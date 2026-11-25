@@ -6,13 +6,18 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LAB="$ROOT/lab"
 SECRETS="$LAB/.secrets"
-SERVERS=(server-1 server-2 server-3)
-# Pretend locations, so the map has something to show: Singapore, Frankfurt, New York.
+SERVERS=(server-1 server-2 server-3 server-4 server-5 server-6 server-7 server-8)
+# Pretend locations, so the map has something to show.
 place() {
   case "$1" in
     server-1) echo "region=sgp,lat=1.35,lng=103.82" ;;
     server-2) echo "region=fra,lat=50.11,lng=8.68" ;;
     server-3) echo "region=nyc,lat=40.71,lng=-74.01" ;;
+    server-4) echo "region=tyo,lat=35.68,lng=139.69" ;;
+    server-5) echo "region=sel,lat=37.57,lng=126.98" ;;
+    server-6) echo "region=sfo,lat=37.77,lng=-122.42" ;;
+    server-7) echo "region=blr,lat=12.97,lng=77.59" ;;
+    server-8) echo "region=ams,lat=52.37,lng=4.90" ;;
   esac
 }
 compose() { docker compose -f "$LAB/compose.yml" "$@"; }

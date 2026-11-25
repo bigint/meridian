@@ -115,6 +115,7 @@ class GitHost::GitHub
 
     def installation_token
       return self.class.token if self.class.token_mode?
+      raise GitHost::Error, "GitHub isn't connected: set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN" unless self.class.configured?
 
       cached = TOKENS[project.installation_id]
       return cached[:token] if cached && cached[:expires_at] > 5.minutes.from_now

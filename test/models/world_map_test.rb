@@ -48,6 +48,15 @@ class WorldMapTest < ActiveSupport::TestCase
     assert_equal [ 48.85, 2.35 ], [ server.latitude, server.longitude ]
   end
 
+  test "places are named by city, then region" do
+    Server.find_by!(name: "web-1.example.com").update!(labels: { "region" => "ap-southeast-1", "city" => "Singapore" })
+    Server.find_by!(name: "api-1.example.com").update!(labels: { "region" => "eu-central-1" })
+    names = WorldMap.new.sites.map(&:name)
+
+    assert_includes names, "Singapore"
+    assert_includes names, "eu-central-1"
+  end
+
   private
     def place(name, lat, lng)
       Server.find_by!(name: name).update!(latitude: lat, longitude: lng, last_seen_at: @now)

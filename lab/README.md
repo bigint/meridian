@@ -3,7 +3,7 @@
 A local fleet for trying Meridian against real Kamal deploys, inside Docker
 (kiri, Docker Desktop, OrbStack…). Nothing here is used in production.
 
-- `server-1` … `server-8` (Singapore, Frankfurt, New York, Tokyo, Seoul, San Francisco, Bangalore, Amsterdam, as far as the map is concerned): each runs sshd and its own Docker daemon (Docker in Docker), so Kamal deploys to them exactly as it would to a VM.
+- Twenty-one servers named like AWS availability zones (`apse1-az1-node-01` in Singapore, `euc1-az1-node-01` in Frankfurt, `mec1-az1-node-01` in Dubai…): each runs sshd and its own Docker daemon (Docker in Docker), so Kamal deploys to them exactly as it would to a VM.
 - `registry`: a private image registry, `registry:5000` inside the lab and `localhost:5555` from your machine.
 - `runner`: a GitHub Actions self-hosted runner registered on your test infra repository, on the same network as the servers, so the Meridian workflow can run `kamal deploy` against them.
 

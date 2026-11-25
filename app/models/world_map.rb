@@ -16,7 +16,14 @@ class WorldMap
   Site = Data.define(:key, :x, :y, :servers, :cells) do
     def state = Drift.worst(cells.map(&:state)) || (servers.any?(&:reporting?) ? "in_sync" : "unknown")
     def stale? = servers.all? { !it.reporting? || it.stale? }
-    def name = servers.map { it.label("region") }.compact.tally.max_by(&:last)&.first || servers.first.short_name
+    # A "city" label reads best; otherwise the most common region, then a server.
+    def name
+      %w[ city region ].each do |key|
+        common = servers.filter_map { it.label(key) }.tally.max_by(&:last)&.first
+        return common if common
+      end
+      servers.first.short_name
+    end
     def apps = cells.map(&:app).uniq
   end
 

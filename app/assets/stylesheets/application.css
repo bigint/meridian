@@ -777,20 +777,23 @@
   @keyframes flow { to { stroke-dashoffset: -16; } }
   @media (prefers-reduced-motion: reduce) { .flow.live { animation: none; } }
 
-  .world__hub {
-    rect { fill: var(--action); }
-    text { fill: var(--ink); font-size: 11px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; }
-  }
+  .world__hub rect { fill: var(--action); }
 
   .world__sites .site {
     circle { fill: var(--state-mute); stroke: var(--sheet); stroke-width: 1.5; }
     .symbol { fill: var(--sheet); font-size: 7px; font-weight: 800; text-anchor: middle; }
-    .name { fill: var(--ink); font-size: 10px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; }
     &.in_sync circle { fill: var(--state-ok); }
     &.drifted circle { fill: var(--state-warn); }
     &.missing circle { fill: var(--state-bad); }
     &.stray circle { fill: var(--state-info); }
     &:hover circle, &:focus-visible circle { stroke: var(--ink); }
+  }
+
+  .world__labels {
+    pointer-events: none;
+    text { fill: var(--ink); font-size: 10px; font-weight: 600; paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; stroke-linejoin: round; }
+    text.hub { font-weight: 750; }
+    line { stroke: var(--ink-faint); stroke-width: 0.8; }
   }
 
   .world__legend {

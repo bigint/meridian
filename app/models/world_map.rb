@@ -33,6 +33,14 @@ class WorldMap
 
   Flow = Data.define(:from, :to, :kind, :live) # kind: "report" | "deploy"
 
+  # Where a name goes: its centre, how it is anchored, its box, and the
+  # point a leader line starts from when it had to move away from its dot.
+  Label = Data.define(:text, :x, :y, :anchor, :box, :leader)
+
+  CHAR_WIDTH = 6.2  # map units per character at the label size
+  LABEL_HEIGHT = 11
+  HUB_RADIUS = 6
+
   def self.project(latitude, longitude)
     x = (longitude + 180.0) / 360.0 * WIDTH
     y = (NORTH - latitude.clamp(SOUTH, NORTH)) / (NORTH - SOUTH) * HEIGHT
@@ -97,11 +105,68 @@ class WorldMap
     reports + deploys
   end
 
+  def radius(site) = (4.5 + Math.sqrt(site.servers.size) * 1.6).round(1)
+  def hub_name = account.location_name.presence || "Meridian"
+  def hub_label = labels[:hub]
+  def label(site) = labels[site.key]
+
+  # Places every name where it overlaps no other name and no dot. Bigger
+  # places choose first; each tries beside its dot, then further out with a
+  # leader line, and keeps its first spot if nothing is free.
+  def labels
+    @labels ||= begin
+      dots = sites.map { |site| box_around(site.x, site.y, radius(site)) }
+      dots << box_around(*hub, HUB_RADIUS) if hub
+
+      items = sites.sort_by { [ -it.servers.size, it.key ] }.map { [ it.key, [ it.x, it.y ], radius(it), it.name ] }
+      items.unshift([ :hub, hub, HUB_RADIUS, hub_name ]) if hub
+
+      taken = []
+      items.to_h do |key, (x, y), r, text|
+        own = box_around(x, y, r)
+        candidates = label_positions(text, x, y, r)
+        choice = candidates.find { |label| (taken + dots - [ own ]).none? { overlap?(label.box, it) } } || candidates.first
+        taken << choice.box
+        [ key, choice ]
+      end
+    end
+  end
+
   def stream_keys
     board.servers.values.map { Board.stream_key(it) }.uniq.presence || [ "all" ]
   end
 
   private
+    def box_around(x, y, r) = [ x - r, y - r, x + r, y + r ]
+
+    def overlap?(a, b)
+      a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
+    end
+
+    # Beside the dot first (above, below, right, left), then twice as far
+    # in eight directions, each with a leader line back to the dot.
+    def label_positions(text, x, y, r)
+      w, h, gap = text.length * CHAR_WIDTH, LABEL_HEIGHT, 3
+      near = [
+        [ x, y - r - gap - h / 2.0, "middle" ], [ x, y + r + gap + h / 2.0, "middle" ],
+        [ x + r + gap, y, "start" ], [ x - r - gap, y, "end" ]
+      ].map { |cx, cy, anchor| build_label(text, cx, cy, anchor, w, h, nil) }
+
+      far = [ [ 0, -1 ], [ 0, 1 ], [ 1, 0 ], [ -1, 0 ], [ 1, -1 ], [ -1, -1 ], [ 1, 1 ], [ -1, 1 ] ].flat_map do |dx, dy|
+        [ 18, 30 ].map do |distance|
+          cx, cy = x + dx * (r + distance), y + dy * (r + distance * 0.6)
+          anchor = dx.positive? ? "start" : dx.negative? ? "end" : "middle"
+          build_label(text, cx, cy, anchor, w, h, [ x + dx * r * 0.7, y + dy * r * 0.7 ])
+        end
+      end
+      near + far
+    end
+
+    def build_label(text, cx, cy, anchor, w, h, leader)
+      left = { "start" => cx, "end" => cx - w, "middle" => cx - w / 2.0 }.fetch(anchor)
+      Label.new(text: text, x: cx.round(1), y: cy.round(1), anchor: anchor, box: [ left, cy - h / 2.0, left + w, cy + h / 2.0 ], leader: leader&.map { it.round(1) })
+    end
+
     def board
       @board ||= Board.new(filters.slice(:project, :app, *Board::LABELS.map(&:to_sym)).merge(group: "none"))
     end

@@ -49,7 +49,6 @@
       </g>
       <g class="world__hub" transform="translate(<%= hub.join(" ") %>)">
         <rect x="-5" y="-5" width="10" height="10" rx="2"/>
-        <text y="16"><%= @map.account.location_name.presence || "Meridian" %></text>
       </g>
     <% end %>
 
@@ -57,12 +56,20 @@
       <% sites.each do |site| %>
         <%= link_to (site.servers.one? ? server_path(site.servers.first) : board_path(region: site.servers.first.label("region"))), class: "site #{site.state}" do %>
           <g transform="translate(<%= site.x %> <%= site.y %>)">
-            <circle r="<%= (4.5 + Math.sqrt(site.servers.size) * 1.6).round(1) %>"/>
+            <circle r="<%= @map.radius(site) %>"/>
             <text class="symbol" dy="0.35em"><%= Drift::SYMBOLS[site.state] %></text>
-            <text class="name" y="<%= -(8 + Math.sqrt(site.servers.size) * 1.6).round(1) %>"><%= site.name %></text>
           </g>
           <title><%= site.name %>: <%= pluralize(site.servers.size, "server") %>, <%= Drift::LABELS[site.state].downcase %></title>
         <% end %>
+      <% end %>
+    </g>
+
+    <g class="world__labels" aria-hidden="true">
+      <% labels = sites.map { [ @map.label(it), it ] } %>
+      <% labels.unshift([ @map.hub_label, nil ]) if hub %>
+      <% labels.each do |label, site| %>
+        <% if label.leader %><line x1="<%= label.leader[0] %>" y1="<%= label.leader[1] %>" x2="<%= label.x %>" y2="<%= label.y %>"/><% end %>
+        <text x="<%= label.x %>" y="<%= label.y %>" dy="0.35em" text-anchor="<%= label.anchor %>" class="<%= site ? "place" : "hub" %>"><%= label.text %></text>
       <% end %>
     </g>
   </svg>

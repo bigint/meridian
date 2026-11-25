@@ -57,7 +57,24 @@ class WorldMapTest < ActiveSupport::TestCase
     assert_includes names, "eu-central-1"
   end
 
+  test "names in a crowded region never overlap each other or a dot" do
+    Account.current.update!(location_name: "Meridian (dev)", latitude: 51.5, longitude: -0.1)
+    { "web-1" => [ 51.51, -0.13, "London" ], "web-2" => [ 48.86, 2.35, "Paris" ], "api-1" => [ 52.37, 4.90, "Amsterdam" ],
+      "jobs-1" => [ 50.11, 8.68, "Frankfurt" ], "staging-1" => [ 50.85, 4.35, "Brussels" ] }.each do |host, (lat, lng, city)|
+      Server.find_by!(name: "#{host}.example.com").update!(latitude: lat, longitude: lng, labels: { "city" => city }, last_seen_at: @now)
+    end
+    map = WorldMap.new
+    boxes = map.labels.values.map(&:box)
+    dots = map.sites.map { [ it.x - map.radius(it), it.y - map.radius(it), it.x + map.radius(it), it.y + map.radius(it) ] }
+
+    assert_equal map.sites.size + 1, boxes.size, "every place, plus Meridian itself"
+    boxes.combination(2).each { |a, b| assert_not overlap?(a, b), "#{a} overlaps #{b}" }
+    boxes.product(dots).each { |box, dot| assert_not overlap?(box, dot), "#{box} covers a dot" }
+  end
+
   private
+    def overlap?(a, b) = a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
+
     def place(name, lat, lng)
       Server.find_by!(name: name).update!(latitude: lat, longitude: lng, last_seen_at: @now)
     end

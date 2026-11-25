@@ -1,0 +1,53 @@
+# Meridian deploys itself with Kamal. Copy this file, fill in the four
+# placeholders, put the secrets in .kamal/secrets, then `kamal setup`.
+# See docs/install.md.
+service: meridian
+image: ghcr.io/bigint/meridian
+
+servers:
+  web:
+    - meridian.internal.example.com        # 1. the host to run on
+
+proxy:
+  host: meridian.example.com               # 2. where you'll reach it
+  ssl: true
+
+registry:
+  server: ghcr.io
+  username: your-github-user              # 3. a registry you can pull from
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    MERIDIAN_URL: https://meridian.example.com   # 4. same as proxy.host
+    # Solid Queue runs inside Puma. For large installs, set this to "false"
+    # and uncomment the job role below.
+    SOLID_QUEUE_IN_PUMA: true
+  secret:
+    - SECRET_KEY_BASE
+    - GITHUB_APP_ID
+    - GITHUB_APP_PRIVATE_KEY
+    - GITHUB_APP_WEBHOOK_SECRET
+    # Optional single sign-on:
+    # - OIDC_ISSUER
+    # - OIDC_CLIENT_ID
+    # - OIDC_CLIENT_SECRET
+
+# job:
+#   hosts:
+#     - meridian.internal.example.com
+#   cmd: bin/jobs
+
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  logs: app logs -f
+
+# SQLite databases live here. Back them up with Litestream: docs/litestream.md.
+volumes:
+  - "meridian_storage:/rails/storage"
+
+asset_path: /rails/public/assets
+
+builder:
+  arch: amd64

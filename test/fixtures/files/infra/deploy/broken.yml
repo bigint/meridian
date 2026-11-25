@@ -1,0 +1,10 @@
+service: broken
+image: example/broken
+
+servers:
+  web:
+    hosts: web-3.example.com
+
+registry:
+  server: ghcr.io
+  username: example

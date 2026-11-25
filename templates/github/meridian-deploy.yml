@@ -1,0 +1,100 @@
+# Deploys with Kamal when a version file changes. Added by Meridian; edit freely.
+#
+# Meridian never deploys itself: it commits `<config>.version` (or
+# `<config>.<destination>.version`), and this workflow runs `kamal deploy`.
+# Previews use the same workflow through workflow_dispatch.
+name: Meridian deploy
+# Meridian matches preview runs by this name: "<command> <config> <destination>".
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('{0} {1} {2}', inputs.command, inputs.config, inputs.destination) || github.event.head_commit.message }}
+
+on:
+  push:
+    branches: [ %{branch} ]
+    paths: [ "**/*.version" ]
+  workflow_dispatch:
+    inputs:
+      config:
+        description: Kamal config path, e.g. config/deploy.yml
+        required: true
+      destination:
+        description: Kamal destination (optional)
+        required: false
+      version:
+        description: Version to deploy (ignored by remove)
+        required: false
+      command:
+        description: deploy or remove
+        required: true
+        default: deploy
+
+concurrency:
+  group: meridian-${{ github.ref }}-${{ inputs.config }}-${{ inputs.destination }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+      - id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            jq -nc --arg c "${{ inputs.config }}" --arg d "${{ inputs.destination }}" --arg v "${{ inputs.version }}" --arg k "${{ inputs.command }}" \
+              '[{config:$c, destination:$d, version:$v, command:$k}]' > matrix.json
+          else
+            : > rows
+            for file in $(git diff --name-only HEAD~1 HEAD -- '*.version'); do
+              [ -f "$file" ] || continue
+              stem="${file%.version}"
+              if [ -f "$stem.yml" ]; then config="$stem.yml"; destination=""
+              else config="${stem%.*}.yml"; destination="${stem##*.}"; fi
+              jq -nc --arg c "$config" --arg d "$destination" --arg v "$(tr -d '[:space:]' < "$file")" \
+                '{config:$c, destination:$d, version:$v, command:"deploy"}' >> rows
+            done
+            jq -sc '.' rows > matrix.json
+          fi
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+
+  kamal:
+    needs: plan
+    if: needs.plan.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.matrix) }}
+    name: ${{ matrix.command }} ${{ matrix.config }} ${{ matrix.destination }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - run: gem install kamal -v %{kamal_version} --no-document
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
+      # Every repository secret becomes an environment variable, so
+      # .kamal/secrets can read it as $NAME. Meridian's Secrets page sets them.
+      - name: Export secrets
+        shell: bash
+        env:
+          SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          echo "$SECRETS" | jq -r 'to_entries[] | select(.key != "github_token") | "\(.key)<<MERIDIAN_EOF\n\(.value)\nMERIDIAN_EOF"' >> "$GITHUB_ENV"
+      - name: Kamal
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(-c "${{ matrix.config }}")
+          [ -n "${{ matrix.destination }}" ] && args+=(-d "${{ matrix.destination }}")
+          if [ "${{ matrix.command }}" = "remove" ]; then
+            kamal remove "${args[@]}" --confirmed
+          else
+            kamal deploy "${args[@]}" --version "${{ matrix.version }}" --skip-push
+          fi

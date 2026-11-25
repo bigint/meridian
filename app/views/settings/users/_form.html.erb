@@ -1,0 +1,12 @@
+<%= form_with model: user, url: user.persisted? ? settings_user_path(user) : settings_users_path, class: "stack" do |form| %>
+  <%= render "shared/errors", record: user %>
+  <div class="field"><%= form.label :name %><%= form.text_field :name %></div>
+  <div class="field"><%= form.label :email_address, "Email" %><%= form.email_field :email_address, required: true %></div>
+  <div class="field">
+    <%= form.label :password %>
+    <%= form.password_field :password, required: user.new_record?, autocomplete: "new-password", minlength: 12, maxlength: 72 %>
+    <span class="hint"><%= user.persisted? ? "Leave blank to keep the current password." : "At least 12 characters. Share it with them privately." %></span>
+  </div>
+  <div class="field"><%= form.label :role %><%= form.select :role, User::ROLES.map { [ it.capitalize, it ] } %></div>
+  <div><%= form.submit class: "button primary" %> <%= link_to "Cancel", settings_users_path, class: "button" %></div>
+<% end %>

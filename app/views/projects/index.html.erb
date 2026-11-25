@@ -1,0 +1,21 @@
+<% content_for :title, "Projects" %>
+<header class="page-header">
+  <h1>Projects</h1>
+  <div class="actions"><%= link_to "Add project", new_project_path, class: "button primary" if current_user.admin? %></div>
+</header>
+
+<table>
+  <thead><tr><th>Project</th><th>Repository</th><th>Apps</th><th>Synced</th><th>Problems</th></tr></thead>
+  <tbody>
+    <% @projects.each do |project| %>
+      <tr>
+        <th scope="row"><%= link_to project.name, project %></th>
+        <td><%= link_to project.repo_full_name, project.repo_url %></td>
+        <td><%= project.apps.size %></td>
+        <td><%= short_sha(project.last_synced_sha) if project.last_synced_sha %> <span class="meta"><%= time_ago(project.synced_at) %></span></td>
+        <td><%= project.config_errors? ? tag.span("✕ #{pluralize(project.config_errors.size, "parse error")}", class: "state missing") : "–" %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<% if @projects.none? %><p class="muted">No projects yet. A project is one Git repository that holds Kamal configs.</p><% end %>

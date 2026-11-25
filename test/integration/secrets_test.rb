@@ -1,0 +1,89 @@
+require "test_helper"
+
+class SecretsTest < ActionDispatch::IntegrationTest
+  SENTINEL = "s3ntinel-#{SecureRandom.hex(16)}"
+
+  setup do
+    @project = projects(:infra)
+    stub_github_repo(@project)
+    @project.sync
+    @key = RbNaCl::PrivateKey.generate
+    stub_request(:get, "https://api.github.com/repos/example/infra/actions/secrets/public-key")
+      .to_return_json(body: { key_id: "k1", key: Base64.strict_encode64(@key.public_key.to_bytes) })
+    @sent = []
+    @put = stub_request(:put, %r{/repos/example/infra/actions/secrets/}).to_return do |request|
+      @sent << [ URI(request.uri).path, JSON.parse(request.body) ]
+      { status: 204 }
+    end
+  end
+
+  test "names come from the configs that reference them" do
+    assert_equal %w[ API_TOKEN_PRODUCTION DATABASE_URL KAMAL_REGISTRY_PASSWORD RAILS_MASTER_KEY ], @project.secret_names.ordered.pluck(:name)
+    assert_equal [ "web · production", "web · staging" ], @project.secret_names.find_by!(name: "RAILS_MASTER_KEY").apps
+  end
+
+  test "secret_names has no column that could hold a value" do
+    assert_equal %w[ apps created_at id last_set_at last_set_by_id name project_id updated_at ], SecretName.column_names.sort
+  end
+
+  test "a rotated value is sealed for GitHub and never persisted, logged, enqueued or broadcast" do
+    sign_in_as users(:admin)
+    secret = @project.secret_names.find_by!(name: "DATABASE_URL")
+    log = capture_log do
+      assert_no_enqueued_jobs do
+        patch secret_path(secret), params: { secret_value: SENTINEL }
+      end
+    end
+    assert_redirected_to secrets_path(anchor: "project-#{@project.id}")
+
+    path, sealed = @sent.sole
+    assert path.end_with?("/actions/secrets/DATABASE_URL")
+    assert_equal "k1", sealed["key_id"]
+    assert_equal SENTINEL, RbNaCl::Boxes::Sealed.from_private_key(@key).decrypt(Base64.decode64(sealed["encrypted_value"]))
+
+    assert_not_includes log, SENTINEL
+    assert_includes log, "[FILTERED]"
+    assert_not_includes database_dump, SENTINEL
+    follow_redirect!
+    assert_not_includes response.body, SENTINEL
+    assert secret.reload.last_set_at
+    assert_equal "secret.set", Event.recent.first.action
+  end
+
+  test "after rotating, a redeploy asks CI to deploy the current version again" do
+    stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ] ] })
+    @project.sync(force: true)
+    dispatch = stub_request(:post, "https://api.github.com/repos/example/infra/actions/workflows/meridian-deploy.yml/dispatches")
+      .with(body: hash_including(ref: "main", inputs: { config: "deploy/web.yml", destination: "production", version: "v42", command: "deploy" }))
+      .to_return(status: 204)
+
+    sign_in_as users(:deployer)
+    post app_redeploy_path(@project.apps.find_by!(service: "web", destination: "production"))
+
+    assert_requested dispatch
+    assert_equal "app.redeploy", Event.recent.first.action
+  end
+
+  test "viewers and deployers can't set secrets" do
+    sign_in_as users(:deployer)
+    patch secret_path(@project.secret_names.first), params: { secret_value: SENTINEL }
+    assert_not_requested @put
+  end
+
+  private
+    def capture_log
+      io = StringIO.new
+      logger = ActiveSupport::Logger.new(io)
+      original = Rails.logger
+      Rails.logger = ActionController::Base.logger = ActiveRecord::Base.logger = logger
+      yield
+      io.string
+    ensure
+      Rails.logger = ActionController::Base.logger = ActiveRecord::Base.logger = original
+    end
+
+    def database_dump
+      connection = ActiveRecord::Base.connection
+      connection.tables.flat_map { |table| connection.select_rows("SELECT * FROM #{connection.quote_table_name(table)}") }.flatten.join("\n")
+    end
+end

@@ -1,0 +1,12 @@
+<li>
+  <%= attention_avatar(item) %>
+  <div>
+    <div class="row__title"><%= attention_sentence(item) %></div>
+    <div class="row__sub"><%= attention_detail(item) %></div>
+  </div>
+  <div class="row__side">
+    <% if item.app %><%= link_to "Open #{item.app.service}", item.app, class: "button" %>
+    <% elsif item.server %><%= link_to "Open server", item.server, class: "button" %>
+    <% else %><%= link_to "See agents", agent_tokens_path, class: "button" %><% end %>
+  </div>
+</li>

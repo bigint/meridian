@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title><%= [ content_for(:title), "Meridian" ].compact.join(" · ") %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= yield :head %>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body data-controller="shortcuts" data-action="keydown@document->shortcuts#press">
+    <% if authenticated? %>
+      <header class="navbar">
+        <button type="button" class="navbar__search" popovertarget="jump" data-shortcuts-target="search">
+          <%= icon :search %> Search
+        </button>
+
+        <button type="button" class="navbar__menu" popovertarget="jump" aria-label="Open the Meridian menu">
+          <%= icon :logo, class: "logo" %> Meridian <%= icon :chevron, class: "chevron" %>
+        </button>
+
+        <button type="button" class="avatar navbar__me" popovertarget="me" aria-label="Your account">
+          <%= current_user.display_name.scan(/[[:alnum:]]+/).first(2).map(&:first).join.upcase %>
+        </button>
+      </header>
+
+      <%= render "shared/jump_menu" %>
+      <%= render "shared/me_menu" %>
+
+      <main id="main" class="sheet <%= yield :sheet %>">
+        <%= render "shared/flash" %>
+        <%= yield %>
+      </main>
+      <%= render "shared/shortcuts" %>
+    <% else %>
+      <main class="auth">
+        <%= render "shared/flash" %>
+        <%= yield %>
+      </main>
+    <% end %>
+  </body>
+</html>

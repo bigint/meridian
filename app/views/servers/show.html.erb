@@ -1,0 +1,65 @@
+<% content_for :title, @server.name %>
+<% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
+<% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
+<header class="page-header">
+  <h1><%= @server.name %></h1>
+  <% if @server.stale? %><span class="state stale">… Agent silent</span><% elsif !@server.reporting? %><span class="state unknown">– No agent yet</span><% end %>
+</header>
+
+<div class="columns">
+  <section>
+    <h2>Machine</h2>
+    <dl class="facts">
+      <dt>Hostname</dt><dd><code><%= @server.hostname %></code></dd>
+      <dt>Labels</dt><dd><%= labels_list(@server.labels).presence || tag.span("none", class: "muted") %></dd>
+      <dt>Agent</dt><dd><%= @server.agent_version || "not installed" %></dd>
+      <dt>Last seen</dt><dd><%= time_ago(@server.last_seen_at) %></dd>
+      <dt>Projects</dt><dd><%= safe_join(@server.projects.map { link_to it.name, it }, ", ").presence || tag.span("none", class: "muted") %></dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Apps</h2>
+    <% group = @board.groups.first %>
+    <% if group %>
+      <table>
+        <thead><tr><th>App</th><th>Roles</th><th>State</th><th>Running</th></tr></thead>
+        <tbody>
+          <% group.rows.each do |app| %>
+            <% cell = group.cell(app, @server) %>
+            <tr>
+              <th scope="row"><%= link_to app.name, app %></th>
+              <td><%= cell.roles.join(", ") %></td>
+              <td><%= drift_badge(cell.state) %></td>
+              <td><code><%= cell.versions.map { it.first(12) }.join(", ").presence || "–" %></code></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="muted">Nothing assigned here.</p>
+    <% end %>
+  </section>
+</div>
+
+<section>
+  <h2>Containers</h2>
+  <p class="meta">Everything with Kamal labels, as the agent last reported it.</p>
+  <table>
+    <thead><tr><th>Container</th><th>Service</th><th>Role</th><th>Version</th><th>State</th><th>Health</th><th>Started</th></tr></thead>
+    <tbody>
+      <% @placements.each do |placement| %>
+        <tr>
+          <td><code><%= placement.name %></code></td>
+          <td><%= placement.app ? link_to(placement.service, placement.app) : placement.service %><%= tag.span(" #{placement.kind}", class: "tag") unless placement.kind == "app" %></td>
+          <td><%= placement.role %></td>
+          <td><code><%= placement.short_version %></code></td>
+          <td><%= placement.state %></td>
+          <td><%= health_text(placement.health) %></td>
+          <td class="nowrap"><%= time_ago(placement.started_at) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <% if @placements.none? %><p class="muted">No containers reported.</p><% end %>
+</section>

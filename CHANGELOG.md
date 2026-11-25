@@ -5,10 +5,25 @@
 ### Calmer, simpler interface
 
 - A new look in the spirit of HEY: one quiet bar, content on a centred sheet with a big title, pill buttons, and light and dark palettes built from RGB tokens. Meridian draws its own icons. See `docs/design.md`.
-- A menu that opens from anywhere: press <kbd>M</kbd> or <kbd>⌘K</kbd>, type to jump to any app, server or project, or press <kbd>1</kbd>–<kbd>6</kbd> for the main places.
+- One menu in the middle of the top bar: type to jump to any app, server or project, or pick one of the main places.
 - The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should", with silent agents summarised in one line. The grid follows under **Everything**, with filters folded away and a "What do these mean?" note.
 - A getting-started checklist on new installs, a one-line status on each app ("✓ Running v42 everywhere"), and Activity laid out day by day like a calendar.
 - `bin/rails meridian:demo` can be run again over an existing demo fleet.
+- No shadows anywhere, and section labels carry a thin rule to the edge, as in HEY.
+- Keyboard shortcuts are gone for now; everything is one click from the menu.
+
+### World map
+
+- Servers have a latitude and longitude, reported by agents as `lat`/`lng` labels or set by an admin. The Map shows them as places, merged when close together, each marked with its worst drift state.
+- Solid arcs link places that run the same app, thicker when they share more. Dotted flows show agent reports arriving at Meridian and deploys going out from it, live. Meridian sees containers, not packets, so it draws only traffic it takes part in.
+- Land outlines are Natural Earth's public-domain 1:110m data, projected once into a cached SVG (`script/world_map.rb`).
+
+### Local lab
+
+- `bin/lab` runs three Docker-in-Docker servers, a registry and a self-hosted GitHub Actions runner, so Meridian can drive real Kamal deploys end to end on one laptop.
+- `GITHUB_TOKEN` can stand in for a GitHub App.
+- Fixed: `GITHUB_APP_ID` was read from the wrong variable. Redeploys are tracked like deploys. The CI template runs on self-hosted runners via `MERIDIAN_RUNS_ON`.
+- New-app Dockerfiles carry `LABEL service=…`, which Kamal requires of images it didn't build.
 
 ## v0.1.0 (2026-11-25)
 

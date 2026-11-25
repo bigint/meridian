@@ -49,7 +49,6 @@
     --today: rgb(var(--rgb-orange));
     --menu-gradient: linear-gradient(135deg, rgb(80 162 255) 0%, rgb(134 126 255) 100%);
     --menu-ink: rgb(27 39 51);
-    --shadow: 0 0 0 1px var(--line-light), 0 1.5rem 4rem rgb(0 0 0 / 0.07);
 
     --state-ok: color-mix(in srgb, rgb(var(--rgb-green)) 75%, var(--ink));
     --state-ok-bg: rgb(var(--rgb-green) / 0.14);
@@ -85,7 +84,6 @@
       --rgb-red: 255 120 120;
       --rgb-teal: 157 255 236;
 
-      --shadow: 0 0 2rem rgb(0 0 0 / 0.25);
       --state-ok: rgb(var(--rgb-green));
       --state-warn: rgb(var(--rgb-gold));
       --state-bad: rgb(var(--rgb-red));
@@ -163,7 +161,6 @@
     padding: 1.5rem 1.75rem;
     background: var(--sheet);
     color: var(--ink);
-    box-shadow: var(--shadow);
     &::backdrop { background: rgb(0 0 0 / 0.35); }
   }
 }
@@ -225,7 +222,6 @@
     padding: 3rem clamp(1.25rem, 4vw, 3.5rem) 4rem;
     border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
     background: var(--sheet);
-    box-shadow: var(--shadow);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
@@ -276,7 +272,6 @@
     padding: 2.5rem 2rem;
     border-radius: var(--radius-sheet);
     background: var(--sheet);
-    box-shadow: var(--shadow);
     display: grid;
     gap: 1.25rem;
     h1 { font-size: 2rem; text-align: center; }
@@ -345,7 +340,14 @@
     text-transform: uppercase;
     color: var(--ink-subtle);
   }
-  .section-heading { display: flex; align-items: center; gap: 0.75rem; justify-content: space-between; flex-wrap: wrap; }
+  /* Like HEY's "NEW FOR YOU": the label, a thin rule to the edge, then any action. */
+  main.sheet section > h2, .section-heading > h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    &::after { content: ""; flex: 1; border-top: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+  }
+  .section-heading { display: flex; align-items: center; gap: 0.85rem; > h2 { flex: 1; } }
 
   .meta { color: var(--ink-subtle); font-size: var(--text-s); }
   .muted { color: var(--ink-faint); }
@@ -627,12 +629,9 @@
     border-radius: 1.5rem;
     background: var(--menu-gradient);
     color: var(--menu-ink);
-    box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.3);
 
     &::backdrop { background: transparent; }
 
-    .jump__hint { text-align: center; font-size: var(--text-xs); opacity: 0.75; margin-bottom: 0.6rem; }
-    .jump__hint kbd { border-color: rgb(27 39 51 / 0.3); }
 
     input[type=search] {
       max-width: none;
@@ -665,7 +664,6 @@
     a:hover, a:focus-visible { background: rgb(255 255 255 / 0.65); }
     a[aria-current=page] { background: rgb(255 255 255 / 0.8); }
     svg { width: 1.45rem; height: 1.45rem; }
-    .number { position: absolute; top: 0.35rem; right: 0.55rem; font-size: var(--text-xs); opacity: 0.6; }
   }
 
   .jump__list {
@@ -701,7 +699,7 @@
     border-radius: 1.1rem;
     background: var(--sheet);
     color: var(--ink);
-    box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.2), 0 0 0 1px var(--line);
+    border: 1px solid var(--line);
     &::backdrop { background: transparent; }
 
     .who { padding: 0.4rem 0.6rem 0.7rem; border-bottom: 1px solid var(--line-light); margin-bottom: 0.4rem; }
@@ -734,7 +732,6 @@
   .day .rows > li { grid-template-columns: 4.75rem auto minmax(0, 1fr); }
   .day .time { color: var(--ink-subtle); font-size: var(--text-s); text-align: right; }
 
-  .shortcuts-hint { justify-self: center; font-size: var(--text-xs); color: var(--ink-faint); }
 }
 
 @layer utilities {
@@ -748,4 +745,62 @@
   .nowrap { white-space: nowrap; }
   .right { text-align: right; }
   .center { text-align: center; justify-self: center; }
+}
+
+/* The world map. Land is a cached asset; everything on it is drawn here. */
+@layer components {
+  .world {
+    display: grid;
+    gap: 0.75rem;
+    svg { width: 100%; height: auto; overflow: visible; }
+  }
+  .world__land { color: var(--surface-strong); }
+
+  .world__links path, .legend-link {
+    fill: none;
+    stroke: var(--accent);
+    stroke-opacity: 0.8;
+    stroke-linecap: round;
+  }
+  .legend-link { stroke-width: 2; }
+
+  .flow {
+    fill: none;
+    stroke-width: 1.2;
+    stroke-linecap: round;
+    stroke-dasharray: 1 5;
+    stroke: var(--ink-faint);
+    &.report.live { stroke: var(--state-ok); }
+    &.deploy { stroke: var(--action); stroke-width: 2; }
+    &.live { animation: flow 1.2s linear infinite; }
+  }
+  @keyframes flow { to { stroke-dashoffset: -16; } }
+  @media (prefers-reduced-motion: reduce) { .flow.live { animation: none; } }
+
+  .world__hub {
+    rect { fill: var(--action); }
+    text { fill: var(--ink); font-size: 11px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; }
+  }
+
+  .world__sites .site {
+    circle { fill: var(--state-mute); stroke: var(--sheet); stroke-width: 1.5; }
+    .symbol { fill: var(--sheet); font-size: 7px; font-weight: 800; text-anchor: middle; }
+    .name { fill: var(--ink); font-size: 10px; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; }
+    &.in_sync circle { fill: var(--state-ok); }
+    &.drifted circle { fill: var(--state-warn); }
+    &.missing circle { fill: var(--state-bad); }
+    &.stray circle { fill: var(--state-info); }
+    &:hover circle, &:focus-visible circle { stroke: var(--ink); }
+  }
+
+  .world__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    justify-content: center;
+    font-size: var(--text-s);
+    color: var(--ink-subtle);
+    span { display: inline-flex; align-items: center; gap: 0.45rem; }
+    svg { width: 1.6rem; height: 0.55rem; overflow: visible; }
+  }
 }

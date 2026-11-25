@@ -15,11 +15,4 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     click_on "Sign in"
     assert_selector ".navbar"
   end
-
-  # Keyboard shortcuts work once Stimulus has connected; wait for that.
-  def wait_for_shortcuts
-    Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.05 until page.evaluate_script("!!window.Stimulus?.controllers?.some(c => c.identifier == 'shortcuts')")
-    end
-  end
 end

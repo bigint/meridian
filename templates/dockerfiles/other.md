@@ -1,1 +1,1 @@
-Any image works. It must listen on the configured port and answer `GET /up` with a 200 once it is ready.
+Any image works. It must listen on the configured port, answer `GET /up` with a 200 once it is ready, and carry `LABEL service="<service>"`: Kamal only boots images labelled with their service (`kamal build` adds it for you).

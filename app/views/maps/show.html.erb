@@ -1,0 +1,107 @@
+<% content_for :title, "Map" %>
+<% content_for :sheet, "sheet--wide" %>
+<% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
+<% @map.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
+<% sites, links, flows, hub = @map.sites, @map.links, @map.flows, @map.hub %>
+
+<header class="page-header">
+  <h1>Map</h1>
+  <p class="meta"><%= pluralize(sites.sum { it.servers.size }, "server") %> in <%= pluralize(sites.size, "place") %>, and how they connect</p>
+</header>
+
+<details class="disclosure" <%= "open" if @map.filters.any? %>>
+  <summary>Filters</summary>
+  <%= form_with url: map_path, method: :get, class: "filters" do |form| %>
+    <div><%= form.label :app %><%= form.search_field :app, value: @map.filters[:app], placeholder: "Service" %></div>
+    <div><%= form.label :project %><%= form.select :project, @projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: @map.filters[:project] } %></div>
+    <% Board::LABELS.each do |key| %>
+      <div><%= form.label key %><%= form.select key, Board.new.label_values(key), { include_blank: "All", selected: @map.filters[key.to_sym] } %></div>
+    <% end %>
+    <%= form.submit "Apply", class: "button", name: nil %>
+    <%= link_to "Clear", map_path, class: "button" if @map.filters.any? %>
+  <% end %>
+</details>
+
+<figure class="world">
+  <svg viewBox="0 0 <%= WorldMap::WIDTH.to_i %> <%= WorldMap::HEIGHT %>" role="img" aria-labelledby="world-title world-desc">
+    <title id="world-title">Servers on a world map</title>
+    <desc id="world-desc"><%= pluralize(sites.size, "place") %>, <%= pluralize(links.size, "shared-app link") %>. The table below lists every place.</desc>
+
+    <use href="<%= image_path("world.svg") %>#land" class="world__land"/>
+
+    <g class="world__links">
+      <% links.each do |link| %>
+        <path d="<%= WorldMap.arc([ link.from.x, link.from.y ], [ link.to.x, link.to.y ]) %>" stroke-width="<%= (1.4 + [ link.weight, 8 ].min * 0.6).round(2) %>">
+          <title><%= link.from.name %> ↔ <%= link.to.name %>: <%= link.apps.map(&:name).to_sentence %></title>
+        </path>
+      <% end %>
+    </g>
+
+    <% if hub %>
+      <g class="world__flows">
+        <% flows.each do |flow| %>
+          <% from = flow.from ? [ flow.from.x, flow.from.y ] : hub %>
+          <% to = flow.to ? [ flow.to.x, flow.to.y ] : hub %>
+          <path d="<%= WorldMap.arc(from, to, bend: -0.12) %>" class="flow <%= flow.kind %> <%= "live" if flow.live %>">
+            <title><%= flow.kind == "report" ? "#{flow.from.name}: agent reports #{flow.live ? "arriving" : "have stopped"}" : "Deploying to #{flow.to.name}" %></title>
+          </path>
+        <% end %>
+      </g>
+      <g class="world__hub" transform="translate(<%= hub.join(" ") %>)">
+        <rect x="-5" y="-5" width="10" height="10" rx="2"/>
+        <text y="16"><%= @map.account.location_name.presence || "Meridian" %></text>
+      </g>
+    <% end %>
+
+    <g class="world__sites">
+      <% sites.each do |site| %>
+        <%= link_to (site.servers.one? ? server_path(site.servers.first) : board_path(region: site.servers.first.label("region"))), class: "site #{site.state}" do %>
+          <g transform="translate(<%= site.x %> <%= site.y %>)">
+            <circle r="<%= (4.5 + Math.sqrt(site.servers.size) * 1.6).round(1) %>"/>
+            <text class="symbol" dy="0.35em"><%= Drift::SYMBOLS[site.state] %></text>
+            <text class="name" y="<%= -(8 + Math.sqrt(site.servers.size) * 1.6).round(1) %>"><%= site.name %></text>
+          </g>
+          <title><%= site.name %>: <%= pluralize(site.servers.size, "server") %>, <%= Drift::LABELS[site.state].downcase %></title>
+        <% end %>
+      <% end %>
+    </g>
+  </svg>
+
+  <figcaption class="world__legend">
+    <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 6 Q12 0 23 6" class="legend-link"/></svg> Runs the same app (thicker: more apps)</span>
+    <% if hub %>
+      <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 4 H23" class="flow report live"/></svg> Agent reports, flowing in</span>
+      <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 4 H23" class="flow deploy live"/></svg> Deploy in progress, flowing out</span>
+    <% end %>
+    <span>Each place shows its worst state: <%= safe_join(%w[ in_sync drifted missing stale ].map { drift_badge(it) }, " ") %></span>
+  </figcaption>
+</figure>
+
+<% unless hub %>
+  <p class="meta center"><%= link_to "Set where Meridian runs", settings_account_path if current_user.admin? %> to see agent reports and deploys flowing on the map.</p>
+<% end %>
+
+<section aria-labelledby="places-heading">
+  <h2 id="places-heading" class="label">Places</h2>
+  <% if sites.any? %>
+    <table>
+      <thead><tr><th>Place</th><th>Servers</th><th>Apps</th><th>State</th><th>Agents</th></tr></thead>
+      <tbody>
+        <% sites.sort_by(&:name).each do |site| %>
+          <tr>
+            <th scope="row"><%= site.name %></th>
+            <td><%= safe_join(site.servers.first(6).map { link_to it.short_name, it, title: it.name }, ", ") %><%= " and #{site.servers.size - 6} more" if site.servers.size > 6 %></td>
+            <td><%= site.apps.map(&:name).first(5).join(", ") %><%= "…" if site.apps.size > 5 %></td>
+            <td><%= drift_badge(site.state) %></td>
+            <td><%= site.stale? ? tag.span("… quiet", class: "state stale") : "reporting" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <div class="empty"><p>No server has a location yet.</p></div>
+  <% end %>
+  <% if (unlocated = @map.unlocated).any? %>
+    <p class="meta"><%= pluralize(unlocated.size, "server") %> without a location (<%= unlocated.first(5).map(&:short_name).join(", ") %><%= "…" if unlocated.size > 5 %>). Add <code>lat=…,lng=…</code> to <code>MERIDIAN_LABELS</code> on their agent, or set it on the server page.</p>
+  <% end %>
+</section>

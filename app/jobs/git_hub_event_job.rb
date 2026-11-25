@@ -22,7 +22,7 @@ class GitHubEventJob < ApplicationJob
       project = Project.find_by(repo_full_name: repo) or return
       return unless run && run["head_branch"] == project.default_branch
 
-      return Preview.track(run) if run["event"] == "workflow_dispatch"
+      return (Preview.track(run) || Deploy.from_dispatch(project, run)) if run["event"] == "workflow_dispatch"
 
       project.sync if project.last_synced_sha != run["head_sha"]
       Deploy.from_workflow_run(project, run)

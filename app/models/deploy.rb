@@ -27,6 +27,20 @@ class Deploy < ApplicationRecord
     end
   end
 
+  # A redeploy is a dispatched run named "deploy <config> [<destination>]".
+  def self.from_dispatch(project, run)
+    command, config, destination = run["display_title"].to_s.split(" ", 3)
+    return unless command == "deploy"
+
+    app = project.apps.find_by(config_path: config, destination: destination.to_s.strip) or return
+    deploy = app.deploys.find_or_initialize_by(commit_sha: run["head_sha"])
+    deploy.kind = "redeploy" if deploy.new_record?
+    deploy.version ||= app.latest_release&.version || run["head_sha"].first(7)
+    deploy.started_at = nil if deploy.ci_run_id != run["id"]
+    deploy.track(run)
+    deploy
+  end
+
   def track(run)
     self.ci_run_id = run["id"]
     self.ci_url = run["html_url"]

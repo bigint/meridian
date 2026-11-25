@@ -14,7 +14,6 @@ class ScreenshotsTest < ApplicationSystemTestCase
 
   test "board, menu, app, server and activity in light and dark" do
     sign_in users(:admin)
-    wait_for_shortcuts
 
     %w[ light dark ].each do |scheme|
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-color-scheme", value: scheme } ])
@@ -37,6 +36,9 @@ class ScreenshotsTest < ApplicationSystemTestCase
 
       visit events_path
       save "activity#{suffix}"
+
+      visit map_path
+      save "map#{suffix}"
     end
   end
 

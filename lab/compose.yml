@@ -1,0 +1,39 @@
+name: meridian-lab
+
+x-server: &server
+  build: ./server
+  privileged: true
+  volumes:
+    - ./.secrets/authorized_keys:/lab/authorized_keys:ro
+  networks: [ lab ]
+  restart: unless-stopped
+
+services:
+  registry:
+    image: registry:2
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: lab
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    volumes:
+      - ./.secrets/htpasswd:/auth/htpasswd:ro
+    ports: [ "127.0.0.1:5555:5000" ]
+    networks: [ lab ]
+    restart: unless-stopped
+
+  server-1: { <<: *server, hostname: server-1 }
+  server-2: { <<: *server, hostname: server-2 }
+  server-3: { <<: *server, hostname: server-3 }
+
+  runner:
+    build: ./runner
+    environment:
+      RUNNER_REPO: ${RUNNER_REPO:-}
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+    networks: [ lab ]
+    restart: unless-stopped
+    profiles: [ runner ]
+
+networks:
+  lab:
+    name: meridian-lab

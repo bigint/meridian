@@ -3,7 +3,7 @@
   <h1>Servers</h1>
   <%= form_with url: servers_path, method: :get, class: "filters", data: { controller: "autosubmit" } do |form| %>
     <%= form.label :q, "Search", class: "visually-hidden" %>
-    <%= form.search_field :q, value: params[:q], placeholder: "Search servers", data: { filter: true } %>
+    <%= form.search_field :q, value: params[:q], placeholder: "Search servers" %>
     <label><%= form.check_box :silent, { checked: @silent, data: { action: "autosubmit#submit" } }, "1", nil %> Only silent agents</label>
   <% end %>
 </header>

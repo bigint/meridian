@@ -38,13 +38,15 @@ class Preview < ApplicationRecord
     # Matches a workflow run to a preview by its run name: "<command> <config> pr-<n>".
     def track(run)
       command, config, destination = run["display_title"].to_s.split(" ", 3)
-      return unless destination.to_s.match?(Project::Syncable::PREVIEW_DESTINATION) && run["status"] == "completed"
+      return unless destination.to_s.match?(Project::Syncable::PREVIEW_DESTINATION)
+      return true unless run["status"] == "completed"
 
-      preview = Preview.joins(:app).find_by(apps: { config_path: config }, destination: destination) or return
+      preview = Preview.joins(:app).find_by(apps: { config_path: config }, destination: destination) or return true
       success = run["conclusion"] == "success"
       if command == "remove" && success then preview.finish_removal
       elsif command == "deploy" && preview.deploying? then preview.update!(state: success ? "active" : "failed")
       end
+      true
     end
   end
 

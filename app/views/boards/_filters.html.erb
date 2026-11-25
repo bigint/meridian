@@ -3,7 +3,7 @@
   <%= form_with url: board_path(anchor: "everything"), method: :get, class: "filters", data: { turbo_action: "replace" } do |form| %>
     <%= form.hidden_field :view, value: board.view %>
     <%= form.hidden_field :state, value: board.state if board.state %>
-    <div><%= form.label :app %><%= form.search_field :app, value: board.filters[:app], placeholder: "Service", data: { filter: true } %></div>
+    <div><%= form.label :app %><%= form.search_field :app, value: board.filters[:app], placeholder: "Service" %></div>
     <div><%= form.label :project %><%= form.select :project, projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: board.filters[:project] } %></div>
     <% Board::LABELS.each do |key| %>
       <div><%= form.label key %><%= form.select key, board.label_values(key), { include_blank: "All", selected: board.filters[key.to_sym] } %></div>

@@ -1,17 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 
-// The menu: type to go anywhere, Enter opens the first match, 1–6 open a tile,
-// arrow keys move between links.
+// The menu: type to go anywhere; Enter opens the first match.
 export default class extends Controller {
   static targets = [ "input", "form" ]
 
   toggled(event) {
     if (event.newState !== "open") return
-    if (document.activeElement !== this.inputTarget) {
-      this.inputTarget.value = ""
-      this.#results.replaceChildren()
-      this.inputTarget.focus()
-    }
+    this.inputTarget.value = ""
+    this.#results.replaceChildren()
+    this.inputTarget.focus()
   }
 
   search() {
@@ -23,19 +20,9 @@ export default class extends Controller {
   }
 
   key(event) {
-    if (event.key === "Enter" && event.target === this.inputTarget) {
-      const first = this.#results.querySelector("a")
-      if (first) { event.preventDefault(); first.click() }
-    } else if (/^[1-6]$/.test(event.key) && !this.inputTarget.value) {
-      const tile = this.element.querySelector(`[data-number="${event.key}"]`)
-      if (tile) { event.preventDefault(); tile.click() }
-    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault()
-      const links = [ this.inputTarget, ...this.element.querySelectorAll("a") ]
-      const index = links.indexOf(document.activeElement)
-      const next = links[(index + (event.key === "ArrowDown" ? 1 : -1) + links.length) % links.length]
-      next.focus()
-    }
+    if (event.key !== "Enter" || event.target !== this.inputTarget) return
+    const first = this.#results.querySelector("a")
+    if (first) { event.preventDefault(); first.click() }
   }
 
   get #results() {

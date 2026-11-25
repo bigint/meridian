@@ -10,6 +10,7 @@ module IconsHelper
     secrets: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l3 3M14 9l2 2"/>',
     projects: '<path d="M3.5 6.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
     settings: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+    map: '<path d="M9 4 3.5 6.5v13L9 17l6 3 5.5-2.5v-13L15 7z"/><path d="M9 4v13M15 7v13"/>',
     jobs: '<path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16" r="3"/>',
     search: '<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',

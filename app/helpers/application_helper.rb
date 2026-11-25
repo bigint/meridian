@@ -1,20 +1,21 @@
 module ApplicationHelper
-  # The six places in the menu's tiles, reachable with 1–6 while it is open.
+  # The six places in the menu's tiles.
   def jump_places
     [
-      [ "Board", root_path, :board, "b" ],
-      [ "Apps", apps_path, :apps, "a" ],
-      [ "Servers", servers_path, :servers, "s" ],
-      [ "Activity", events_path, :activity, "e" ],
-      [ "Previews", previews_path, :previews, "v" ],
-      [ "Agents", agent_tokens_path, :agents, "g" ]
+      [ "Board", root_path, :board ],
+      [ "Map", map_path, :map ],
+      [ "Apps", apps_path, :apps ],
+      [ "Servers", servers_path, :servers ],
+      [ "Activity", events_path, :activity ],
+      [ "Previews", previews_path, :previews ]
     ]
   end
 
   def jump_more
     [
-      [ "Projects", projects_path, :projects, "p" ],
-      [ "Secrets", secrets_path, :secrets, "k" ],
+      [ "Projects", projects_path, :projects ],
+      [ "Agents", agent_tokens_path, :agents ],
+      [ "Secrets", secrets_path, :secrets ],
       ([ "Settings", settings_root_path, :settings ] if current_user.admin?),
       ([ "Jobs", "/jobs", :jobs ] if current_user.admin?)
     ].compact

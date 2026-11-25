@@ -4,6 +4,7 @@ A static site served by nginx. Build your site into `dist/` (adjust the path), t
 
 ```dockerfile
 FROM nginx:1.27-alpine
+LABEL service="<service>"
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY dist/ /usr/share/nginx/html/
 ```
@@ -18,3 +19,5 @@ server {
   location / { try_files $uri $uri/ $uri.html =404; }
 }
 ```
+
+Kamal only boots images labelled with their service. `kamal build` adds the label for you; if your CI builds the image another way, keep the `LABEL service=` line (Meridian fills in the name).

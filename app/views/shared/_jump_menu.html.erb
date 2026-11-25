@@ -1,5 +1,4 @@
 <div id="jump" popover class="jump" data-controller="jump" data-action="toggle->jump#toggled keydown->jump#key" aria-label="Go to">
-  <p class="jump__hint">Press <kbd>M</kbd> or <kbd>⌘K</kbd> to open this menu from anywhere</p>
 
   <%= form_with url: jump_path, method: :get, data: { turbo_frame: "jump_results", jump_target: "form" } do |form| %>
     <%= form.label :q, "Go to an app, server or project", class: "visually-hidden" %>
@@ -10,17 +9,17 @@
 
   <nav aria-label="Places">
     <div class="jump__tiles">
-      <% jump_places.each_with_index do |(name, path, icon_name, shortcut), index| %>
-        <%= link_to path, aria: { current: (current_place?(path) ? "page" : nil) }, data: { number: index + 1, shortcut: shortcut } do %>
-          <span class="number"><%= index + 1 %></span><%= icon icon_name %><%= name %>
+      <% jump_places.each do |name, path, icon_name| %>
+        <%= link_to path, aria: { current: (current_place?(path) ? "page" : nil) } do %>
+          <%= icon icon_name %><%= name %>
         <% end %>
       <% end %>
     </div>
 
     <p class="label">More</p>
     <ul class="jump__list">
-      <% jump_more.each do |name, path, icon_name, shortcut| %>
-        <li><%= link_to path, aria: { current: (current_place?(path) ? "page" : nil) }, data: { shortcut: shortcut }.compact do %><%= icon icon_name %><%= name %><% end %></li>
+      <% jump_more.each do |name, path, icon_name| %>
+        <li><%= link_to path, aria: { current: (current_place?(path) ? "page" : nil) } do %><%= icon icon_name %><%= name %><% end %></li>
       <% end %>
     </ul>
   </nav>

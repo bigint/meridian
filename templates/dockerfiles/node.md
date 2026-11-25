@@ -21,6 +21,7 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine
+LABEL service="<service>"
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=build /app/.next/standalone ./
@@ -29,3 +30,5 @@ COPY --from=build /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]
 ```
+
+Kamal only boots images labelled with their service. `kamal build` adds the label for you; if your CI builds the image another way, keep the `LABEL service=` line (Meridian fills in the name).

@@ -29,6 +29,13 @@ class Snapshot
     Hash(payload["labels"]).to_h { |key, value| [ key.to_s.first(64), value.to_s.first(128) ] }.first(32).to_h
   end
 
+  # MERIDIAN_LABELS=lat=1.35,lng=103.82 (or latitude/longitude/lon).
+  def location
+    lat = Float(labels["lat"] || labels["latitude"], exception: false)
+    lng = Float(labels["lng"] || labels["lon"] || labels["longitude"], exception: false)
+    lat && lng && lat.between?(-90, 90) && lng.between?(-180, 180) ? { latitude: lat, longitude: lng } : {}
+  end
+
   def containers
     Array(payload["containers"]).grep(Hash).first(MAX_CONTAINERS)
   end
@@ -42,7 +49,7 @@ class Snapshot
   def ingest
     Server.transaction do
       server = claim_server
-      server.update!(machine_id: machine_id, labels: labels, agent_version: agent_version, last_seen_at: Time.current)
+      server.update!(machine_id: machine_id, labels: labels, agent_version: agent_version, last_seen_at: Time.current, **location)
       record_placements(server)
       server
     end

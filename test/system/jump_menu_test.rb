@@ -6,14 +6,12 @@ class JumpMenuTest < ApplicationSystemTestCase
     projects(:infra).sync
   end
 
-  test "press M, type, Enter: you're there" do
+  test "open the menu, type, Enter: you're there" do
     sign_in users(:viewer)
-    wait_for_shortcuts
 
-    find("body").send_keys("m")
+    click_on "Open the Meridian menu"
     within("#jump") do
-      assert_field "Go to an app, server or project", focused: true
-      send_keys "blog"
+      fill_in "Go to an app, server or project", with: "blog"
       assert_link "blog"
     end
     send_keys :enter
@@ -21,11 +19,10 @@ class JumpMenuTest < ApplicationSystemTestCase
     assert_selector "h1", text: "blog"
   end
 
-  test "number keys open the menu's places" do
+  test "tiles go to the main places" do
     sign_in users(:viewer)
     click_on "Open the Meridian menu"
-    assert_field "Go to an app, server or project", focused: true
-    send_keys "3"
-    assert_selector "h1", text: "Servers"
+    within("#jump") { click_on "Map" }
+    assert_selector "h1", text: "Map"
   end
 end

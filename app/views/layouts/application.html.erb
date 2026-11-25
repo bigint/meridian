@@ -12,10 +12,10 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body data-controller="shortcuts" data-action="keydown@document->shortcuts#press">
+  <body>
     <% if authenticated? %>
       <header class="navbar">
-        <button type="button" class="navbar__search" popovertarget="jump" data-shortcuts-target="search">
+        <button type="button" class="navbar__search" popovertarget="jump">
           <%= icon :search %> Search
         </button>
 
@@ -35,7 +35,6 @@
         <%= render "shared/flash" %>
         <%= yield %>
       </main>
-      <%= render "shared/shortcuts" %>
     <% else %>
       <main class="auth">
         <%= render "shared/flash" %>

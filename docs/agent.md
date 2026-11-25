@@ -51,3 +51,5 @@ The only other way to read routes is `kamal-proxy list`, which needs `docker exe
 ## Labels
 
 `MERIDIAN_LABELS=region=sgp,provider=ovh,role=web` sets the labels the board filters and groups by. Use any keys you like. `region`, `provider` and `role` get their own filters.
+
+Add `lat` and `lng` (decimal degrees) to put the server on the map, e.g. `MERIDIAN_LABELS=region=sgp,lat=1.35,lng=103.82`. An admin can also set a location on the server page; an agent that reports one wins.

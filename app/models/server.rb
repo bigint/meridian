@@ -9,6 +9,10 @@ class Server < ApplicationRecord
   has_many :agent_tokens, dependent: :nullify
 
   validates :name, :hostname, presence: true
+  validates :latitude, numericality: { in: -90..90 }, allow_nil: true
+  validates :longitude, numericality: { in: -180..180 }, allow_nil: true
+
+  scope :located, -> { where.not(latitude: nil).where.not(longitude: nil) }
 
   scope :ordered, -> { order(:name) }
   scope :silent, -> { where(last_seen_at: ...STALE_AFTER.ago) }
@@ -17,6 +21,10 @@ class Server < ApplicationRecord
   # own hostname. Either finds the same row.
   def self.for_host(host)
     find_by(hostname: host) || find_by(name: host) || create!(name: host, hostname: host)
+  end
+
+  def located?
+    latitude && longitude
   end
 
   def reporting?

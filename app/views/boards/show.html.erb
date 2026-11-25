@@ -14,7 +14,7 @@
 <% steps = getting_started %>
 <% unless steps.all?(&:last) %>
   <section aria-labelledby="getting-started">
-    <h2 id="getting-started" class="label center">Getting started</h2>
+    <h2 id="getting-started" class="label">Getting started</h2>
     <ol class="steps">
       <% steps.each do |title, detail, path, done| %>
         <li class="<%= "done" if done %>">

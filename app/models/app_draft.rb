@@ -61,7 +61,7 @@ class AppDraft
   end
 
   def instructions
-    Rails.root.join("templates/dockerfiles/#{kind}.md").read
+    Rails.root.join("templates/dockerfiles/#{kind}.md").read.gsub("<service>", service.to_s)
   end
 
   def manual_steps

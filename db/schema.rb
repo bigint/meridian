@@ -10,14 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_090000) do
   create_table "accounts", force: :cascade do |t|
-    t.string "name", default: "Meridian", null: false
+    t.string "name", default: "Alidade", null: false
     t.string "preview_domain"
     t.integer "preview_ttl_days", default: 7, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "preview_selector"
+    t.float "latitude"
+    t.float "longitude"
+    t.string "location_name"
   end
 
   create_table "agent_tokens", force: :cascade do |t|
@@ -201,6 +204,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_210000) do
     t.datetime "last_seen_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.float "latitude"
+    t.float "longitude"
     t.index ["hostname"], name: "index_servers_on_hostname"
     t.index ["machine_id"], name: "index_servers_on_machine_id", unique: true
     t.index ["name"], name: "index_servers_on_name"

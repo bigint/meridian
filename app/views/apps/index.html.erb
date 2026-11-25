@@ -3,7 +3,7 @@
   <h1>Apps</h1>
   <%= form_with url: apps_path, method: :get, class: "filters" do |form| %>
     <%= form.label :q, "Search", class: "visually-hidden" %>
-    <%= form.search_field :q, value: params[:q], placeholder: "Search apps", data: { filter: true } %>
+    <%= form.search_field :q, value: params[:q], placeholder: "Search apps" %>
   <% end %>
   <div class="actions"><%= link_to "New app", new_app_path, class: "button primary" if current_user.admin? %></div>
 </header>

@@ -40,7 +40,7 @@ Operator ──▶ Meridian ──commits, PRs──▶ GitHub ──Actions─�
 ```
 
 - **Board:** what needs attention first, in plain sentences; then apps × servers, with each cell's drift state: in sync, drifted, missing, stray, stale or unknown.
-- **One menu:** press <kbd>M</kbd> (or <kbd>⌘K</kbd>) anywhere, type an app or server name, press Enter.
+- **One menu:** click the name in the top bar, type an app or server name, press Enter.
 - **Deploy and roll back:** commit or revert a one-line version file next to the app's Kamal config. CI runs `kamal deploy`.
 - **New app:** a form that opens a pull request with a Kamal config for a static, Node (Next.js) or Rails app.
 - **Secrets:** names come from your configs. Values are sealed for GitHub Actions secrets.

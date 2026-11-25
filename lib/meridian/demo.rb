@@ -3,6 +3,8 @@
 module Meridian
   class Demo
     REGIONS = %w[ ams fra lon nyc sfo sgp syd tor ].freeze
+    CITIES = { "ams" => [ 52.37, 4.90 ], "fra" => [ 50.11, 8.68 ], "lon" => [ 51.51, -0.13 ], "nyc" => [ 40.71, -74.01 ],
+               "sfo" => [ 37.77, -122.42 ], "sgp" => [ 1.35, 103.82 ], "syd" => [ -33.87, 151.21 ], "tor" => [ 43.65, -79.38 ] }.freeze
     PROVIDERS = %w[ hetzner ovh equinix homelab ].freeze
     WORDS = %w[ atlas beacon cedar delta ember fjord grove harbor iris juniper kestrel lumen meadow nova orbit pine quartz raven sierra tundra umber vale willow yarrow zephyr ].freeze
 
@@ -14,6 +16,8 @@ module Meridian
     def call
       now = Time.current
       ActiveRecord::Base.transaction do
+        account = Account.current
+        account.update!(location_name: "Dublin", latitude: 53.35, longitude: -6.26) unless account.located?
         project = Project.find_or_create_by!(repo_full_name: "example/fleet") { it.assign_attributes(name: "Demo fleet", installation_id: 1, config_globs: [ "apps/*.yml" ], last_synced_sha: "f" * 40, synced_at: now) }
         project.apps.destroy_all
         old = Server.where("name LIKE ?", "demo-%")
@@ -38,7 +42,9 @@ module Meridian
           else now - @random.rand(0..20)
           end
           name = format("demo-%s-%03d.example.com", region, index)
+          lat, lng = CITIES.fetch(region)
           { name: name, hostname: name, machine_id: (Digest::MD5.hexdigest(name) if seen),
+            latitude: (lat + @random.rand(-0.05..0.05)).round(4), longitude: (lng + @random.rand(-0.05..0.05)).round(4),
             labels: { region: region, provider: PROVIDERS[@random.rand(PROVIDERS.size)], role: %w[ web web web worker db ][@random.rand(5)] },
             agent_version: ("0.1.0" if seen), last_seen_at: seen, created_at: now, updated_at: now }
         end
@@ -69,6 +75,8 @@ module Meridian
 
         apps.each_with_index do |app, index|
           pool = by_region[REGIONS[index % REGIONS.size]]
+          # A quarter of the apps also run in a second region, as real fleets do.
+          pool += by_region[REGIONS[(index + 1 + index % 3) % REGIONS.size]].first(2) if (index % 4).zero?
           pool.sample(@random.rand(2..6), random: @random).each do |server|
             assignments << { app_id: app.id, server_id: server.id, role: "web", created_at: now, updated_at: now }
             version = case @random.rand(100)

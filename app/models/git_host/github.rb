@@ -1,18 +1,22 @@
-# GitHub through a GitHub App installation. Every call is made as the
-# installation, so Meridian only ever has the access the App was granted.
+# GitHub through a GitHub App installation, so Meridian only ever has the
+# access the App was granted. For homelabs and local development a token
+# (GITHUB_TOKEN, a fine-grained or classic personal access token) can stand
+# in for the App; then every call is made as that token's owner.
 class GitHost::GitHub
   TOKENS = Concurrent::Map.new
 
   class << self
-    def app_id = setting(:app_id)
-    def private_key = setting(:private_key)&.gsub("\\n", "\n")
-    def webhook_secret = setting(:webhook_secret)
+    def app_id = setting(:app_id, "GITHUB_APP_ID")
+    def private_key = setting(:private_key, "GITHUB_APP_PRIVATE_KEY")&.gsub("\\n", "\n")
+    def webhook_secret = setting(:webhook_secret, "GITHUB_APP_WEBHOOK_SECRET")
     def api_endpoint = ENV.fetch("GITHUB_API_URL", "https://api.github.com/")
-    def configured? = app_id.present? && private_key.present?
+    def token = ENV["GITHUB_TOKEN"].presence || Rails.application.credentials.dig(:github, :token)
+    def token_mode? = token.present? && !(app_id.present? && private_key.present?)
+    def configured? = (app_id.present? && private_key.present?) || token.present?
 
     private
-      def setting(name)
-        ENV["GITHUB_APP_#{name.upcase}"].presence || Rails.application.credentials.dig(:github, name)
+      def setting(name, env)
+        ENV[env].presence || Rails.application.credentials.dig(:github, name)
       end
   end
 
@@ -110,6 +114,8 @@ class GitHost::GitHub
     end
 
     def installation_token
+      return self.class.token if self.class.token_mode?
+
       cached = TOKENS[project.installation_id]
       return cached[:token] if cached && cached[:expires_at] > 5.minutes.from_now
 

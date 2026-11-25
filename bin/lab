@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# A local fleet for Meridian: three Docker-in-Docker servers, a registry and
+# a GitHub Actions runner. See lab/README.md.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LAB="$ROOT/lab"
+SECRETS="$LAB/.secrets"
+SERVERS=(server-1 server-2 server-3)
+# Pretend locations, so the map has something to show: Singapore, Frankfurt, New York.
+place() {
+  case "$1" in
+    server-1) echo "region=sgp,lat=1.35,lng=103.82" ;;
+    server-2) echo "region=fra,lat=50.11,lng=8.68" ;;
+    server-3) echo "region=nyc,lat=40.71,lng=-74.01" ;;
+  esac
+}
+compose() { docker compose -f "$LAB/compose.yml" "$@"; }
+
+ensure_secrets() {
+  mkdir -p "$SECRETS" && chmod 700 "$SECRETS"
+  [ -f "$SECRETS/id_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -C meridian-lab -f "$SECRETS/id_ed25519"
+  cp "$SECRETS/id_ed25519.pub" "$SECRETS/authorized_keys"
+  [ -f "$SECRETS/registry_password" ] || (openssl rand -hex 16 > "$SECRETS/registry_password")
+  [ -s "$SECRETS/htpasswd" ] || docker run --rm httpd:2.4-alpine htpasswd -Bbn lab "$(cat "$SECRETS/registry_password")" > "$SECRETS/htpasswd"
+}
+
+registry_login() {
+  docker login localhost:5555 -u lab --password-stdin < "$SECRETS/registry_password" >/dev/null
+}
+
+case "${1:-}" in
+  up)
+    repo="${2:?usage: bin/lab up owner/infra-repo}"
+    ensure_secrets
+    compose up -d --build registry "${SERVERS[@]}"
+    echo "Registering the runner on $repo…"
+    token="$(gh api -X POST "repos/$repo/actions/runners/registration-token" --jq .token)"
+    RUNNER_REPO="$repo" RUNNER_TOKEN="$token" compose --profile runner up -d --build runner
+    echo "Lab is up. Registry password: lab/.secrets/registry_password. SSH key: lab/.secrets/id_ed25519."
+    ;;
+
+  push)
+    version="${2:?usage: bin/lab push VERSION [app]}"
+    app="${3:-web}"
+    registry_login
+    docker build -q --build-arg VERSION="$version" --build-arg SERVICE="$app" -t "localhost:5555/demo/$app:$version" "$LAB/demo" >/dev/null
+    docker push -q "localhost:5555/demo/$app:$version"
+    ;;
+
+  agents)
+    url="${MERIDIAN_URL:-http://host.docker.internal:3000}"
+    registry_login
+    docker build -q --build-arg VERSION=lab -t localhost:5555/meridian-agent:lab "$ROOT/agent" >/dev/null
+    docker push -q localhost:5555/meridian-agent:lab >/dev/null
+    for server in "${SERVERS[@]}"; do
+      token="$(cd "$ROOT" && bin/rails runner "print AgentToken.where(label: '$server', revoked_at: nil).destroy_all && AgentToken.create!(label: '$server').token" 2>/dev/null)"
+      docker exec -i "meridian-lab-$server-1" sh -c '
+        docker login registry:5000 -u lab --password-stdin >/dev/null &&
+        docker rm -f meridian-agent >/dev/null 2>&1;
+        host_ip="$(getent hosts host.docker.internal | cut -d" " -f1)";
+        docker run -d --name meridian-agent --restart unless-stopped --user 0 \
+          ${host_ip:+--add-host host.docker.internal:$host_ip} \
+          -v /var/run/docker.sock:/var/run/docker.sock:ro \
+          -v /etc/machine-id:/host/etc/machine-id:ro -v /etc/hostname:/host/etc/hostname:ro \
+          -e MERIDIAN_URL='"$url"' -e MERIDIAN_TOKEN='"$token"' -e MERIDIAN_INTERVAL=5s \
+          -e MERIDIAN_LABELS=provider=kiri,'"$(place "$server")"' \
+          registry:5000/meridian-agent:lab >/dev/null' < "$SECRETS/registry_password"
+      echo "$server: agent running"
+    done
+    ;;
+
+  ssh)
+    server="${2:-server-1}"
+    docker exec -it "meridian-lab-$server-1" sh
+    ;;
+
+  status)
+    compose --profile runner ps --format 'table {{.Service}}\t{{.Status}}'
+    for server in "${SERVERS[@]}"; do
+      echo "— $server"
+      docker exec "meridian-lab-$server-1" docker ps --format '  {{.Names}}  {{.Image}}  {{.Status}}' 2>/dev/null || echo "  (down)"
+    done
+    ;;
+
+  down)
+    compose --profile runner down
+    ;;
+
+  *)
+    echo "usage: bin/lab up owner/repo | push VERSION [app] | agents | ssh [server] | status | down" >&2
+    exit 1
+    ;;
+esac

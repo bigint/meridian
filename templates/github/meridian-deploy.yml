@@ -33,7 +33,9 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    # Set the repository variable MERIDIAN_RUNS_ON to use your own runner
+    # (e.g. "self-hosted") when the servers aren't reachable from GitHub.
+    runs-on: ${{ vars.MERIDIAN_RUNS_ON || 'ubuntu-latest' }}
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
@@ -64,7 +66,7 @@ jobs:
   kamal:
     needs: plan
     if: needs.plan.outputs.matrix != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.MERIDIAN_RUNS_ON || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -73,9 +75,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ruby/setup-ruby@v1
+        if: runner.environment == 'github-hosted'
         with:
           ruby-version: "3.4"
-      - run: gem install kamal -v %{kamal_version} --no-document
+      - run: kamal version 2>/dev/null | grep -qx "%{kamal_version}" || gem install kamal -v %{kamal_version} --no-document
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}

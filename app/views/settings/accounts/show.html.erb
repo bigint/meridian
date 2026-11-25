@@ -18,6 +18,14 @@
         <span class="hint">Labels a server needs to host previews. The least busy match is used. Blank: the app's own servers.</span>
       </div>
       <div class="field"><%= form.label :preview_ttl_days, "Previews expire after (days)" %><%= form.number_field :preview_ttl_days, min: 1 %></div>
+      <fieldset class="stack">
+        <legend><strong>Where Meridian runs</strong> <span class="meta">— the centre of the map's flows</span></legend>
+        <div class="field"><%= form.label :location_name, "Place" %><%= form.text_field :location_name, placeholder: "Singapore" %></div>
+        <div class="filters">
+          <div><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90, placeholder: "1.35" %></div>
+          <div><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180, placeholder: "103.82" %></div>
+        </div>
+      </fieldset>
       <div><%= form.submit "Save", class: "button primary" %></div>
     <% end %>
   </section>
@@ -26,7 +34,11 @@
     <h2>Connections</h2>
     <dl class="facts">
       <dt>GitHub App</dt>
-      <dd><%= GitHost::GitHub.configured? ? "Configured (App #{GitHost::GitHub.app_id})" : "Not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY." %></dd>
+      <dd>
+        <% if GitHost::GitHub.token_mode? %>Token (GITHUB_TOKEN). Fine for a homelab; a GitHub App limits access more tightly.
+        <% elsif GitHost::GitHub.configured? %>App <%= GitHost::GitHub.app_id %>
+        <% else %>Not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN.<% end %>
+      </dd>
       <dt>Webhooks</dt>
       <dd><%= GitHost::GitHub.webhook_secret.present? ? "Secret set" : "Set GITHUB_APP_WEBHOOK_SECRET" %></dd>
       <dt>OpenID Connect</dt>

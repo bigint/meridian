@@ -7,7 +7,7 @@
 <details class="disclosure" <%= "open" if params[:action_name].present? || params[:actor].present? %>>
   <summary>Filters</summary>
   <%= form_with url: events_path, method: :get, class: "filters" do |form| %>
-    <div><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy", data: { filter: true } %></div>
+    <div><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy" %></div>
     <div><%= form.label :actor, "Who" %><%= form.select :actor, @actors.map { [ it.display_name, it.id ] }, { include_blank: "Anyone", selected: params[:actor] } %></div>
     <%= form.submit "Apply", class: "button", name: nil %>
   <% end %>

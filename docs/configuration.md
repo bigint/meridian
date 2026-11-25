@@ -9,6 +9,7 @@ Everything site-specific is set through environment variables, so it stays out o
 | `GITHUB_APP_ID` | yes | The GitHub App's ID. |
 | `GITHUB_APP_PRIVATE_KEY` | yes | The App's private key (PEM). Literal `\n` sequences are accepted. |
 | `GITHUB_APP_WEBHOOK_SECRET` | yes | Verifies webhook signatures. |
+| `GITHUB_TOKEN` | no | Instead of a GitHub App: a personal access token with `repo` and `workflow` scopes. Simpler for a homelab or local development; an App limits access more tightly. |
 | `GITHUB_API_URL` | no | For GitHub Enterprise Server, e.g. `https://github.example.com/api/v3/`. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | no | Turns on OpenID Connect sign-in with any provider (Pocket ID, Authentik, Keycloak, Google…). |
 | `OIDC_NAME` | no | Button label, e.g. `Pocket ID`. |
@@ -20,11 +21,12 @@ OIDC users are matched to existing users by email address. New OIDC users start 
 
 ## In the app
 
-**Settings → General** holds three values:
+**Settings → General** holds:
 
 - the preview domain,
 - the preview lifetime (7 days by default),
-- the label selector for preview servers.
+- the label selector for preview servers,
+- where Meridian runs (a place name, latitude and longitude). The map draws agent reports flowing in to it and deploys flowing out from it.
 
 Per project, you can set:
 

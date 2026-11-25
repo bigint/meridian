@@ -65,4 +65,13 @@ class DeployableTest < ActiveSupport::TestCase
     Deploy.from_workflow_run(@project, { "id" => 9, "head_sha" => "c" * 40, "status" => "completed", "conclusion" => "success", "updated_at" => Time.current.iso8601 })
     assert @app.current_deploy.reload.succeeded?
   end
+
+  test "redeploys are tracked from dispatched runs named after the config" do
+    run = { "id" => 31, "event" => "workflow_dispatch", "display_title" => "deploy deploy/web.yml production", "head_sha" => "c" * 40, "status" => "in_progress" }
+    deploy = Deploy.from_dispatch(@project, run)
+
+    assert_equal [ "web · production", "redeploy", "v42", "in_progress" ], [ deploy.app.name, deploy.kind, deploy.version, deploy.status ]
+    assert_nil Deploy.from_dispatch(@project, run.merge("display_title" => "remove deploy/web.yml pr-3"))
+    assert_nil Preview.track(run), "not a preview, so the redeploy path handles it"
+  end
 end

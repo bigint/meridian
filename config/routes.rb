@@ -3,6 +3,7 @@ Rails.application.routes.draw do
 
   resource :board, only: :show
   resource :jump, only: :show
+  resource :map, only: :show
   resources :apps, only: %i[ index show new create ] do
     scope module: :apps do
       resources :deploys, only: :create
@@ -10,7 +11,7 @@ Rails.application.routes.draw do
       resource :redeploy, only: :create
     end
   end
-  resources :servers, only: %i[ index show ]
+  resources :servers, only: %i[ index show update ]
   resources :events, only: :index
   resources :secrets, only: %i[ index create update ]
   resources :previews, only: %i[ index destroy ]

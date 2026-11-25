@@ -1,0 +1,5 @@
+<nav class="segmented" aria-label="Settings">
+  <%= link_to "General", settings_account_path, aria: { current: current_page?(settings_account_path) || current_page?(settings_root_path) } %>
+  <%= link_to "People", settings_users_path, aria: { current: request.path.start_with?(settings_users_path) } %>
+  <%= link_to "Jobs", "/jobs" %>
+</nav>

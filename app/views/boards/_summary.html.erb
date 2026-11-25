@@ -1,0 +1,16 @@
+<ul class="summary" aria-label="Filter by state">
+  <% Drift::STATES.each do |state| %>
+    <li>
+      <%= link_to request.query_parameters.merge(state: (board.state == state ? nil : state), page: nil, anchor: "everything"), aria: { current: board.state == state } do %>
+        <strong><%= board.summary.fetch(state, 0) %></strong>
+        <span><%= Drift::SYMBOLS[state] %> <%= Drift::LABELS[state] %></span>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
+<details class="disclosure">
+  <summary>What do these mean?</summary>
+  <dl class="facts">
+    <% Drift::STATES.each do |state| %><dt><%= drift_badge(state) %></dt><dd><%= Drift::MEANINGS[state] %></dd><% end %>
+  </dl>
+</details>

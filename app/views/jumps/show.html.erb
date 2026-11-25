@@ -1,0 +1,11 @@
+<turbo-frame id="jump_results" class="jump__results" target="_top">
+  <% if @results.any? %>
+    <ul class="jump__list">
+      <% @results.each do |name, record, icon_name, kind| %>
+        <li><%= link_to record do %><%= icon icon_name %><%= name %><span class="kind"><%= kind %></span><% end %></li>
+      <% end %>
+    </ul>
+  <% elsif @query.present? %>
+    <p class="meta center">Nothing called “<%= @query %>”.</p>
+  <% end %>
+</turbo-frame>

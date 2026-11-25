@@ -1,0 +1,30 @@
+class AppsController < ApplicationController
+  require_admin only: %i[ new create ]
+
+  def index
+    @apps = App.includes(:project).ordered
+    @apps = @apps.where("service LIKE ?", "%#{App.sanitize_sql_like(params[:q])}%") if params[:q].present?
+  end
+
+  def new
+    @draft = AppDraft.new(project_id: params[:project_id] || Project.order(:name).first&.id)
+  end
+
+  def create
+    @draft = AppDraft.new(params.expect(app_draft: [ :project_id, :service, :source_repo, :kind, :hostname, :label_selector, :destination, :app_port, :registry, :version, server_ids: [] ]))
+    if (@proposal = @draft.submit(current_user))
+      render :proposed, status: :created
+    else
+      render :new, status: :unprocessable_entity
+    end
+  rescue GitHost::Error => error
+    flash.now[:alert] = "GitHub refused: #{error.message.truncate(200)}"
+    render :new, status: :unprocessable_entity
+  end
+
+  def show
+    @app = App.find(params[:id])
+    @board = Board.new(app_id: @app.id, group: "none")
+    @releases = @app.releases.limit(20)
+  end
+end

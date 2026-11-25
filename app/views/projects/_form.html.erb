@@ -1,0 +1,22 @@
+<%= form_with model: project, class: "stack" do |form| %>
+  <%= render "shared/errors", record: project %>
+  <div class="field"><%= form.label :name %><%= form.text_field :name, required: true, autofocus: true %></div>
+  <div class="field">
+    <%= form.label :repo_full_name, "Repository" %>
+    <%= form.text_field :repo_full_name, required: true, placeholder: "acme/infra" %>
+    <span class="hint">The GitHub repository that holds your Kamal configs, as owner/name.</span>
+  </div>
+  <div class="field"><%= form.label :default_branch, "Branch" %><%= form.text_field :default_branch, required: true %></div>
+  <div class="field">
+    <%= form.label :installation_id, "GitHub App installation ID" %>
+    <%= form.number_field :installation_id %>
+    <span class="hint">Shown in the URL after installing the Meridian GitHub App on this repository.</span>
+  </div>
+  <div class="field">
+    <%= form.label :config_globs, "Config paths" %>
+    <%= form.text_field :config_globs, value: project.config_globs.join(", ") %>
+    <span class="hint">Globs, comma separated. <code>config/deploy.staging.yml</code> is read as the <code>staging</code> destination of <code>config/deploy.yml</code>.</span>
+  </div>
+  <label><%= form.check_box :direct_commits %> Let admins commit changes directly instead of opening pull requests</label>
+  <div><%= form.submit class: "button primary" %> <%= link_to "Cancel", project.persisted? ? project : projects_path, class: "button" %></div>
+<% end %>

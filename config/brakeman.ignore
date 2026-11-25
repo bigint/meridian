@@ -1,0 +1,15 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Cross-Site Scripting",
+      "fingerprint": "8f5020e75dc6fca73e57d08722753b2b3caf514e16bf1f4dcf002c4ed67c8543",
+      "check_name": "LinkToHref",
+      "message": "Potentially unsafe model attribute in `link_to` href",
+      "file": "app/views/projects/show.html.erb",
+      "line": 16,
+      "code": "link_to(Project.find(params[:id]).repo_full_name, Project.find(params[:id]).repo_url)",
+      "note": "repo_full_name is validated against owner/name format, so repo_url is always https://github.com/<owner>/<name>."
+    }
+  ],
+  "brakeman_version": "8.1.1"
+}

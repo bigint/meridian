@@ -1,0 +1,38 @@
+<% content_for :title, "Settings" %>
+<header class="page-header"><h1>Settings</h1><%= render "settings/nav" %></header>
+
+<div class="columns">
+  <section>
+    <h2>General</h2>
+    <%= form_with model: @account, url: settings_account_path, method: :patch, class: "stack" do |form| %>
+      <%= render "shared/errors", record: @account %>
+      <div class="field"><%= form.label :name %><%= form.text_field :name, required: true %></div>
+      <div class="field">
+        <%= form.label :preview_domain %>
+        <%= form.text_field :preview_domain, placeholder: "preview.example.com" %>
+        <span class="hint">Previews get <code>pr-&lt;n&gt;.&lt;app&gt;.&lt;this domain&gt;</code>. Needs a wildcard DNS record.</span>
+      </div>
+      <div class="field">
+        <%= form.label :preview_selector, "Preview servers" %>
+        <%= form.text_field :preview_selector, placeholder: "role=preview" %>
+        <span class="hint">Labels a server needs to host previews. The least busy match is used. Blank: the app's own servers.</span>
+      </div>
+      <div class="field"><%= form.label :preview_ttl_days, "Previews expire after (days)" %><%= form.number_field :preview_ttl_days, min: 1 %></div>
+      <div><%= form.submit "Save", class: "button primary" %></div>
+    <% end %>
+  </section>
+
+  <section>
+    <h2>Connections</h2>
+    <dl class="facts">
+      <dt>GitHub App</dt>
+      <dd><%= GitHost::GitHub.configured? ? "Configured (App #{GitHost::GitHub.app_id})" : "Not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY." %></dd>
+      <dt>Webhooks</dt>
+      <dd><%= GitHost::GitHub.webhook_secret.present? ? "Secret set" : "Set GITHUB_APP_WEBHOOK_SECRET" %></dd>
+      <dt>OpenID Connect</dt>
+      <dd><%= Meridian.oidc? ? "#{Meridian.oidc_name} (#{ENV["OIDC_ISSUER"]})" : "Off. Set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET." %></dd>
+      <dt>Kamal</dt><dd><%= KamalConfig::KAMAL_VERSION %></dd>
+    </dl>
+    <p class="meta">These come from the environment, so they stay out of the database. See <code>docs/configuration.md</code>.</p>
+  </section>
+</div>

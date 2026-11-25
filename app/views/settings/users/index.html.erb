@@ -1,0 +1,21 @@
+<% content_for :title, "People" %>
+<header class="page-header">
+  <h1>People</h1>
+  <%= render "settings/nav" %>
+  <div class="actions"><%= link_to "Add person", new_settings_user_path, class: "button primary" %></div>
+</header>
+<p class="meta">Viewers read everything. Deployers can also deploy and roll back. Admins do everything else.</p>
+<table>
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Sign-in</th><th></th></tr></thead>
+  <tbody>
+    <% @users.each do |user| %>
+      <tr>
+        <th scope="row"><%= user.display_name %></th>
+        <td><%= user.email_address %></td>
+        <td><span class="tag"><%= user.role %></span></td>
+        <td><%= user.identities.any? ? "Password, OIDC" : "Password" %></td>
+        <td class="right"><%= link_to "Edit", edit_settings_user_path(user) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

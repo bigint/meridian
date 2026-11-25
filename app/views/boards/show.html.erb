@@ -1,0 +1,65 @@
+<% content_for :title, "Board" %>
+<% content_for :sheet, "sheet--wide" %>
+<% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
+<% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
+
+<header class="page-header">
+  <h1>Board</h1>
+  <p class="meta"><%= pluralize(@board.apps.size, "app") %> on <%= pluralize(@board.servers.size, "server") %>, compared with Git</p>
+  <div class="actions">
+    <%= link_to safe_join([ icon(:plus), "New app" ]), new_app_path, class: "button primary" if current_user.admin? %>
+  </div>
+</header>
+
+<% steps = getting_started %>
+<% unless steps.all?(&:last) %>
+  <section aria-labelledby="getting-started">
+    <h2 id="getting-started" class="label center">Getting started</h2>
+    <ol class="steps">
+      <% steps.each do |title, detail, path, done| %>
+        <li class="<%= "done" if done %>">
+          <div><strong><%= done ? title : link_to(title, path) %></strong><div class="meta"><%= detail %></div></div>
+        </li>
+      <% end %>
+    </ol>
+  </section>
+<% end %>
+
+<%= render "boards/attention", board: @board %>
+
+<section aria-labelledby="everything" id="everything">
+  <div class="section-heading">
+    <h2 id="everything-heading" class="label">Everything</h2>
+    <nav class="segmented" aria-label="Arrange the grid">
+      <%= link_to "Apps × servers", request.query_parameters.merge(view: "apps", page: nil, anchor: "everything"), aria: { current: @board.view == "apps" } %>
+      <%= link_to "Servers × apps", request.query_parameters.merge(view: "servers", page: nil, anchor: "everything"), aria: { current: @board.view == "servers" } %>
+    </nav>
+  </div>
+
+  <%= render "boards/summary", board: @board %>
+  <%= render "boards/filters", board: @board, projects: @projects %>
+
+  <% if @board.groups.empty? %>
+    <div class="empty">
+      <% if Project.none? %>
+        <p>Nothing to show yet.</p>
+        <p><%= link_to "Connect your infra repository", new_project_path %> to see your apps.</p>
+      <% else %>
+        <p>Nothing matches these filters.</p>
+        <p><%= link_to "Clear filters", board_path(view: @board.view) %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% @board.groups.each do |group| %>
+    <%= render "boards/group", board: @board, group: group %>
+  <% end %>
+
+  <% if @board.pages > 1 %>
+    <nav class="pagination" aria-label="Pages">
+      <%= link_to "← Previous", request.query_parameters.merge(page: @board.page - 1, anchor: "everything"), class: "button" if @board.page > 1 %>
+      <span class="meta">Page <%= @board.page %> of <%= @board.pages %></span>
+      <%= link_to "Next →", request.query_parameters.merge(page: @board.page + 1, anchor: "everything"), class: "button" if @board.page < @board.pages %>
+    </nav>
+  <% end %>
+</section>

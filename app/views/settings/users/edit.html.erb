@@ -1,0 +1,6 @@
+<% content_for :title, "Edit #{@user.display_name}" %>
+<header class="page-header">
+  <h1><%= @user.display_name %></h1>
+  <div class="actions"><%= button_to "Remove", settings_user_path(@user), method: :delete, class: "button danger", form: { data: { turbo_confirm: "Remove #{@user.email_address}?" } } unless @user == current_user %></div>
+</header>
+<%= render "form", user: @user %>

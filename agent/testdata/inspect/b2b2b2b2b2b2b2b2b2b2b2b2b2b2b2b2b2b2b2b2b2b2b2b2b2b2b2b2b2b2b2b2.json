@@ -1,0 +1,18 @@
+{
+  "Id": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "Name": "/web-web-9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c",
+  "State": {
+    "Status": "exited",
+    "Running": false,
+    "ExitCode": 0,
+    "StartedAt": "2026-11-20T08:30:00Z",
+    "FinishedAt": "2026-11-22T08:30:00Z"
+  },
+  "Mounts": [],
+  "Config": {
+    "Env": ["DATABASE_URL=postgres://user:SHOULD_NOT_LEAK_DBURL@db.example.com/web"],
+    "Cmd": ["./bin/rails", "server"],
+    "Image": "registry.example.com/acme/web:9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c",
+    "Labels": {"service": "web", "role": "web", "destination": ""}
+  }
+}

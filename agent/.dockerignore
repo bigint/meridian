@@ -1,0 +1,5 @@
+testdata/
+*_test.go
+README.md
+Dockerfile
+.dockerignore

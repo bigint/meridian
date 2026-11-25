@@ -1,0 +1,32 @@
+<% content_for :title, "Previews" %>
+<% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
+<%= turbo_stream_from :previews %>
+<header class="page-header"><h1>Previews</h1></header>
+<p class="meta">
+  A pull request in an app's source repository gets <code>pr-&lt;n&gt;.&lt;app&gt;.<%= Account.current.preview_domain.presence || "&lt;preview domain&gt;".html_safe %></code>.
+  <%= link_to "Set the preview domain", settings_account_path if Account.current.preview_domain.blank? && current_user.admin? %>
+</p>
+
+<table>
+  <thead><tr><th>App</th><th>Pull request</th><th>URL</th><th>State</th><th>Expires</th><th></th></tr></thead>
+  <tbody>
+    <% @previews.each do |preview| %>
+      <tr>
+        <th scope="row"><%= link_to preview.app.name, preview.app %></th>
+        <td><%= link_to "#{preview.app.source_repo}##{preview.pr_number}", preview.pr_url %> <%= short_sha(preview.head_sha) if preview.head_sha %></td>
+        <td><%= link_to preview.hostname, preview.url %></td>
+        <td><span class="state <%= { "active" => "in_sync", "failed" => "missing", "removing" => "stale" }[preview.state] %>"><%= preview.state.humanize %></span></td>
+        <td class="nowrap"><%= tag.time("in #{time_ago_in_words(preview.expires_at)}", datetime: preview.expires_at.iso8601) %></td>
+        <td class="right"><%= button_to "Destroy", preview_path(preview), method: :delete, class: "button danger", form: { data: { turbo_confirm: "Remove pr-#{preview.pr_number} from its server now?" } } if current_user.can_deploy? && !preview.removing? %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<% if @previews.none? %><p class="muted">No open previews. They appear when a pull request opens in an app's source repository.</p><% end %>
+
+<% if @recent.any? %>
+  <section>
+    <h2>Recently removed</h2>
+    <ul><% @recent.each do |preview| %><li><%= preview.app.name %> #<%= preview.pr_number %> <span class="meta"><%= time_ago(preview.updated_at) %></span></li><% end %></ul>
+  </section>
+<% end %>

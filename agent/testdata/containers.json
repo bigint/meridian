@@ -1,0 +1,48 @@
+[
+  {
+    "Id": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "Names": ["/web-web-production-3f2a9c1e5b7d4a6f8e0c2b4d6f8a0c1e3b5d7f9a"],
+    "Image": "registry.example.com/acme/web:3f2a9c1e5b7d4a6f8e0c2b4d6f8a0c1e3b5d7f9a",
+    "Command": "/rails/bin/docker-entrypoint ./bin/thrust ./bin/rails server",
+    "Labels": {"service": "web", "role": "web", "destination": "production"},
+    "State": "running",
+    "Status": "Up 2 hours (healthy)",
+    "Mounts": [{"Type": "bind", "Source": "/srv/secret-mount", "Destination": "/rails/storage"}]
+  },
+  {
+    "Id": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    "Names": ["/web-web-9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c"],
+    "Image": "registry.example.com/acme/web:9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c",
+    "Command": "./bin/rails server",
+    "Labels": {"service": "web", "role": "web", "destination": ""},
+    "State": "exited",
+    "Status": "Exited (0) 3 days ago"
+  },
+  {
+    "Id": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+    "Names": ["/web-db"],
+    "Image": "postgres:17",
+    "Command": "docker-entrypoint.sh postgres",
+    "Labels": {"service": "web-db"},
+    "State": "running",
+    "Status": "Up 9 days"
+  },
+  {
+    "Id": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+    "Names": ["/kamal-proxy"],
+    "Image": "basecamp/kamal-proxy:v0.10.3",
+    "Command": "kamal-proxy run",
+    "Labels": {},
+    "State": "running",
+    "Status": "Up 9 days"
+  },
+  {
+    "Id": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+    "Names": ["/grafana"],
+    "Image": "grafana/grafana:11",
+    "Command": "/run.sh",
+    "Labels": {"com.docker.compose.service": "grafana"},
+    "State": "running",
+    "Status": "Up 1 hour"
+  }
+]

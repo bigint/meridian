@@ -1,0 +1,12 @@
+{
+  "Id": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+  "Name": "/kamal-proxy",
+  "State": {"Status": "running", "Running": true, "StartedAt": "2026-11-16T00:00:00Z"},
+  "Mounts": [{"Type": "volume", "Name": "kamal-proxy-config", "Source": "/var/lib/docker/volumes/kamal-proxy-config/_data", "Destination": "/home/kamal-proxy/.config/kamal-proxy"}],
+  "Config": {
+    "Env": ["KAMAL_PROXY_SECRET=SHOULD_NOT_LEAK_PROXYENV"],
+    "Cmd": ["kamal-proxy", "run"],
+    "Image": "basecamp/kamal-proxy:v0.10.3",
+    "Labels": {}
+  }
+}

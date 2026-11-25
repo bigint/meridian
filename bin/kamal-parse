@@ -1,0 +1,110 @@
+#!/usr/bin/env ruby
+# Parses Kamal configs with Kamal's own code and prints what Meridian needs as JSON.
+#
+# Meridian runs this in a separate process with an empty environment, in a
+# temporary directory that holds only files fetched from the infra repository.
+# Kamal configs evaluate ERB, which is arbitrary Ruby, so it must never run
+# inside the Rails process where credentials live.
+#
+#   echo '{"configs":[{"path":"config/deploy.yml","destination":null}]}' | bin/kamal-parse
+
+require "json"
+require "pathname"
+require "psych"
+require "kamal"
+require "active_support/core_ext/object/blank"
+
+module KamalParse
+  extend self
+
+  def call(request)
+    { "configs" => request.fetch("configs").map { |entry| parse(entry.fetch("path"), entry["destination"]) } }
+  end
+
+  def parse(path, destination)
+    config = Kamal::Configuration.create_from(config_file: Pathname.new(path), destination: destination, version: "0")
+    describe(config).merge("path" => path, "destination" => destination)
+  rescue Exception => error # rubocop:disable Lint/RescueException -- ERB in a config can raise anything, including SyntaxError
+    { "path" => path, "destination" => destination, "error" => describe_error(error, path, destination) }
+  end
+
+  private
+    def describe(config)
+      {
+        "service" => config.service,
+        "image" => config.image,
+        "roles" => config.roles.map { |role| describe_role(role) },
+        "accessories" => config.accessories.map { |accessory| { "name" => accessory.name, "service" => accessory.service_name, "hosts" => accessory.hosts } },
+        "hostnames" => config.roles.select(&:running_proxy?).flat_map { |role| role.proxy.hosts }.uniq,
+        "app_port" => config.proxy&.app_port,
+        "secrets" => secret_names(config.raw_config.to_h.deep_stringify_keys),
+        "labels" => (config.raw_config.to_h.deep_stringify_keys["labels"] || {}).transform_values(&:to_s)
+      }
+    end
+
+    def describe_role(role)
+      { "name" => role.name, "hosts" => role.hosts, "container_prefix" => role.container_prefix, "proxy" => role.running_proxy? }
+    end
+
+    # Names only. Kamal reads secret values lazily, and we never ask for one.
+    def secret_names(raw)
+      envs = [ raw["env"] ]
+      envs += Array(raw["servers"].is_a?(Hash) ? raw["servers"].values : []).grep(Hash).map { |role| role["env"] }
+      envs += Array(raw["accessories"]&.values).grep(Hash).map { |accessory| accessory["env"] }
+      keys = envs.grep(Hash).flat_map { |env| Array(env["secret"]) }
+      keys += Array(raw.dig("registry", "password")) if raw.dig("registry", "password").is_a?(Array)
+      keys.map { |key| key.to_s.split(":", 2).last }.uniq.sort
+    end
+
+    def describe_error(error, path, destination)
+      message = error.message.to_s.lines.first.to_s.strip
+      file, line = locate(error, path, destination)
+      { "class" => error.class.name, "message" => message, "file" => file, "line" => line }
+    end
+
+    def locate(error, path, destination)
+      candidates = [ destination && Pathname.new(path).sub_ext(".#{destination}.yml").to_s, path ].compact.select { |file| File.exist?(file) }
+
+      if error.is_a?(Psych::SyntaxError)
+        [ candidates.find { |file| error.file.to_s.end_with?(file) } || candidates.last, error.line ]
+      elsif (keys = key_path(error.message))
+        candidates.each do |file|
+          line = line_for(file, keys)
+          return [ file, line ] if line
+        end
+        [ candidates.last, nil ]
+      else
+        [ candidates.last, nil ]
+      end
+    end
+
+    # "servers/web/hosts: should be an array" => ["servers", "web", "hosts"]
+    # "unknown key: imagez" => ["imagez"]
+    def key_path(message)
+      context, detail = message.split(": ", 2)
+      keys = detail ? context.split("/").reject { |key| key.start_with?("[") } : []
+      if (unknown = message[/unknown keys?: ([^,\s]+)/, 1])
+        keys = (detail && context !~ /unknown keys?/ ? keys : []) + [ unknown ]
+      end
+      keys.presence
+    end
+
+    def line_for(file, keys)
+      node = Psych.parse(File.read(file))&.root
+      line = nil
+      keys.each do |key|
+        break unless node.is_a?(Psych::Nodes::Mapping)
+        pair = node.children.each_slice(2).find { |k, _| k.respond_to?(:value) && k.value == key }
+        break unless pair
+        line = pair.first.start_line + 1
+        node = pair.last
+      end
+      line
+    rescue Psych::Exception
+      nil
+    end
+end
+
+if $PROGRAM_NAME == __FILE__
+  puts JSON.generate(KamalParse.call(JSON.parse($stdin.read)))
+end

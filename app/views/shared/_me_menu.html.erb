@@ -1,0 +1,12 @@
+<div id="me" popover class="me-menu" aria-label="Your account">
+  <div class="who">
+    <strong><%= current_user.display_name %></strong>
+    <div class="meta"><%= current_user.email_address %> · <%= current_user.role %></div>
+  </div>
+  <% if current_user.admin? %>
+    <%= link_to "Settings", settings_root_path %>
+    <%= link_to "People", settings_users_path %>
+  <% end %>
+  <button type="button" class="link" data-action="shortcuts#help">Keyboard shortcuts</button>
+  <%= button_to "Sign out", session_path, method: :delete, class: "link" %>
+</div>

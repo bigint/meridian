@@ -1,0 +1,25 @@
+# Decisions
+
+These are short entries, newest last. Each records a choice made where the spec was ambiguous. Meridian takes the simplest option that keeps Git as the record.
+
+1. **Configs are parsed in a clean subprocess.** `bin/kamal-parse` runs with an empty environment, a timeout, and a temporary checkout as its working directory. ERB in a Kamal config is arbitrary Ruby from the infra repository, so it must not see Meridian's credentials or memory.
+2. **Versions are passed as the placeholder `"0"` while parsing.** This stops Kamal from shelling out to git. Real versions come from releases.
+3. **Kamal errors are given line numbers.** Kamal's `ConfigurationError` reports a key path such as `servers/web/hosts`. Meridian walks the YAML node tree to find that key's line, so every error renders as `file:line`.
+4. **The infra repository is read through the API, never cloned.** Meridian uses the tree API plus blob fetches by SHA, and caches blobs by SHA, so only changed files are downloaded.
+5. **The release reference is a version file.** Kamal has no version key in its YAML. Meridian therefore writes a one-line file next to the config, `<config>.version` or `<config>.<destination>.version`, for example `config/deploy.production.version` beside `config/deploy.yml`, and the CI workflow passes `--version "$(cat …)"`. Releases are the commits that touched that file. Without one, a release is the latest commit to the config, with its short SHA as the version. The spec's other modes (image tag, build argument) are deferred, and nothing is built for them yet.
+6. **An app is one config plus one destination.** `config/deploy.yml` with `deploy.staging.yml` and `deploy.production.yml` produces two apps. A config with no destination files produces one.
+7. **A server's identity is its machine id.** The agent sends `/etc/machine-id` (or `MERIDIAN_MACHINE_ID`). Before any agent reports, Git hostnames create placeholder servers, which the first agent that reports a matching hostname claims.
+8. **A preview overlay sits next to its base config.** It is `<config base>.pr-<n>.yml`, because Kamal resolves destination files as siblings of `-c`.
+9. **kamal-proxy routes are read from the state file in its volume.** Reporting them is opt-in. Meridian never uses `docker exec`.
+10. **Board broadcasts are throttled with Solid Cache.** A `write(unless_exist: true, expires_in: 1.second)` key per board group decides whether a refresh broadcast is enqueued, so there are no timers and no extra infrastructure.
+11. **Per-server deploy progress is read from agents, not stored.** Kamal deploys every host in one CI job, so CI can't report per-server progress. A deploy is done on a server when its agent reports the target version running there. `Deploy` therefore has no `per_server` column.
+12. **Deploys and rollbacks are always direct commits.** They change one line, so they go straight to the default branch. The project's pull-request setting applies only to structural changes: new apps, the CI workflow and preview setup.
+13. **A rollback reverts the newest release only.** The version file is restored to its content at that release commit's parent. Rolling back an older release is the same as deploying its version, which the Deploy form already does.
+14. **CI is linked to apps by commit SHA.** A `workflow_run` webhook is matched to apps through the releases (or Meridian-made deploys) at its `head_sha`. The workflow therefore needs no knowledge of Meridian.
+15. **An app's kind and source repository are Docker labels in its config.** `labels: { meridian.kind: node, meridian.source: acme/shop }` keeps them in Git, where sync reads them back. As a side effect they are visible on the containers. A YAML comment couldn't be parsed back, and a database column would hold data that isn't in Git.
+16. **Generated configs are validated by Kamal before they are proposed.** A pull request Kamal would reject is never opened.
+17. **Secret names come from configs, not from `.kamal/secrets` files.** Those files can contain literal values in some repositories, so Meridian never reads them.
+18. **Redeploy is a `workflow_dispatch`.** Rotating a secret doesn't change any file, so there is nothing to commit. Meridian asks the CI workflow to run again, and CI still runs Kamal. The dispatch is recorded as an Event.
+19. **Preview overlays are direct commits, not pull requests.** They live only as long as their pull request, and a pull request per preview would bury the real changes.
+20. **Preview runs are matched by run name.** The workflow names dispatched runs `<command> <config> <destination>`, because `workflow_run` webhooks don't carry inputs.
+21. **A preview inherits its app's destination file**, minus `service`, `servers` and the proxy host, so settings such as `app_port` carry over. The base config is shared through Kamal's own merge.

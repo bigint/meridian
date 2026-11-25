@@ -1,0 +1,59 @@
+<% content_for :title, @project.name %>
+<header class="page-header">
+  <h1><%= @project.name %></h1>
+  <div class="actions">
+    <% if current_user.admin? %>
+      <%= button_to "Sync now", project_sync_path(@project), class: "button" %>
+      <%= button_to "Add CI workflow", project_workflow_path(@project), class: "button", form: { data: { turbo_confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} .github/workflows/meridian-deploy.yml?" } } %>
+      <%= link_to "Edit", edit_project_path(@project), class: "button" %>
+    <% end %>
+  </div>
+</header>
+
+<div class="columns">
+  <section>
+    <h2>Repository</h2>
+    <dl class="facts">
+      <dt>Repository</dt><dd><%= link_to @project.repo_full_name, @project.repo_url %></dd>
+      <dt>Branch</dt><dd><code><%= @project.default_branch %></code></dd>
+      <dt>Configs</dt><dd><%= safe_join(@project.config_globs.map { tag.code(it) }, ", ") %></dd>
+      <dt>Synced</dt><dd><%= @project.last_synced_sha ? link_to(@project.last_synced_sha.first(7), "#{@project.repo_url}/commit/#{@project.last_synced_sha}") : "never" %> <span class="meta"><%= time_ago(@project.synced_at) %></span></dd>
+      <dt>Changes</dt><dd><%= @project.direct_commits? ? "Admins may commit directly" : "Pull requests" %></dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Parse errors</h2>
+    <% if @project.config_errors? %>
+      <ul class="error-list">
+        <% @project.config_errors.each do |error| %>
+          <li>
+            <code><%= [ error["file"], error["line"] ].compact.join(":") %></code>
+            <% if error["file"] %>(<%= link_to "view", "#{@project.repo_url}/blob/#{@project.last_synced_sha || @project.default_branch}/#{error["file"]}#{"#L#{error["line"]}" if error["line"]}" %>)<% end %>
+            <div><%= error["message"] %></div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="muted">None. Every config parsed with Kamal <%= KamalConfig::KAMAL_VERSION %>.</p>
+    <% end %>
+  </section>
+</div>
+
+<section>
+  <h2>Configs found</h2>
+  <table>
+    <thead><tr><th>App</th><th>Config</th><th>Destination</th><th>Servers</th><th>Hostnames</th></tr></thead>
+    <tbody>
+      <% @apps.each do |app| %>
+        <tr>
+          <th scope="row"><%= link_to app.name, app %></th>
+          <td><code><%= app.config_path %></code></td>
+          <td><%= app.destination.presence || "–" %></td>
+          <td><%= app.roles.sum { it["hosts"].size } %></td>
+          <td><%= app.hostnames.join(", ") %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

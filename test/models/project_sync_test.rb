@@ -130,7 +130,27 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert @project.sync
     assert_equal 4, @project.apps.count
     assert_equal "The parser exited without a result", @project.reload.config_errors.sole["message"]
-    assert_equal "5" * 40, @project.last_synced_sha
+  end
+
+  test "a head the parser failed on is tried again, with backoff, until it parses" do
+    @project.sync
+    stub_github_files(@project, infra_files.merge("deploy/gone.yml" => "<% exit!(0) %>\nservice: gone\n"), head: "5" * 40)
+    assert @project.sync
+    assert_equal "a" * 40, @project.reload.last_synced_sha, "a parser that may only have timed out doesn't mark the head synced"
+
+    assert_not @project.sync, "not again at once"
+    travel 61.seconds
+    assert @project.sync, "again after a minute"
+    travel 61.seconds
+    assert_not @project.sync, "then after two"
+    assert_equal 2, @project.reload.parse_failures
+    assert_equal "The parser exited without a result", @project.config_errors.sole["message"]
+
+    stub_github_files(@project, infra_files.merge("deploy/gone.yml" => "service: gone\nimage: example/gone\nservers: [ web-1.example.com ]\nregistry: { username: x, password: [ KAMAL_REGISTRY_PASSWORD ] }\nbuilder: { arch: amd64 }\n"), head: "5" * 40)
+    travel 2.minutes
+    assert @project.sync
+    assert_equal [ "5" * 40, 0 ], [ @project.reload.last_synced_sha, @project.parse_failures ]
+    assert @project.apps.exists?(service: "gone")
   end
 
   test "a meridian label taken out of the config is cleared" do

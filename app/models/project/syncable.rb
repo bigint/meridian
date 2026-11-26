@@ -7,10 +7,14 @@ module Project::Syncable
 
   PREVIEW_DESTINATION = /\Apr-\d+\z/
   DESTINATION_FILE = /\.([^.\/]+)\.yml\z/
+  # A head the parser failed on is tried again after 1, 2, 4… minutes, at most hourly.
+  PARSE_RETRY = 1.minute
+  PARSE_RETRY_MAX = 1.hour
 
   def sync(force: false)
     sha = git.head_sha
     return false if sha == last_synced_sha && !force
+    return false if parse_retry_pending?(sha) && !force
 
     tree = git.tree(sha).index_by(&:path)
     configs = config_paths(tree.keys)
@@ -23,8 +27,10 @@ module Project::Syncable
     rescue KamalConfig::Error => error
       # One config that hangs or kills the parser stops them all. Nothing
       # parsed, so no app can be told apart from a removed one: keep them
-      # all, and say why on the project.
-      update!(last_synced_sha: sha, synced_at: Time.current, config_errors: [ { "class" => error.class.name, "message" => error.message, "file" => nil, "line" => nil } ])
+      # all, and say why on the project. The head isn't marked synced, since
+      # a timeout may pass, but it is tried again only with backoff.
+      update!(parse_failed_sha: sha, parse_failures: parse_failed_sha == sha ? parse_failures + 1 : 1, synced_at: Time.current,
+        config_errors: [ { "class" => error.class.name, "message" => error.message, "file" => nil, "line" => nil } ])
       return true
     end
 
@@ -43,7 +49,7 @@ module Project::Syncable
       parsed.each { it.record_config(releases[it]) }
       gone.each(&:destroy)
       SecretName.record(self)
-      update!(last_synced_sha: sha, synced_at: Time.current, config_errors: results.filter_map { it["error"] })
+      update!(last_synced_sha: sha, synced_at: Time.current, config_errors: results.filter_map { it["error"] }, parse_failed_sha: nil, parse_failures: 0)
     end
     true
   end
@@ -75,6 +81,12 @@ module Project::Syncable
   end
 
   private
+    def parse_retry_pending?(sha)
+      return false unless sha == parse_failed_sha && synced_at
+
+      synced_at > [ PARSE_RETRY * 2**(parse_failures - 1).clamp(0, 6), PARSE_RETRY_MAX ].min.ago
+    end
+
     # Not built through `apps`: an unsaved app there would be validated, and
     # fail, when the project is saved.
     def app_for(result)

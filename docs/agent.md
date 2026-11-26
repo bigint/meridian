@@ -2,7 +2,7 @@
 
 `meridian-agent` is a small Go binary (standard library only, distroless image) that runs on each server and tells Meridian what is actually running there. It:
 
-- reads Docker **read-only**: `GET /containers/json`, `GET /containers/{id}/json` and, only while someone has the server's page open, `GET /containers/{id}/stats`, nothing else;
+- reads Docker **read-only**: `GET /containers/json`, `GET /containers/{id}/json` and, only while someone is looking, `GET /containers/{id}/stats` and (if you turn logs on) `GET /containers/{id}/logs`, nothing else;
 - recognises Kamal containers by the labels Kamal sets (`service`, `role`, `destination`) and takes the version from the container name, exactly as Kamal does;
 - sends container name, image, labels, state, health and start time, and **never** environment variables, commands or mounts, which can contain secrets;
 - POSTs a snapshot every 15 seconds (±20% jitter), outbound only, so it works behind NAT and firewalls;
@@ -17,7 +17,18 @@ The agent holds one WebSocket open to `MERIDIAN_URL/cable`, outbound like everyt
 
 Host numbers come from the host's `/proc`, mounted read-only at `/host/proc` (the template does this). Without it the page shows per-container numbers only. Disk usage is the host's root filesystem, read with `statfs` on the already-mounted `/host/etc/hostname`.
 
-`MERIDIAN_LIVE=0` turns live stats off; the agent then only posts snapshots. Your proxy must pass WebSockets through to Meridian; kamal-proxy and Thruster both do.
+## Live logs
+
+With `MERIDIAN_LOGS=1` on the agent, deployers and admins can open a container's logs, or an app's logs merged across every server it runs on. They see the last 200 lines, then new lines as they're written.
+
+It works like live stats. Opening the logs sends the agent a 30-second lease for that container, renewed while the page is open. The agent follows `docker logs` for it and sends lines in batches of up to 250 ms, and stops when the lease runs out.
+
+- **Off by default.** Logs can contain secrets, so the agent tails nothing unless `MERIDIAN_LOGS=1`. The accessory template turns it on; remove the line to keep logs on the server.
+- **Kamal containers only.** The agent checks every container it is asked for against Kamal's labels itself, so even a compromised Meridian can't read the logs of anything else on the host.
+- **Bounded.** At most 20 containers at once, 8 KB per line, and 512 KB per second per container. Lines beyond that are dropped and counted.
+- **Not stored.** Lines are relayed to the open page. They pass through the cable database, which keeps messages for a minute. Each time someone opens logs, it's recorded in Activity.
+
+`MERIDIAN_LIVE=0` turns live stats and logs off; the agent then only posts snapshots. Your proxy must pass WebSockets through to Meridian; kamal-proxy and Thruster both do.
 
 The full reference (every environment variable and the payload format) is in [`agent/README.md`](../agent/README.md).
 

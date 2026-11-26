@@ -4,7 +4,7 @@
 # service.
   meridian_docker:
     # Read-only Docker API: only GETs under /containers (list, inspect
-    # and, while someone watches a server, stats).
+    # and, while someone is looking, stats and logs).
     image: tecnativa/docker-socket-proxy:v0.4.1
     roles: [ web ]
     env:
@@ -22,6 +22,9 @@
         MERIDIAN_URL: %{meridian_url}
         DOCKER_HOST: tcp://SERVICE-meridian_docker:2375
         MERIDIAN_LABELS: region=REGION,provider=PROVIDER
+        # Let deployers read Kamal containers' logs live in Meridian. Logs can
+        # hold secrets; they are relayed, never stored. Remove to turn off.
+        MERIDIAN_LOGS: 1
       secret:
         - MERIDIAN_TOKEN
     volumes:

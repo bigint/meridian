@@ -96,7 +96,7 @@ case "${1:-}" in
           ${host_ip:+--add-host host.docker.internal:$host_ip} \
           -v /var/run/docker.sock:/var/run/docker.sock:ro \
           -v /etc/machine-id:/host/etc/machine-id:ro -v /etc/hostname:/host/etc/hostname:ro -v /proc:/host/proc:ro \
-          -e MERIDIAN_URL='"$url"' -e MERIDIAN_TOKEN='"$token"' -e MERIDIAN_INTERVAL=5s \
+          -e MERIDIAN_URL='"$url"' -e MERIDIAN_TOKEN='"$token"' -e MERIDIAN_INTERVAL=5s -e MERIDIAN_LOGS=1 \
           -e "MERIDIAN_LABELS=provider=kiri,'"$(place "$server")"'" \
           registry:5000/meridian-agent:lab >/dev/null' < "$SECRETS/registry_password"
       echo "$server: agent running"

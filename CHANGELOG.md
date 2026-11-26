@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Live logs
+
+- Open a container's logs, or an app's logs merged across every server it runs on, and read the last 200 lines and then new ones as they're written. Filter, show only stderr, follow or pause, and toggle each server on and off. ANSI colours render.
+- Off until an agent runs with `MERIDIAN_LOGS=1` (the accessory template sets it). Only Kamal containers, only deployers and admins, every viewing recorded in Activity, and lines never stored. See decision 32.
+
 ### Live stats
 
 - A server's page shows its CPU, memory, load and disk, and every container's CPU, memory, network and disk IO, updating every second while the page is open, with a sparkline, average and peak for each.
@@ -10,6 +15,7 @@
 
 ### Inspector interface
 
+- A new mark: a globe with one meridian drawn on it, in the sidebar, the sign-in page, the favicon (indigo, lighter in dark mode) and `public/icon.png`.
 - Meridian's own look, chosen from three mockups: zinc neutrals, one indigo accent, monospace for versions and hosts, dense tables, light and dark, and no shadows. See `docs/design.md`.
 - The board is one grid where every cell shows the version a server actually runs, tinted by drift state, with servers grouped under their region. Click an app to open it in a side panel: its servers, recent releases, a deploy form, Redeploy and Roll back, without leaving the board.
 - App and server pages use the same layout: content on the left, what you act on in a panel on the right.

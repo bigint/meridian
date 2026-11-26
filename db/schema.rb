@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_200000) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", default: "Meridian", null: false
     t.string "preview_domain"
@@ -133,6 +133,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_190000) do
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "latest_run_id"
+    t.bigint "dispatched_after_run_id"
+    t.integer "remove_attempts", default: 0, null: false
     t.index ["app_id", "pr_number"], name: "index_previews_on_app_id_and_pr_number", unique: true
     t.index ["state"], name: "index_previews_on_state"
   end

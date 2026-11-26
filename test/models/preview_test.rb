@@ -259,8 +259,9 @@ class PreviewTest < ActiveSupport::TestCase
       end
     end
 
-    def track(title, conclusion: "success", repository: "example/infra")
-      Preview.track("display_title" => title, "status" => "completed", "conclusion" => conclusion, "repository" => { "full_name" => repository })
+    # Each call is a newer run, as GitHub numbers them.
+    def track(title, conclusion: "success", repository: "example/infra", id: @run_id = @run_id.to_i + 1)
+      Preview.track("id" => id, "display_title" => title, "status" => "completed", "conclusion" => conclusion, "repository" => { "full_name" => repository })
     end
 
     def stub_overlay
@@ -297,5 +298,36 @@ class PreviewPollingTest < ActiveSupport::TestCase
 
     assert preview.reload.deploying?
     assert_requested deletes, times: 0
+  end
+
+  test "polling again over a failed removal doesn't undo the retry asked for since" do
+    project = projects(:infra)
+    stub_github_repo(project)
+    project.sync
+    app = project.apps.find_by!(service: "api")
+    app.update!(source_repo: "example/api-src")
+    writes = stub_github_writes(project)
+    stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 204)
+    deletes = stub_request(:delete, %r{/contents/deploy/api.pr-7.yml}).to_return_json(body: { commit: { sha: "d" * 40 } })
+
+    preview = Preview.deploy(app, number: 7, head_sha: "h" * 40, url: nil)
+    preview.close
+    failed = { "id" => 1, "event" => "workflow_dispatch", "path" => ".github/workflows/meridian-deploy.yml", "head_branch" => "main", "head_sha" => "a" * 40,
+               "status" => "completed", "conclusion" => "failure", "display_title" => "remove deploy/api.yml pr-7", "updated_at" => 10.minutes.ago.iso8601,
+               "repository" => { "full_name" => "example/infra" } }
+    stub_github_runs(project, [ failed ])
+    project.poll_workflow_runs
+    assert preview.reload.failed?
+
+    preview.close
+    stub_github_runs(project, [ failed.merge("id" => 2, "status" => "queued", "conclusion" => nil, "updated_at" => 1.minute.ago.iso8601), failed ])
+    project.poll_workflow_runs
+    assert preview.reload.removing?, "the old failure, replayed, counted against the retry"
+
+    stub_github_files(project, { "deploy/api.yml" => file_fixture("infra/deploy/api.yml").read, "deploy/api.pr-7.yml" => writes.last["content"] })
+    stub_github_runs(project, [ failed.merge("id" => 2, "conclusion" => "success", "updated_at" => Time.current.iso8601), failed ])
+    project.poll_workflow_runs
+    assert preview.reload.removed?
+    assert_requested deletes
   end
 end

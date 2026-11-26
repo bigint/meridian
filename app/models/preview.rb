@@ -51,9 +51,10 @@ class Preview < ApplicationRecord
     def track(run, project = Project.for_repo(run.dig("repository", "full_name")))
       command, config, destination = run["display_title"].to_s.split(" ", 3)
       return unless destination.to_s.match?(Project::Syncable::PREVIEW_DESTINATION)
-      return true unless run["status"] == "completed" && project
+      return true unless project
 
       preview = Preview.joins(:app).find_by(apps: { project_id: project.id, config_path: config }, destination: destination) or return true
+      return true unless preview.current_run?(run) && run["status"] == "completed"
       # A run GitHub cancelled because a newer one queued says nothing.
       return true if run["conclusion"].in?(%w[ cancelled skipped ])
 
@@ -107,9 +108,25 @@ class Preview < ApplicationRecord
     Event.record("preview.opened", subject: self, summary: "Preview of #{app.source_repo}##{pr_number} at #{hostname}")
   end
 
+  # Every run seen so far was asked for before this dispatch, so none of them
+  # speaks for it. Read from the database: a webhook job may have seen a
+  # newer run than this copy knows.
   def dispatch(command, version: nil)
+    seen = Preview.where(id: id).pick(:latest_run_id)
     project.git.dispatch_workflow(Project::Changes::WORKFLOW_FILE,
       inputs: { config: app.config_path, destination: destination, version: version.to_s, command: command })
+    update_columns(dispatched_after_run_id: seen) if seen
+  end
+
+  # Polling replays the newest finished run, and GitHub may redeliver an old
+  # one. A run from before the latest dispatch, such as the failed removal a
+  # retry was asked for after, must not undo it. Run ids only grow.
+  def current_run?(run)
+    id = run["id"]&.to_i or return true
+    return false if dispatched_after_run_id && id <= dispatched_after_run_id
+
+    update_columns(latest_run_id: id) if latest_run_id.nil? || id > latest_run_id
+    true
   end
 
   def server

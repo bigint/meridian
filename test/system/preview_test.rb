@@ -2,8 +2,6 @@ require "application_system_test_case"
 
 # M5: a PR gets a working preview URL and is cleaned up when it closes.
 class PreviewSystemTest < ApplicationSystemTestCase
-  include GitHubHelper
-
   setup do
     @project = projects(:infra)
     stub_github_repo(@project)

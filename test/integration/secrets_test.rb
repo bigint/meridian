@@ -18,7 +18,7 @@ class SecretsTest < ActionDispatch::IntegrationTest
   end
 
   test "names come from the configs that reference them" do
-    assert_equal %w[ API_TOKEN_PRODUCTION DATABASE_URL KAMAL_REGISTRY_PASSWORD RAILS_MASTER_KEY ], @project.secret_names.ordered.pluck(:name)
+    assert_equal %w[ API_TOKEN_PRODUCTION DATABASE_URL KAMAL_REGISTRY_PASSWORD RAILS_MASTER_KEY ], @project.secret_names.order(:name).pluck(:name)
     assert_equal [ "web · production", "web · staging" ], @project.secret_names.find_by!(name: "RAILS_MASTER_KEY").apps
   end
 

@@ -77,7 +77,7 @@
           <% end %>
         <% end %>
       <% else %>
-        <%= render "boards/matrix", board: @board, selected: @inspected&.id, inspectable: true %>
+        <%= render "boards/matrix", board: @board, selected: @inspected&.id %>
         <p class="txt-small txt-muted">Each cell is the version a server runs: green is what Git says, ≠ drifted, ✕ missing, dashed means its agent is quiet or Meridian can't tell. Click an app to inspect it.</p>
       <% end %>
 

@@ -129,8 +129,6 @@ class WorldMap
 
   def radius(site) = (4.5 + Math.sqrt(site.servers.size) * 1.6).round(1)
   def hub_name = account.location_name.presence || "Meridian"
-  def hub_label = labels[:hub]
-  def label(site) = labels[site.key]
 
   # Places every name where it overlaps no other name and no dot. Bigger
   # places choose first; each tries beside its dot, then further out with a

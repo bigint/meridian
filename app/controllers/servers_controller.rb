@@ -11,7 +11,6 @@ class ServersController < ApplicationController
   def show
     @server = Server.find(params[:id])
     @placements = @server.placements.includes(:app).order(:service, :role, :name)
-    @assignments = @server.assignments.includes(app: :project)
     @board = Board.new(server_id: @server.id, group: "none")
   end
 

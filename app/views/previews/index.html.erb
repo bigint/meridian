@@ -25,7 +25,7 @@
           <th scope="row"><%= link_to preview.app.name, preview.app %></th>
           <td><%= safe_join([ link_to("#{preview.app.source_repo}##{preview.pr_number}", preview.pr_url), (tag.span(short_sha(preview.head_sha), class: "mono txt-small txt-muted") if preview.head_sha) ].compact, " ") %></td>
           <td class="mono txt-small"><%= link_to preview.hostname, preview.url, class: "link" %></td>
-          <td><%= badge preview.state.humanize, tone: { "active" => :ok, "failed" => :bad, "removing" => nil }.fetch(preview.state, :info), data: { preview_state: preview.state } %></td>
+          <td><%= badge preview.state.humanize, tone: { "active" => :ok, "failed" => :bad, "removing" => nil }.fetch(preview.state, :info) %></td>
           <td class="nowrap"><%= tag.time("in #{time_ago_in_words(preview.expires_at)}", datetime: preview.expires_at.iso8601) %></td>
           <% if current_user.can_deploy? %>
             <td class="table__end">

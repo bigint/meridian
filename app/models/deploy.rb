@@ -53,7 +53,6 @@ class Deploy < ApplicationRecord
 
   def finished? = status == "completed"
   def succeeded? = conclusion == "success"
-  def rollback? = kind == "rollback"
 
   def state_label
     if finished? then conclusion.to_s.humanize.presence || "Finished"

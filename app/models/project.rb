@@ -3,8 +3,6 @@ class Project < ApplicationRecord
 
   has_many :apps, dependent: :destroy
   has_many :secret_names, dependent: :delete_all
-  has_many :assignments, through: :apps
-  has_many :servers, -> { distinct }, through: :assignments
 
   validates :name, :default_branch, presence: true
   validates :repo_full_name, presence: true, uniqueness: true, format: { with: %r{\A[\w.-]+/[\w.-]+\z}, message: "must look like owner/name" }

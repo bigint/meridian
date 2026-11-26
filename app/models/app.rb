@@ -27,11 +27,6 @@ class App < ApplicationRecord
     "-d #{destination}" if destination.present?
   end
 
-  # The container name prefix Kamal uses for a role (see docs/architecture.md).
-  def container_prefix(role)
-    [ service, role, destination.presence ].compact.join("-")
-  end
-
   def latest_release
     releases.first
   end

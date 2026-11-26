@@ -6,8 +6,8 @@ module GitHubHelper
   API = "https://api.github.com"
   INFRA = Rails.root.join("test/fixtures/files/infra")
 
-  def stub_github_repo(project, dir: INFRA, head: "a" * 40, history: {}, files: {}, runs: [])
-    tree = Dir.glob("**/*", File::FNM_DOTMATCH, base: dir).select { File.file?(File.join(dir, it)) }.index_with { File.read(File.join(dir, it)) }
+  def stub_github_repo(project, head: "a" * 40, history: {}, files: {}, runs: [])
+    tree = Dir.glob("**/*", File::FNM_DOTMATCH, base: INFRA).select { File.file?(INFRA.join(it)) }.index_with { File.read(INFRA.join(it)) }
     stub_github_files(project, tree.merge(files), head: head, history: history)
     stub_github_runs(project, runs)
   end

@@ -2,8 +2,6 @@ require "application_system_test_case"
 
 # M2: a rollback from the UI ships through CI and the board returns to in sync.
 class RollbackTest < ApplicationSystemTestCase
-  include GitHubHelper
-
   BEFORE = { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ], [ "b" * 40, "v41\n" ] ] }
   AFTER = { "deploy/web.production.version" => [ [ "r" * 40, "v41\n" ], [ "c" * 40, "v42\n" ], [ "b" * 40, "v41\n" ] ] }
   SERVERS = { "web-1" => "web", "web-2" => "web", "jobs-1" => "job" }

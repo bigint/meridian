@@ -2,8 +2,6 @@ require "application_system_test_case"
 
 # M3: a Next.js SSR app goes from form to live through one merged PR.
 class NewAppTest < ApplicationSystemTestCase
-  include GitHubHelper
-
   setup do
     @project = projects(:infra)
     stub_github_repo(@project)

@@ -31,7 +31,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :session
+  resource :session, only: %i[ new create destroy ]
   resource :first_run, only: %i[ show create ]
 
   namespace :settings do

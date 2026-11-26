@@ -10,8 +10,6 @@ class SecretName < ApplicationRecord
   normalizes :name, with: ->(name) { name.to_s.strip.upcase }
   validates :name, format: { with: FORMAT, message: "must be letters, digits and underscores, not starting with GITHUB_" }, uniqueness: { scope: :project_id }
 
-  scope :ordered, -> { order(:name) }
-
   def self.record(project)
     references = project.apps.each_with_object(Hash.new { |h, k| h[k] = [] }) do |app, names|
       app.secret_names.each { names[it] << app.name }

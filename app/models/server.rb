@@ -12,8 +12,6 @@ class Server < ApplicationRecord
   validates :latitude, numericality: { in: -90..90 }, allow_nil: true
   validates :longitude, numericality: { in: -180..180 }, allow_nil: true
 
-  scope :located, -> { where.not(latitude: nil).where.not(longitude: nil) }
-
   scope :ordered, -> { order(:name) }
   scope :silent, -> { where(last_seen_at: ...STALE_AFTER.ago) }
 

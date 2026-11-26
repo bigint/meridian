@@ -48,7 +48,7 @@ class DeployableTest < ActiveSupport::TestCase
     assert_equal "v41\n", write["content"]
     assert_match "rollback(web-production): v41", write["message"]
     assert_match "This reverts commit #{"c" * 40}.", write["message"]
-    assert deploy.rollback?
+    assert_equal "rollback", deploy.kind
   end
 
   test "only the newest release can be rolled back" do
@@ -56,7 +56,6 @@ class DeployableTest < ActiveSupport::TestCase
   end
 
   test "CI runs move deploys along" do
-    stub_github_writes(@project, commit: "c" * 40)
     @app.deploys.create!(version: "v42", commit_sha: "c" * 40)
 
     Deploy.from_workflow_run(@project, { "id" => 9, "head_sha" => "c" * 40, "status" => "in_progress", "html_url" => "https://github.com/example/infra/actions/runs/9" })

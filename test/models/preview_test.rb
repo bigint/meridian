@@ -28,8 +28,6 @@ class PreviewTest < ActiveSupport::TestCase
   test "a preview of a destination keeps that destination's settings" do
     web = @project.apps.find_by!(service: "web", destination: "production")
     web.update!(source_repo: "example/shop")
-    stub_request(:delete, %r{/contents/}).to_return_json(body: {})
-
     Preview.deploy(web, number: 9, head_sha: "h" * 40, url: nil)
 
     overlay = YAML.safe_load(@writes.sole["content"])

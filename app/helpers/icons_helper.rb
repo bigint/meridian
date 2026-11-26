@@ -6,7 +6,7 @@ module IconsHelper
     agents: "radio-tower", secrets: "key-round", projects: "folder-git-2", settings: "settings", jobs: "list-checks",
     search: "search", plus: "plus", menu: "menu", chevron: "chevron-down", previous: "chevron-left", next: "chevron-right",
     collapse: "panel-left-close", expand: "panel-left-open", sign_out: "log-out", copy: "copy", copied: "check",
-    info: "info", ok: "circle-check", warn: "triangle-alert", bad: "circle-x", external: "external-link",
+    info: "info", ok: "circle-check", warn: "triangle-alert", bad: "circle-x",
     system: "monitor", light: "sun", dark: "moon",
     cpu: "cpu", memory: "memory-stick", load: "gauge", disk: "hard-drive", download: "arrow-down", upload: "arrow-up",
     git_host: "folder-git-2", webhooks: "webhook", kamal: "ship"

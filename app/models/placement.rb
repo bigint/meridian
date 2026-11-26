@@ -5,7 +5,6 @@ class Placement < ApplicationRecord
   belongs_to :app, optional: true
 
   scope :running, -> { where(state: "running") }
-  scope :unhealthy, -> { where(health: "unhealthy") }
 
   def running?
     state == "running"

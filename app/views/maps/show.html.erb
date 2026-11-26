@@ -9,7 +9,7 @@
 
 <%= page_header "Map", meta: "#{pluralize(sites.sum { it.servers.size }, "server")} in #{pluralize(sites.size, "place")}#{" · Meridian runs in #{@map.hub_name}" if @map.hub}" %>
 
-<div class="chips" data-map-chips>
+<div class="chips">
   <% if services.size.between?(2, 8) %>
     <span class="chips__label">App</span>
     <%= chip "All", services.size, current: @map.filters[:app].blank?, href: map_path(request.query_parameters.except("app", "place")) %>

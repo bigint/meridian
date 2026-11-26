@@ -34,7 +34,6 @@ class WorkflowTest < ActionDispatch::IntegrationTest
 
   test "viewers can't deploy" do
     sign_in_as users(:viewer)
-    stub_github_repo(@project)
     @project.sync
     app = @project.apps.first
 

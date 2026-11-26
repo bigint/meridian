@@ -55,7 +55,7 @@ Create the App, then:
 git clone https://github.com/bigint/meridian && cd meridian
 ```
 
-1. Edit the four marked lines in `config/deploy.yml`.
+1. Fill in the five numbered placeholders in `config/deploy.yml`.
 2. Export the secrets that `.kamal/secrets` reads:
 
    ```bash

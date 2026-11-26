@@ -3,21 +3,21 @@
 module Project::Changes
   extend ActiveSupport::Concern
 
-  Proposal = Data.define(:url, :number, :branch, :direct)
+  Proposal = Data.define(:url, :number, :direct)
   WORKFLOW_FILE = "meridian-deploy.yml"
 
   def propose(files:, title:, body:, actor:, slug:)
     if direct_commits? && actor.admin?
       sha = files.each_with_object([]) { |(path, content), shas| shas << write(path, content, title, actor) }.last
       Event.record("project.committed", subject: self, actor: actor, summary: title, commit: sha, files: files.keys)
-      Proposal.new(url: git.commit_url(sha), number: nil, branch: default_branch, direct: true)
+      Proposal.new(url: git.commit_url(sha), number: nil, direct: true)
     else
       branch = "meridian/#{slug}-#{SecureRandom.hex(3)}"
       git.create_branch(branch, from: git.head_sha)
       files.each { |path, content| write(path, content, title, actor, branch: branch) }
       number, url = git.create_pull_request(head: branch, title: title, body: body)
       Event.record("project.pull_request", subject: self, actor: actor, summary: title, pull_request: url, files: files.keys)
-      Proposal.new(url: url, number: number, branch: branch, direct: false)
+      Proposal.new(url: url, number: number, direct: false)
     end
   end
 

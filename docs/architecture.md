@@ -5,7 +5,7 @@ Meridian is a Rails application that reads Kamal configs from Git and reads runn
 ```
 Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Puma)
                        │  ▲
-      commits, PRs,    │  │ webhooks (push, pull_request, workflow_run, workflow_job)
+      commits, PRs,    │  │ webhooks (push, pull_request, workflow_run)
    secrets (write-only)▼  │
                      GitHub ──Actions──▶ kamal deploy ──SSH──▶ servers (kamal-proxy + apps)
                                                                   │
@@ -17,7 +17,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 **What should run comes from Git.**
 
 1. A `push` webhook, the reconcile job (every 30 seconds) or an operator pressing *Sync* enqueues `ProjectSyncJob`. It reads Git, then the branch's recent workflow runs, so deploys show up even without webhooks. Both GitHub calls carry the last answer's ETag: an unchanged repository answers 304, which costs no rate limit.
-2. The job reads the repository tree at the default branch's head through the GitHub API. It keeps only the paths that match the project's `config_globs`, together with their destination files (`deploy.<dest>.yml`), version files (`deploy.version`) and `.kamal/secrets*` files. Blobs are fetched by SHA and cached, so a blob that has not changed is never fetched again.
+2. The job reads the repository tree at the default branch's head through the GitHub API. It keeps only the paths that match the project's `config_globs`, together with their destination files (`deploy.<dest>.yml`) and version files (`deploy.version`). Blobs are fetched by SHA and cached, so a blob that has not changed is never fetched again.
 3. The files are written to a temporary directory, and `bin/kamal-parse` parses them in a **separate process with an empty environment**. The script uses `Kamal::Configuration`, the same code that `kamal deploy` runs, so Meridian sees what Kamal sees: ERB, aliases, destinations, roles and accessories. The environment is empty because Kamal configs evaluate ERB, and ERB is arbitrary Ruby from the infra repository. That Ruby must not be able to read Meridian's own credentials.
 4. The sync upserts these records:
    - `App`: one per config and destination
@@ -32,7 +32,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 2. The endpoint checks the bearer token's digest, enqueues the snapshot and returns `202`.
 3. `SnapshotIngestJob` upserts the server and its `Placement` rows in one transaction, deletes the placements that have gone and touches `last_seen_at`. It then asks for a throttled board broadcast for the server's group, at most one per group per second.
 
-**Drift is the difference between the two.** It is computed when it is read, never stored, by `Assignment#drift` and by `Board` for stray placements:
+**Drift is the difference between the two.** It is computed when it is read, never stored, by `Drift.state`, which `Board` calls for each app and server, stray placements included:
 
 | State | Meaning |
 | --- | --- |
@@ -62,7 +62,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 | `Assignment` | An app that Git says should run on a server, in a given role. |
 | `Placement` | A container that an agent says is running on a server. The row is upserted and never appended. |
 | `Release` | One commit that changed what an app should run. It holds version, SHA, author, time and message. |
-| `Deploy` | One CI run, with per-server progress taken from the job steps. |
+| `Deploy` | One CI run. Per-server progress comes from what agents report running. |
 | `Preview` | A `pr-<n>` destination overlay for a pull request in the app's source repository. |
 | `SecretName` | The name of a secret and the apps that reference it. **It never holds a value.** |
 | `AgentToken` | A bearer token, stored only as a SHA-256 digest, optionally bound to one server. |

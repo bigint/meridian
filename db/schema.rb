@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_140000) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", default: "Alidade", null: false
     t.string "preview_domain"
@@ -53,7 +53,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["project_id", "config_path", "destination"], name: "index_apps_on_project_id_and_config_path_and_destination", unique: true
-    t.index ["project_id"], name: "index_apps_on_project_id"
     t.index ["service"], name: "index_apps_on_service"
   end
 
@@ -64,7 +63,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["app_id", "server_id", "role"], name: "index_assignments_on_app_id_and_server_id_and_role", unique: true
-    t.index ["app_id"], name: "index_assignments_on_app_id"
     t.index ["server_id"], name: "index_assignments_on_server_id"
   end
 
@@ -85,8 +83,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_deploys_on_actor_id"
     t.index ["app_id", "commit_sha"], name: "index_deploys_on_app_id_and_commit_sha", unique: true
-    t.index ["app_id"], name: "index_deploys_on_app_id"
-    t.index ["ci_run_id"], name: "index_deploys_on_ci_run_id"
     t.index ["commit_sha"], name: "index_deploys_on_commit_sha"
     t.index ["release_id"], name: "index_deploys_on_release_id"
   end
@@ -121,8 +117,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "observed_at", null: false
     t.index ["app_id"], name: "index_placements_on_app_id"
     t.index ["server_id", "container_id"], name: "index_placements_on_server_id_and_container_id", unique: true
-    t.index ["server_id"], name: "index_placements_on_server_id"
-    t.index ["service", "role", "destination"], name: "index_placements_on_service_and_role_and_destination"
   end
 
   create_table "previews", force: :cascade do |t|
@@ -138,7 +132,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["app_id", "pr_number"], name: "index_previews_on_app_id_and_pr_number", unique: true
-    t.index ["app_id"], name: "index_previews_on_app_id"
     t.index ["state"], name: "index_previews_on_state"
   end
 
@@ -169,7 +162,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "updated_at", null: false
     t.index ["app_id", "commit_sha"], name: "index_releases_on_app_id_and_commit_sha", unique: true
     t.index ["app_id", "committed_at"], name: "index_releases_on_app_id_and_committed_at"
-    t.index ["app_id"], name: "index_releases_on_app_id"
   end
 
   create_table "secret_names", force: :cascade do |t|
@@ -182,7 +174,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "updated_at", null: false
     t.index ["last_set_by_id"], name: "index_secret_names_on_last_set_by_id"
     t.index ["project_id", "name"], name: "index_secret_names_on_project_id_and_name", unique: true
-    t.index ["project_id"], name: "index_secret_names_on_project_id"
   end
 
   create_table "servers", force: :cascade do |t|

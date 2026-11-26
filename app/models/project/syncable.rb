@@ -54,8 +54,8 @@ module Project::Syncable
     true
   end
 
-  def sync_later
-    ProjectSyncJob.perform_later(self)
+  def sync_later(force: false)
+    ProjectSyncJob.perform_later(self, force: force)
   end
 
   # { "deploy/web.yml" => ["production", "staging"], "deploy/blog.yml" => [nil] }

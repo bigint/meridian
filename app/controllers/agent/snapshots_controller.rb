@@ -20,7 +20,7 @@ class Agent::SnapshotsController < ActionController::API
   def create
     snapshot = Snapshot.new(JSON.parse(request.raw_post.byteslice(0, MAX_BYTES + 1)), token: @token)
     if snapshot.valid?
-      SnapshotIngestJob.perform_later(@token, snapshot.to_job)
+      snapshot.ingest_later
       head :accepted
     else
       render json: { errors: snapshot.errors.full_messages }, status: :unprocessable_entity

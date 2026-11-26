@@ -52,11 +52,15 @@ class Snapshot
       .merge("containers" => containers.map { it.slice(*%w[ id name image service role destination version kind state health started_at ]) })
   end
 
-  # Returns the server. Afterwards changed? says whether any page now draws
-  # differently: a placement came, went or changed, the server's labels or
-  # place moved, or a quiet agent is back. Most snapshots change nothing.
+  def ingest_later
+    SnapshotIngestJob.perform_later(token, to_job)
+  end
+
+  # Returns the server, and redraws its pages if any now draw differently: a
+  # placement came, went or changed, the server's labels or place moved, or a
+  # quiet agent is back. Most snapshots change nothing.
   def ingest
-    Server.transaction do
+    server = Server.transaction do
       server = claim_server
       was_quiet = !server.reporting? || server.stale?
       server.assign_attributes(machine_id: machine_id, labels: labels, agent_version: agent_version, interval_seconds: interval_seconds, **location)
@@ -65,6 +69,8 @@ class Snapshot
       @changed = record_placements(server) || server_changed || was_quiet
       server
     end
+    Board.refresh_later(server) if changed?
+    server
   end
 
   def changed? = @changed

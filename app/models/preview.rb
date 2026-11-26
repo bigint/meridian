@@ -72,6 +72,22 @@ class Preview < ApplicationRecord
       end
       true
     end
+
+    # Hourly: closes expired previews, and drops the overlay of a removal whose
+    # CI run never reported back after a day.
+    def expire_all
+      expired.find_each { expiring(it) { it.close(reason: "expired") } }
+      where(state: "removing").where(updated_at: ..1.day.ago).find_each { expiring(it, &:finish_removal) }
+    end
+
+    private
+      # One project GitHub refuses (an uninstalled App, a missing workflow)
+      # mustn't stop every other preview from expiring.
+      def expiring(preview)
+        yield preview
+      rescue GitHost::Error => error
+        Rails.logger.warn("Preview #{preview.app.name} ##{preview.pr_number} not expired: #{error.message}")
+      end
   end
 
   def url = "https://#{hostname}"

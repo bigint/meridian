@@ -14,8 +14,11 @@ bin/lab push all              # push the newest version of every site to the reg
 bin/lab versions occasions    # list a site's versions, oldest first
 bin/lab push occasions 6c45ebf  # push an older one, to deploy or roll back to
 bin/lab agents                # run meridian-agent on every server
+bin/lab webhooks owner/infra-repo  # forward the repo's webhooks to the dev server (leave it running)
 bin/lab status
 bin/lab down
 ```
 
-Secrets the lab generates (an SSH key and the registry password) live in `lab/.secrets/`, which is git-ignored.
+Meridian learns about deploys, including their status, only from GitHub webhooks, and GitHub can't reach `localhost`. `bin/lab webhooks` uses `gh webhook forward` (install it with `gh extension install cli/gh-webhook`), so GitHub relays them without exposing the dev server. Start the dev server with `GITHUB_APP_WEBHOOK_SECRET=$(cat lab/.secrets/webhook_secret)`.
+
+Secrets the lab generates (an SSH key, the registry password and the webhook secret) live in `lab/.secrets/`, which is git-ignored.

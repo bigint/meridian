@@ -28,10 +28,10 @@
         <% @tunnels.each do |tunnel| %>
           <tr>
             <th scope="row"><%= link_to tunnel.app.name, tunnel.app %></th>
-            <td class="mono txt-small"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
+            <td class="mono txt-small nowrap"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
             <td>
               <% if tunnel.secret_name %>
-                <span class="mono txt-small block"><%= tunnel.secret_name %></span>
+                <span class="mono txt-small block nowrap"><%= tunnel.secret_name %></span>
                 <%= tunnel.token_set? ? badge("set", tone: :ok, data: { tooltip: "Set from Meridian #{time_ago_in_words(tunnel.secret.last_set_at)} ago" }) : badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %>
               <% else %>
                 <span class="txt-faint">none</span>
@@ -47,7 +47,7 @@
                         when :missing then badge("not started", tone: :bad)
                         else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
                         end %>
-                    <span class="mono txt-small"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
+                    <span class="mono txt-small nowrap"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
                   </li>
                 <% end %>
               </ul>

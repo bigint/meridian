@@ -12,8 +12,8 @@ module IconsHelper
     git_host: "folder-git-2", webhooks: "webhook", kamal: "ship"
   }.freeze
 
-  # Meridian's own mark: a dial with its meridian line.
-  LOGO = '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="m4.5 15.5 15-7"/>'.freeze
+  # Meridian's own mark: a globe with one meridian drawn on it.
+  LOGO = '<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/>'.freeze
 
   SHAPES = Hash.new do |shapes, name|
     svg = Rails.root.join("vendor/lucide", "#{ICONS.fetch(name)}.svg").read

@@ -17,10 +17,14 @@
           <tr>
             <th scope="row"><%= link_to tunnel.app.name, tunnel.app %></th>
             <td class="mono txt-small"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
-            <td class="nowrap">
+            <td>
               <% if tunnel.secret_name %>
-                <span class="mono txt-small"><%= tunnel.secret_name %></span>
-                <%= tunnel.token_set? ? badge("set #{time_ago(tunnel.secret.last_set_at)}", tone: :ok) : badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %>
+                <span class="mono txt-small block"><%= tunnel.secret_name %></span>
+                <% if tunnel.token_set? %>
+                  <%= badge("set", tone: :ok) %> <span class="txt-small txt-muted"><%= time_ago(tunnel.secret.last_set_at) %></span>
+                <% else %>
+                  <%= badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %>
+                <% end %>
               <% else %>
                 <span class="txt-faint">no token secret</span>
               <% end %>
@@ -84,13 +88,13 @@
       <li>
         <strong>Route the hostname.</strong>
         On the tunnel's <strong>Routes</strong> tab, click <strong>Add route</strong>, then <strong>Published application</strong>.
+        Enter the hostname to serve as the subdomain and domain, and <code>http://kamal-proxy:80</code> as the <strong>Service URL</strong>. Cloudflare creates the DNS record.
         <% if app.hostnames.any? %>
-          Enter <%= safe_join(app.hostnames.map { tag.code(it) }, " or ") %> as the subdomain and domain,
+          If it isn't <%= safe_join(app.hostnames.map { tag.code(it) }, " or ") %>, open <strong>Additional application settings → HTTP</strong> and set <strong>HTTP Host Header</strong> to <code><%= app.hostnames.first %></code>. kamal-proxy and the app then see a name they already serve; otherwise they answer 404.
         <% else %>
-          Enter a hostname the app's <code>proxy</code> answers to,
+          Use a hostname the app's <code>proxy</code> answers to, or set <strong>HTTP Host Header</strong> under <strong>Additional application settings → HTTP</strong> to one.
         <% end %>
-        and <code>http://kamal-proxy:80</code> as the <strong>Service URL</strong>. Click <strong>Add route</strong>. Cloudflare creates the DNS record.
-        To use a new hostname, add it to <code>proxy.hosts</code> in the config first, or kamal-proxy answers 404. Keep it one level below the domain: Cloudflare's free certificate covers <code>app.example.com</code>, not <code>app.team.example.com</code>.
+        Click <strong>Add route</strong>. Keep the hostname one level below the domain: Cloudflare's free certificate covers <code>app.example.com</code>, not <code>app.team.example.com</code>.
       </li>
       <li>
         <strong>Add the connector to the config.</strong>

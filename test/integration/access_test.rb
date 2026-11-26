@@ -137,4 +137,21 @@ class AccessTest < ActionDispatch::IntegrationTest
     sign_in.call
     assert_redirected_to root_url
   end
+
+  test "removing someone who deployed, set a secret and appears in Activity keeps those records" do
+    gone = users(:deployer)
+    app = App.create!(project: projects(:infra), service: "api", config_path: "deploy/api.yml", kind: "rails")
+    deploy = Deploy.create!(app: app, actor: gone, version: "v1", commit_sha: "a" * 40)
+    secret = SecretName.create!(project: projects(:infra), name: "API_KEY", last_set_by: gone, last_set_at: Time.current)
+    event = Event.record("deploy.started", subject: app, actor: gone)
+    sign_in_as users(:admin)
+
+    delete settings_user_path(gone)
+
+    assert_redirected_to settings_users_path
+    assert_not User.exists?(gone.id)
+    assert_nil deploy.reload.actor
+    assert_nil secret.reload.last_set_by
+    assert_nil event.reload.actor
+  end
 end

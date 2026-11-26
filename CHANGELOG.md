@@ -27,6 +27,7 @@
 ### Local lab
 
 - `bin/lab` runs three Docker-in-Docker servers, a registry and a self-hosted GitHub Actions runner, so Meridian can drive real Kamal deploys end to end on one laptop.
+- The lab deploys the six real bigint sites from `ghcr.io/bigint/<site>` instead of a placeholder nginx app: `bin/lab push SITE|all [VERSION]` and `bin/lab versions SITE`.
 - `GITHUB_TOKEN` can stand in for a GitHub App.
 - Fixed: `GITHUB_APP_ID` was read from the wrong variable. Redeploys are tracked like deploys. The CI template runs on self-hosted runners via `MERIDIAN_RUNS_ON`.
 - New-app Dockerfiles carry `LABEL service=…`, which Kamal requires of images it didn't build.

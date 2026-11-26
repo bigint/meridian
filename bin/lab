@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# A local fleet for Meridian: three Docker-in-Docker servers, a registry and
-# a GitHub Actions runner. See lab/README.md.
+# A local fleet for Meridian: Docker-in-Docker servers, a registry and a
+# GitHub Actions runner, running real bigint sites. See lab/README.md.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,7 +33,29 @@ place() {
     afs1-az1-node-01) echo "region=af-south-1,city=Cape Town,lat=-33.92,lng=18.42" ;;
   esac
 }
+# The real sites: files-only images at ghcr.io/bigint/<site>, one tag per commit.
+SITES=(yoginth-com asiafibernet-com nailbykyro-com asiagigafibernet-com occasions pckumar-in)
 compose() { docker compose -f "$LAB/compose.yml" "$@"; }
+
+# A site's published versions (full commit SHAs), oldest first, as GHCR lists them.
+versions() {
+  local token
+  token="$(curl -fsS "https://ghcr.io/token?scope=repository:bigint/$1:pull" | jq -r .token)"
+  curl -fsS -H "Authorization: Bearer $token" "https://ghcr.io/v2/bigint/$1/tags/list?n=1000" \
+    | jq -r '.tags[] | select(test("^[0-9a-f]{40}$"))'
+}
+
+# Wraps ghcr.io/bigint/SITE at VERSION (a SHA prefix; the newest if empty) in
+# lab/site and pushes it as localhost:5555/bigint/SITE:<7-character SHA>.
+push_site() {
+  local site="$1" want="${2:-}" sha
+  sha="$(versions "$site" | grep "^$want" | tail -n 1 || true)"
+  [ -n "$sha" ] || { echo "$site: no version ${want:-at all} on ghcr.io/bigint/$site" >&2; return 1; }
+  docker build -q --build-arg SITE="$site" --build-arg SITE_IMAGE="ghcr.io/bigint/$site:$sha" \
+    -t "localhost:5555/bigint/$site:${sha:0:7}" "$LAB/site" >/dev/null
+  docker push -q "localhost:5555/bigint/$site:${sha:0:7}" >/dev/null
+  echo "$site: pushed ${sha:0:7}"
+}
 
 ensure_secrets() {
   mkdir -p "$SECRETS" && chmod 700 "$SECRETS"
@@ -59,11 +81,18 @@ case "${1:-}" in
     ;;
 
   push)
-    version="${2:?usage: bin/lab push VERSION [app]}"
-    app="${3:-web}"
+    site="${2:?usage: bin/lab push SITE|all [VERSION]}"
     registry_login
-    docker build -q --build-arg VERSION="$version" --build-arg SERVICE="$app" -t "localhost:5555/demo/$app:$version" "$LAB/demo" >/dev/null
-    docker push -q "localhost:5555/demo/$app:$version"
+    if [ "$site" = all ]; then
+      for site in "${SITES[@]}"; do push_site "$site"; done
+    else
+      push_site "$site" "${3:-}"
+    fi
+    ;;
+
+  versions)
+    site="${2:?usage: bin/lab versions SITE}"
+    versions "$site" | cut -c1-7
     ;;
 
   agents)
@@ -106,7 +135,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "usage: bin/lab up owner/repo | push VERSION [app] | agents | ssh [server] | status | down" >&2
+    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | versions SITE | agents | ssh [server] | status | down" >&2
     exit 1
     ;;
 esac

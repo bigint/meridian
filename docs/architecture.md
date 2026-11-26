@@ -31,7 +31,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 
 1. Every 15 seconds, give or take 20%, each agent POSTs a snapshot to `/agent/snapshots`. A snapshot lists containers with Kamal labels, their health and their versions.
 2. The endpoint checks the bearer token's digest, enqueues the snapshot and returns `202`.
-3. `SnapshotIngestJob` upserts the server and its `Placement` rows in one transaction, deletes the placements that have gone and touches `last_seen_at`. It then asks for a throttled board broadcast for the server's group, at most one per group per second.
+3. `SnapshotIngestJob` upserts the server and its `Placement` rows in one transaction, deletes the placements that have gone and touches `last_seen_at`. It then asks for a throttled board broadcast for the server's group (and for the group it left, if its region changed), at most about one per group per second: the first change in a second goes out at once, and any later ones share one broadcast when that second ends, so the last change always reaches open pages.
 
 **Drift is the difference between the two.** It is computed when it is read, never stored, by `Drift.state`, which `Board` calls for each app, server and role, stray placements included. A cell shows its worst role, so a stopped `job` container isn't hidden by a running `web` one:
 

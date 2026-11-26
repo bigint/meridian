@@ -115,16 +115,37 @@ class Board
   # Live updates: one Turbo stream per region, refreshed at most once a second
   # however many snapshots arrive. The page morphs in place.
   STREAM_LABEL = "region"
+  REFRESH_EVERY = 1.second
 
-  def self.stream_key(server)
-    server.label(STREAM_LABEL).to_s.parameterize.presence || "all"
+  def self.stream_key(server, labels = server.labels)
+    labels.to_h[STREAM_LABEL].to_s.parameterize.presence || "all"
   end
 
+  # A server that just moved region is refreshed in the region it left too,
+  # so its old column goes away there.
   def self.refresh_later(server)
-    key = stream_key(server)
-    if Rails.cache.write([ "board-refresh", key ], true, unless_exist: true, expires_in: 1.second)
+    keys = [ stream_key(server) ]
+    keys << stream_key(server, server.labels_before_last_save) if server.saved_change_to_labels? && !server.previously_new_record?
+    keys.uniq.each { refresh_stream_later(it) }
+  end
+
+  # The first change in a window refreshes at once. Later ones in the same
+  # window share one refresh when it ends, so the last change always reaches
+  # open pages, even when it landed after they re-read the board.
+  def self.refresh_stream_later(key)
+    if Rails.cache.write([ "board-refresh", key ], true, unless_exist: true, expires_in: REFRESH_EVERY)
       Turbo::StreamsChannel.broadcast_refresh_later_to(:board, key)
+    elsif Rails.cache.write([ "board-refresh-trailing", key ], true, unless_exist: true, expires_in: REFRESH_EVERY)
+      BoardRefreshJob.set(wait: REFRESH_EVERY).perform_later(key)
     end
+  end
+
+  # The window's closing refresh opens the next window, so a steady stream of
+  # changes still refreshes about once a second.
+  def self.refresh_now(key)
+    Rails.cache.write([ "board-refresh", key ], true, expires_in: REFRESH_EVERY)
+    Rails.cache.delete([ "board-refresh-trailing", key ])
+    Turbo::StreamsChannel.broadcast_refresh_to(:board, key)
   end
 
   def stream_keys

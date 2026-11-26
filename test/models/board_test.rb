@@ -19,12 +19,33 @@ class BoardTest < ActiveSupport::TestCase
     assert_not_includes services, "edge"
   end
 
-  test "refreshes are throttled to one per group per second" do
+  test "refreshes are throttled to one per group per second, and the last change still goes out" do
     with_cache(ActiveSupport::Cache::MemoryStore.new) do
       assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) do
-        3.times { Board.refresh_later(@server) }
+        Board.refresh_later(@server)
         perform_enqueued_jobs
       end
+
+      assert_enqueued_with(job: BoardRefreshJob, args: [ "sgp" ]) do
+        3.times { Board.refresh_later(@server) }
+      end
+      assert_enqueued_jobs 1, only: BoardRefreshJob
+      assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) { perform_enqueued_jobs }
+
+      assert_enqueued_jobs 1, only: BoardRefreshJob do
+        Board.refresh_later(@server)
+      end
+    end
+  end
+
+  test "a server that moves region is refreshed in the region it left too" do
+    @server.update!(labels: { "region" => "fra" })
+
+    with_cache(ActiveSupport::Cache::MemoryStore.new) do
+      Board.refresh_later(@server)
+      perform_enqueued_jobs
+      assert_turbo_stream_broadcasts [ :board, "fra" ], count: 1
+      assert_turbo_stream_broadcasts [ :board, "sgp" ], count: 1
     end
   end
 

@@ -13,9 +13,12 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     stub_connection current_user: users(:deployer), agent_token: nil
   end
 
-  test "a deployer streams the app's traffic and every kamal-proxy is asked for its history" do
-    assert_broadcast_on AgentChannel.broadcasting_for(@web_1), { type: "tail", container: "c" * 64, seconds: 30, backlog: LiveTraffic::BACKLOG } do
-      assert_broadcast_on AgentChannel.broadcasting_for(@web_2), { type: "tail", container: "d" * 64, seconds: 30, backlog: LiveTraffic::BACKLOG } do
+  # kamal-proxy lines run to a kilobyte, and the agent sends at most 512 KB a
+  # second of one container, history included, dropping the newest lines past
+  # that. 200 lines fit; 1,000 lost the most recent requests.
+  test "a deployer streams the app's traffic and every kamal-proxy is asked for the last 200 lines" do
+    assert_broadcast_on AgentChannel.broadcasting_for(@web_1), { type: "tail", container: "c" * 64, seconds: 30, backlog: 200 } do
+      assert_broadcast_on AgentChannel.broadcasting_for(@web_2), { type: "tail", container: "d" * 64, seconds: 30, backlog: 200 } do
         subscribe app_id: @app.id
       end
     end

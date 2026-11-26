@@ -10,7 +10,7 @@ class TrafficChannel < ApplicationCable::Channel
 
     stream_for @app
     LiveTraffic.watch(@app, @proxies)
-    @proxies.each { LiveLogs.tail(it, backlog: LiveTraffic::BACKLOG) }
+    @proxies.each { LiveLogs.tail(it, backlog: LiveLogs::BACKLOG) }
   end
 
   periodically every: LogsChannel::RENEW_EVERY do

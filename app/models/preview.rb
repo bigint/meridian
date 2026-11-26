@@ -93,6 +93,8 @@ class Preview < ApplicationRecord
   def server
     selector = Account.current.preview_selector.to_s.split(/[\s,]+/).to_h { it.split("=", 2) }
     candidates = selector.any? ? Server.ordered.select { |s| selector.all? { |k, v| s.label(k) == v } } : app.servers.ordered.to_a
+    # Its hostname goes into the overlay, where Kamal evaluates ERB.
+    candidates = candidates.select { it.hostname.match?(Server::HOST_FORMAT) }
     candidates.min_by { |s| [ s.placements.count, s.id ] } or raise ArgumentError, "No server matches the preview selector"
   end
 

@@ -78,6 +78,18 @@ class PreviewTest < ActiveSupport::TestCase
     assert preview.reload.removing?
   end
 
+  test "never picks a server whose hostname isn't a host name, nor runs its ERB" do
+    accounts(:main).update!(preview_selector: "role=preview")
+    Dir.mktmpdir do |dir|
+      marker = File.join(dir, "ran")
+      Server.create!(name: "evil", hostname: "evil<%= File::write(#{marker.inspect}, 1) %>", labels: { "role" => "preview" })
+
+      assert_raises(ArgumentError) { Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil) }
+      assert_empty @writes
+      assert_not File.exist?(marker), "ERB in a server's hostname ran"
+    end
+  end
+
   test "no preview domain, no preview" do
     accounts(:main).update!(preview_domain: nil)
     assert_raises(ArgumentError) { Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil) }

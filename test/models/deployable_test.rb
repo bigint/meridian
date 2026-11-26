@@ -45,6 +45,8 @@ class DeployableTest < ActiveSupport::TestCase
   test "rejects versions that aren't one plain token" do
     assert_raises(ArgumentError) { @app.deploy("v1; rm -rf /", actor: @actor) }
     assert_raises(ArgumentError) { @app.deploy(" ", actor: @actor) }
+    assert_raises(ArgumentError, "CI would pass it to Kamal as a flag") { @app.deploy("--skip-hooks", actor: @actor) }
+    assert_raises(ArgumentError, "not valid in a container name") { @app.deploy("v1@sha256:abc", actor: @actor) }
   end
 
   test "roll back restores the version file from before the newest release" do

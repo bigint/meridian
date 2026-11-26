@@ -2,6 +2,11 @@
 module App::Deployable
   extend ActiveSupport::Concern
 
+  # A Docker image tag. Kamal names containers after it, and CI passes it as
+  # `--version`, so it can't start with "-" (Kamal would read a flag).
+  VERSION_FORMAT = /\A\w[\w.-]{0,127}\z/
+  VERSION_PATTERN = "\\w[\\w.\\-]{0,127}" # the same, for <input pattern>
+
   included do
     has_many :deploys, -> { recent }, dependent: :delete_all
   end
@@ -15,7 +20,7 @@ module App::Deployable
   def deploy(version, actor:)
     version = version.to_s.strip
     raise ArgumentError, "Version can't be blank" if version.blank?
-    raise ArgumentError, "Version must be one line without spaces" unless version.match?(/\A[\w.+:@-]{1,128}\z/)
+    raise ArgumentError, "Version must be an image tag: letters, digits, _ . and -, not starting with . or -" unless version.match?(VERSION_FORMAT)
 
     current = read_version_file
     # The commit would change no file, so the workflow would never run and

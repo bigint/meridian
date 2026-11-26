@@ -35,7 +35,7 @@ class AppDraft
   validates :kind, inclusion: { in: App::KINDS }
   validates :hostname, format: { with: /\A[a-z0-9.-]+\.[a-z]{2,}\z/i, message: "must be a domain name" }, allow_blank: true
   validates :destination, format: { with: /\A[a-z0-9_-]+\z/ }, allow_blank: true
-  validates :version, format: { with: /\A[\w.+:@-]{1,128}\z/ }
+  validates :version, format: { with: App::VERSION_FORMAT }
   validate :servers_chosen, :path_free, :kamal_accepts_it
 
   attr_writer :project

@@ -14,7 +14,7 @@
       <div class="card__body">
         <%= form.label :version, "Ship a version", for: "inspector-version", class: "txt-strong" %>
         <div class="flex gap-s">
-          <%= form.text_field :version, id: "inspector-version", class: "mono", required: true, pattern: "[\\w.+:@\\-]{1,128}", autocomplete: "off", placeholder: app.latest_release&.version %>
+          <%= form.text_field :version, id: "inspector-version", class: "mono", required: true, pattern: App::VERSION_PATTERN, autocomplete: "off", placeholder: app.latest_release&.version %>
           <%= form.submit "Deploy", class: "btn btn--primary", data: { turbo_confirm: "Commit this version to #{app.version_file_path}?" } %>
         </div>
         <p class="field__hint">Commits the tag to <code><%= app.version_file_path %></code>; CI runs <code>kamal deploy</code>.</p>

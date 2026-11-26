@@ -43,6 +43,15 @@ class AppDraftTest < ActiveSupport::TestCase
     assert_equal @servers, draft.servers
   end
 
+  test "a label selector term without = is an error, not a crash" do
+    assert_equal @servers, build(server_ids: [], label_selector: " role=web, ").servers
+
+    draft = build(server_ids: [], label_selector: "web")
+    assert_not draft.valid?
+    assert_includes draft.errors[:label_selector], "must be labels like role=web, separated by commas"
+    assert_empty draft.servers, "a selector with no usable term matches nothing, not everything"
+  end
+
   test "config paths follow the project's globs" do
     @project.config_globs = [ "config/deploy*.yml" ]
     assert_equal "config/deploy-shop.yml", build.config_path

@@ -47,12 +47,14 @@ class AppDraft
 
   def servers
     @servers ||= if label_selector.present?
-      wanted = label_selector.split(/[\s,]+/).to_h { it.split("=", 2) }
-      Server.ordered.select { |server| wanted.all? { |key, value| server.label(key) == value } }
+      wanted = selector_terms.select { it.size == 2 }.to_h
+      wanted.empty? ? [] : Server.ordered.select { |server| wanted.all? { |key, value| server.label(key) == value } }
     else
       Server.where(id: Array(server_ids).compact_blank).ordered.to_a
     end
   end
+
+  def selector_terms = label_selector.to_s.split(/[\s,]+/).compact_blank.map { it.split("=", 2) }
 
   def config_path = (project || Project.new).config_path_for(service)
 
@@ -143,6 +145,7 @@ class AppDraft
     # Agents report the hostnames of servers they create, and Kamal
     # evaluates ERB in the config they are written into.
     def servers_chosen
+      errors.add(:label_selector, "must be labels like role=web, separated by commas") if selector_terms.any? { it.size < 2 }
       errors.add(:base, "Choose at least one server, or a label selector that matches some") if servers.empty?
       bad = servers.reject { it.hostname.match?(Server::HOST_FORMAT) }
       errors.add(:base, "Can't write these servers into a config, their hostnames aren't host names: #{bad.map(&:name).to_sentence}") if bad.any?

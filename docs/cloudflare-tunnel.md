@@ -1,48 +1,46 @@
 # Cloudflare Tunnel
 
-A tunnel is one way to reach your servers, not something Meridian assumes. Meridian never calls Cloudflare's API. It writes plain YAML to Git (principle 1), keeps only secret names (principle 4) and makes no assumption about your network (principle 5). You create the tunnel in Cloudflare yourself.
+One Cloudflare Tunnel can serve every app, with a connector on each server and no open ports. Meridian reads the tunnel from Git and the agents and never calls Cloudflare's API: it writes plain YAML to Git (principle 1), keeps only secret names (principle 4) and makes no assumption about your network (principle 5). You create the tunnel and its routes in Cloudflare yourself.
 
-## Apps behind a tunnel
+## How it works
 
-Give each app its own tunnel and its own token. Cloudflare spreads a tunnel's requests over all its connectors, so a tunnel shared by apps on different servers sends some requests to servers that don't run the app. The token lives in a repository secret named after the service, `<SERVICE>_TUNNEL_TOKEN` (`saleor-api` becomes `SALEOR_API_TUNNEL_TOKEN`). The accessory reads it with Kamal's secret alias, `TUNNEL_TOKEN:<SERVICE>_TUNNEL_TOKEN`, because cloudflared expects `TUNNEL_TOKEN`.
+- **One tunnel, one token.** The token lives in the repository secret `CLOUDFLARE_TUNNEL_TOKEN`. cloudflared reads `TUNNEL_TOKEN`, so the connectors alias it: `TUNNEL_TOKEN:CLOUDFLARE_TUNNEL_TOKEN`.
+- **A connector on each server.** `deploy/edge.yml` (the first config glob, with `edge` for the service) runs only accessories: one `cloudflared-<server>` per server, each with its own `hostname`, so Cloudflare lists every replica by server name. Its `meridian.kind: accessories` label keeps it off the board, and Kamal never deploys an app from it.
+- **Every hostname to kamal-proxy.** The tunnel routes each app's hostname to `http://kamal-proxy:80`, which routes by Host. Accessories share Kamal's `kamal` Docker network, where the proxy container is `kamal-proxy`.
+- **The rule.** Cloudflare sends each request to whichever connector is nearest, not to the server that runs the app. So every connector's server must run every app the tunnel serves, or kamal-proxy answers 404. Run your apps on the connector servers before you route them.
 
-For a new app, tick **Behind a Cloudflare Tunnel** on the New app form. The generated base config ends with the `cloudflared` accessory (`templates/kamal/cloudflared.yml`), and the pull request lists the steps. For an existing app, **Tunnels → Set up a tunnel** shows the same steps with that app's names filled in. These match the Cloudflare dashboard as of November 2026.
+Meridian finds a tunnel from Git: every accessory whose image starts with `cloudflare/cloudflared` (or, for configs synced before images were recorded, one named `cloudflared`), grouped by the token secret it reads. A tunnel is named after the config its connectors live in.
 
-1. **Create the tunnel.** Open **Networking → Tunnels**, click **Create Tunnel**, name it after the app and click **Create Tunnel**.
-2. **Copy its token.** On the tunnel's **Overview**, under **Install cloudflared connector**, choose **Docker** and copy the command. Keep only the value after `--token`. Don't run the command; Kamal runs the connector.
-3. **Save the token.** On Meridian's Secrets page, set `<SERVICE>_TUNNEL_TOKEN` to it. Add `<SERVICE>_TUNNEL_TOKEN=$<SERVICE>_TUNNEL_TOKEN` to `.kamal/secrets`, so Kamal can read it.
-4. **Add a route.** On the tunnel's **Routes** tab, click **Add route → Published application**. Enter the hostname, and `http://kamal-proxy:80` as the **Service URL**. Cloudflare creates the DNS record, though not always: in testing it skipped 3 of 6. Check **DNS → Records**, and if the record is missing, add a proxied CNAME from the hostname to `<tunnel ID>.cfargotunnel.com`. If the hostname isn't one the app already serves, open **Additional application settings → HTTP** and set **HTTP Host Header** to one it does. kamal-proxy routes by Host, and apps such as nginx sites or Rails check it too, so an unknown name gets a 404. Accessories share Kamal's `kamal` Docker network, where the proxy container is `kamal-proxy`.
-5. **Add the connector** to the app's config and commit it. It goes in the base file because Kamal resolves accessories with `roles:` after it merges the destination file.
-6. **Start it once** with `kamal accessory boot cloudflared -c <config>` (plus `-d <destination>`), with the token secret in the environment. `kamal deploy` doesn't start accessories.
+## Setting it up
 
-Every server that runs the connector is a replica of the app's tunnel. Cloudflare serves HTTPS, so the app needs no certificate of its own. Keep hostnames one level below the domain: Cloudflare's free certificate covers `app.example.com`, not `app.team.example.com`.
+**Tunnels → Set up a tunnel** shows these steps in the project's own names. Pick the connector servers in its panel; it generates the edge config for them and names any app that isn't on all of them. The steps match the Cloudflare dashboard as of November 2026, and the ones Meridian can see tick themselves off.
+
+1. **Create the tunnel.** In Cloudflare, open **Networking → Tunnels** and click **Create Tunnel**.
+2. **Copy its token.** Under **Install cloudflared connector**, choose **Docker** and copy the command. Keep only the value after `--token`. Don't run the command.
+3. **Save the token.** On Meridian's Secrets page, set `CLOUDFLARE_TUNNEL_TOKEN`. Add `CLOUDFLARE_TUNNEL_TOKEN=$CLOUDFLARE_TUNNEL_TOKEN` to `.kamal/secrets`.
+4. **Add the connectors.** Commit the generated `deploy/edge.yml` (`templates/kamal/edge.yml`).
+5. **Start them** with `kamal accessory boot all -c deploy/edge.yml`, from a machine that can SSH to the servers, with the token in its environment. `kamal deploy` doesn't start accessories. Each connector should register four connections.
+6. **Route each hostname.** On the tunnel's **Routes** tab, add a **Published application** per hostname, all to `http://kamal-proxy:80`. Cloudflare creates the DNS record, though not always: in testing it skipped 3 of 6. Check **DNS → Records**, and if one is missing, add a proxied CNAME to `<tunnel ID>.cfargotunnel.com`.
+7. **Check it.** The Tunnels page shows every connector running and no app missing from a connector's server, and Cloudflare shows the tunnel Healthy with one replica per server.
+
+To serve a hostname the app doesn't answer to, set **HTTP Host Header** under **Additional application settings → HTTP** to one it does: kamal-proxy routes by Host, and apps such as nginx sites or Rails check it too. Keep hostnames one level below the domain: Cloudflare's free certificate covers `app.example.com`, not `app.team.example.com`.
 
 ## The Tunnels page
 
-**Tunnels** under Manage lists every app with a `cloudflared` accessory, problems first. Meridian finds them in Git (an accessory whose image starts with `cloudflare/cloudflared`) and reads each connector's container from the agents. It never asks Cloudflare, so it can't tell whether the tunnel itself is healthy. Each server that should run the connector shows one state.
+**Tunnels** under Manage shows each tunnel, problems first.
 
-- **running** means the agent reports the container and it is running.
-- **A Docker state** such as `exited` or `restarting` means the container exists but isn't running.
-- **not booted** means the server's agent is reporting and has no such container, so the connector was never booted or was removed. The page shows the `kamal accessory boot` command.
-- **unknown** means Meridian can't tell. The server isn't known, has no agent, or hasn't reported lately.
-
-Each row also names the app's token secret and whether Meridian has set it. **Set up a tunnel** opens the steps for any app, grouped by where you do them (Cloudflare, Git, the servers), with its names, hostname, secret, config path and boot command ready to copy. The steps Meridian can see tick themselves off: the token set from its Secrets page, the connector in the config, and the connector running.
+- **Connectors**, one per server, each in one state: **running**; a Docker state such as `exited`; **not started**, when the server's agent reports but has no such container (the page shows the `kamal accessory boot` command); or **unknown**, when the server isn't known or its agent hasn't reported lately.
+- **The token** secret, and whether Meridian has set it.
+- **Apps it can serve**: those that run on every connector's server. An app on only some of them gets a warning naming the servers it's missing from. Meridian can't see Cloudflare's routes, so this is advice, not an error: don't route that app through the tunnel until it runs everywhere. Apps on no connector's server are listed quietly.
 
 ## Previews behind a tunnel
 
-Previews are named `pr-<n>.<app>.<preview domain>` by default. That is two levels below the domain. Cloudflare's Universal SSL wildcard covers one level, so behind Cloudflare's proxy or a tunnel those names fail HTTPS unless you pay for Advanced Certificate Manager.
+Previews are named `pr-<n>.<app>.<preview domain>` by default, two levels below the domain, which Cloudflare's free certificate doesn't cover.
 
-1. In **Settings → General**, set **Hostnames** to `pr-<n>-<app>.<domain>`. Only new and reopened previews change. Existing ones keep their hostname.
-2. Give the preview servers' tunnel a wildcard public hostname `*.<preview domain>` that points at `http://kamal-proxy:80`.
-3. Add a proxied wildcard DNS record, a CNAME from `*.<preview domain>` to `<tunnel id>.cfargotunnel.com`. One record covers every app.
-
-The preview servers need a `cloudflared` connector for that tunnel, booted the same way.
+1. In **Settings → General**, set **Hostnames** to `pr-<n>-<app>.<domain>`. Only new and reopened previews change.
+2. Give the tunnel a wildcard route `*.<preview domain>` to `http://kamal-proxy:80`, and a proxied wildcard CNAME `*.<preview domain>` to `<tunnel ID>.cfargotunnel.com`.
+3. Use the connector servers as the preview servers (the preview selector), so every preview runs where the tunnel can reach it.
 
 ## Meridian behind a tunnel
 
-GitHub webhooks and agents must reach Meridian. A tunnel can do that.
-
-- Add the same `cloudflared` accessory to Meridian's own `config/deploy.yml`. Its `roles: [ web ]` works there as it is.
-- Set `proxy.ssl: false`, because Cloudflare terminates TLS.
-- `MERIDIAN_URL` stays the public `https://` URL.
-- Agents connect out over HTTP and keep one outbound WebSocket to `/cable`. Both work through a tunnel.
+GitHub webhooks and agents must reach Meridian. Run Meridian on a connector server, add a route for its hostname, and set `proxy.ssl: false`, because Cloudflare terminates TLS. `MERIDIAN_URL` stays the public `https://` URL. Agents connect out over HTTPS and keep one WebSocket to `/cable`; both work through a tunnel.

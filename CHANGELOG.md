@@ -4,10 +4,11 @@
 
 ### Cloudflare Tunnel
 
-- The New app form can put an app behind a Cloudflare Tunnel. It adds a `cloudflared` accessory to the config and swaps the DNS steps for the tunnel's. Meridian never calls Cloudflare's API. See [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) and decision 33.
-- A Tunnels page lists the apps behind a tunnel and whether each server's connector runs, read from Git and the agents. It shows the boot command for a connector that was never started, the setup steps and the preview hostname format.
+- One Cloudflare Tunnel serves every app, the way production runs: an accessories-only `deploy/edge.yml` starts a `cloudflared` connector on each server, all reading `CLOUDFLARE_TUNNEL_TOKEN`, and the tunnel routes each hostname to `kamal-proxy`. Meridian never calls Cloudflare's API. See [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) and decision 33.
+- The Tunnels page shows each tunnel's connectors (running, stopped, not started or unknown, with the command that starts a missing one), its token, and which apps it can serve: an app is safe to route only if it runs on every connector's server, and the page names the servers it's missing from.
+- **Set up a tunnel** walks through it with the project's own names, generates the edge config for the servers you pick, and ticks off what Meridian can see is done.
+- A config labelled `meridian.kind: accessories` runs no app, so the board leaves it out.
 - Settings → General can name previews `pr-<n>-<app>.<domain>`. One wildcard record covers every app, and it works with Cloudflare's free certificate. Existing previews keep their hostname.
-- Each tunnelled app reads its token from its own secret, `<SERVICE>_TUNNEL_TOKEN`, so apps on different servers never share a tunnel. The Tunnels page shows whether each token is set, and step-by-step setup for any app with its own names filled in, matching Cloudflare's current dashboard.
 
 ### Live logs
 

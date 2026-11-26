@@ -97,8 +97,7 @@ module ApplicationHelper
   def version_cell(cell)
     running = cell.versions.join(", ")
     text = case cell.state
-    when "missing" then "✕"
-    when "unknown" then "?"
+    when "missing", "unknown" then Drift::SYMBOLS[cell.state]
     when "drifted" then "≠#{cell.versions.first&.first(10)}"
     else cell.version&.first(10) || "–"
     end

@@ -17,8 +17,9 @@ class ApplicationHelperTest < ActionView::TestCase
   test "a drifted cell shows the version it runs; missing and unknown show a symbol" do
     render html: version_cell(cell("drifted", versions: [ "v41" ])) + version_cell(cell("missing", versions: [])) + version_cell(cell("unknown", versions: []))
     assert_select "[data-state=drifted]", text: /≠v41/
-    assert_select "[data-state=missing]", text: /✕/
-    assert_select "[data-state=unknown]", text: /\?/
+    assert_select "[data-state=missing]", text: /#{Drift::SYMBOLS["missing"]}/
+    assert_select "[data-state=unknown]", text: /#{Drift::SYMBOLS["unknown"]}/
+    assert_select "[data-state=unknown]", text: /\?/, count: 0
   end
 
   test "every drift state is a symbol and a word, never colour alone" do

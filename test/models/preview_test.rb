@@ -86,6 +86,29 @@ class PreviewTest < ActiveSupport::TestCase
     assert_equal "i" * 40, @dispatches.last.dig("inputs", "version")
   end
 
+  test "a pull request reopened after its preview was removed gets the overlay back" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    preview.update!(state: "removed")
+
+    Preview.deploy(@app, number: 7, head_sha: "i" * 40, url: nil)
+    assert_equal 2, @writes.size
+    assert_equal [ "deploy/api.pr-7.yml" ] * 2, @writes.map { it["path"] }
+    assert preview.reload.deploying?
+  end
+
+  test "a push after expiry brings the preview back for a whole lifetime" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    travel 8.days
+    PreviewExpiryJob.perform_now
+    assert preview.reload.removing?
+
+    Preview.deploy(@app, number: 7, head_sha: "i" * 40, url: nil)
+    assert_in_delta 7.days.from_now, preview.reload.expires_at, 1.minute
+    travel 1.hour
+    PreviewExpiryJob.perform_now
+    assert preview.reload.deploying?, "the next hourly run took it down again"
+  end
+
   test "CI runs move previews along, and removal drops the overlay" do
     preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
 

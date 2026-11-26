@@ -16,18 +16,24 @@ class Preview < ApplicationRecord
   after_commit -> { broadcast_refresh_later_to :previews }
 
   class << self
-    # Opened, reopened or pushed to: commit the overlay once, deploy the head.
+    # Opened, reopened or pushed to: commit the overlay once (again after a
+    # removal), deploy the head.
     def deploy(app, number:, head_sha:, url:)
       account = Account.current
       raise ArgumentError, "Set a preview domain in Settings first" if account.preview_domain.blank?
 
       preview = app.previews.find_or_initialize_by(pr_number: number)
+      # Asked before the state below changes: a removed preview's overlay is gone.
+      fresh = preview.new_record? || preview.removed?
+      # One being removed, or past its time, comes back for a whole lifetime;
+      # otherwise the next hourly expiry would take it down again.
+      revived = fresh || preview.removing? || preview.expires_at.past?
       preview.assign_attributes(pr_url: url, head_sha: head_sha, state: "deploying")
-      if preview.new_record? || preview.removed?
+      preview.expires_at = account.preview_ttl_days.days.from_now if revived
+      if fresh
         preview.destination = "pr-#{number}"
         preview.hostname = account.preview_hostname(app.service, number)
         preview.overlay_path = app.project.destination_path(app.config_path, preview.destination)
-        preview.expires_at = account.preview_ttl_days.days.from_now
         preview.commit_overlay
       end
       preview.save!

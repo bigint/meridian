@@ -101,6 +101,7 @@
 - Copy works over plain HTTP: with no clipboard API it selects the text and says to press ⌘C or Ctrl+C.
 - Enter in the search opens a match for what the box says now, never an older query's, and a reply arriving after Escape no longer refills the list.
 - The "Browser too old" page is styled again. The error pages' styles moved to `public/error-pages.css`, which the CSP allows.
+- A pull request reopened, or pushed to, after its preview was removed gets its overlay back, and a push to an expired preview gives it a whole new lifetime. The overlay was never committed again, so CI ran Kamal for a destination with no file, and a preview brought back after expiry was taken down at the next hourly check.
 
 ### Upgrading
 

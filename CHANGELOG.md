@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Removed
+
+- The demo fleet. `bin/rails meridian:demo` and its `SERVERS` and `APPS` settings are gone, and the Quickstart now points Meridian at your own infra repository with a `GITHUB_TOKEN`. The development seed user is `admin@example.com` / `admin-password-123`.
+
 ### Fixed
 
 - Previews deploy. The overlay renamed the service `<app>-pr-<n>`, but a preview runs the app's image, which is labelled with the app's service, and Kamal won't boot an image whose label doesn't match, so every preview failed in CI with "missing the 'service' label". A preview now keeps the app's service and is told apart by its `pr-<n>` destination. An open pull request gets the new overlay on its next push.

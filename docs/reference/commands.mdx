@@ -27,14 +27,6 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
   Prints the setup code that `/first_run` asks for before it creates the first admin. Meridian derives the code from `SECRET_KEY_BASE`, so it stores nothing. Meridian also logs it as `Meridian setup code: …` each time someone opens `/first_run`.
 </ResponseField>
 
-<ResponseField name="bin/rails meridian:demo" type="task">
-  Fills the database with a demo fleet: 500 servers and 200 apps by default. Most cells are in sync, and the rest are drifted, missing, stray or stale. `SERVERS=` and `APPS=` change the numbers. You can run it again over an existing demo fleet.
-
-  ```bash
-  bin/rails meridian:demo SERVERS=50 APPS=20
-  ```
-</ResponseField>
-
 <ResponseField name="bin/rails db:prepare" type="task">
   Creates every database, or brings it up to date with the newest migrations. The image runs it before the server starts. See [Upgrading](/operate/upgrading).
 </ResponseField>

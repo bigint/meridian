@@ -15,11 +15,7 @@ Meridian is built to handle 500 servers and 200 apps in one container on one sma
 | GitHub polling | Two requests per project every 30 seconds | Requests carry ETags. A repository where nothing changed answers `304`, which costs no rate limit. |
 | Live stats | Only for pages that are open | Nothing streams until someone opens a server's page, and it stops within 30 seconds of the last viewer leaving. |
 
-The board shows 25 rows a page, and groups servers by region above 30 servers. To try Meridian at that size, load the demo fleet:
-
-```bash
-bin/rails meridian:demo SERVERS=500 APPS=200
-```
+The board shows 25 rows a page, and groups servers by region above 30 servers.
 
 ## What limits it
 

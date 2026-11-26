@@ -20,31 +20,23 @@ bin/setup --skip-server
 ```
 
 `bin/setup` runs `bundle install`, `bin/rails db:prepare`, then clears logs and `tmp/`. Without `--skip-server` it starts `bin/dev` at the end. Add `--reset` to rebuild the development databases from scratch. It is safe to run again at any time.
-### 2. Seed a demo fleet (optional)
-
-```bash
-bin/rails meridian:demo
-SERVERS=50 APPS=20 bin/rails meridian:demo
-```
-
-The task seeds a demo project with 500 servers and 200 apps by default, with realistic drift, so every page has something to show without GitHub or agents. You can run it again over an existing demo fleet.
-### 3. Start the app
+### 2. Start the app
 
 ```bash
 bin/dev
 ```
 
 `bin/dev` runs `bin/rails server` on port `3000`. Solid Queue runs inside Puma, so there is no second process to start.
-### 4. Create the first admin
+### 3. Create the first admin
 
 Open `http://localhost:3000`. Meridian sends you to `/first_run`, which asks for a setup code. The code is in the server's log as `Meridian setup code: …`, or you can print it:
 
 ```bash
 bin/rails meridian:setup_code
 ```
-### 5. Connect GitHub (optional)
+### 4. Connect GitHub
 
-The demo fleet needs no GitHub. To sync a real infra repository, the quickest way is a personal access token:
+To sync an infra repository, the quickest way is a personal access token:
 
 ```bash
 GITHUB_TOKEN=github_pat_… bin/dev

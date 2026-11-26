@@ -62,7 +62,6 @@ For working on Meridian itself: [development](contributing/development.md), [arc
 
 ```bash
 bin/setup        # installs gems and prepares the databases (needs libsodium)
-bin/rails meridian:demo   # a 500-server demo fleet
 bin/dev          # the app on :3000
 bin/ci           # everything CI runs: lint, security, Go tests
 ```

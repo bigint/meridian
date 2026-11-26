@@ -1,14 +1,16 @@
 ---
 title: "Quickstart"
-description: "Run Meridian on your machine with Docker, add a demo fleet of 500 servers and 200 apps, and look around in two minutes."
+description: "Run Meridian on your machine with Docker, point it at your infra repository, and see every app your Kamal configs describe, in about five minutes."
 icon: "rocket"
 ---
 
-Run Meridian on your own machine in two minutes, with a demo fleet to look at. Nothing connects to GitHub or to your servers.
+Run Meridian on your own machine and point it at your real [infra repository](/reference/glossary#infra-repository), the Git repository that holds your Kamal configs. Meridian reads it and shows every app on the board. Nothing changes on your servers unless you press **Deploy**.
 
 ## Before you start
 
-You need [Docker](https://docs.docker.com/get-docker/) and `openssl`.
+- [Docker](https://docs.docker.com/get-docker/) and `openssl`.
+- An infra repository on GitHub with at least one Kamal config, such as `config/deploy.yml`.
+- A GitHub personal access token that can reach that repository. A classic token needs the `repo` and `workflow` scopes. For a fine-grained token, see [Using a token instead](/reference/github-app#using-a-token-instead).
 
 <Steps>
   <Step title="Start Meridian">
@@ -17,10 +19,11 @@ You need [Docker](https://docs.docker.com/get-docker/) and `openssl`.
       -v meridian:/rails/storage \
       -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
       -e MERIDIAN_URL=http://localhost:3000 \
+      -e GITHUB_TOKEN=github_pat_… \
       ghcr.io/bigint/meridian:v0.1.0
     ```
 
-    The `meridian` volume holds Meridian's SQLite databases. `MERIDIAN_URL` is the address you open Meridian at. A plain `http://` address turns off the redirect to HTTPS, which you want on your own machine.
+    The `meridian` volume holds Meridian's SQLite databases. `MERIDIAN_URL` is the address you open Meridian at. A plain `http://` address turns off the redirect to HTTPS, which you want on your own machine. `GITHUB_TOKEN` is your token: Meridian makes every GitHub call as its owner.
   </Step>
 
   <Step title="Create the first admin">
@@ -41,45 +44,24 @@ You need [Docker](https://docs.docker.com/get-docker/) and `openssl`.
     </Tip>
   </Step>
 
-  <Step title="Add a demo fleet">
-    ```bash
-    docker exec meridian bin/rails meridian:demo
-    ```
+  <Step title="Add your infra repository">
+    On **Projects**, press **Add project**. Fill in:
 
-    ```text Output
-    Seeded Demo fleet: 500 servers, 200 apps. Open the board to look around.
-    ```
+    - **Repository:** `owner/name`, such as `acme/infra`.
+    - **Branch:** the branch your configs live on, such as `main`.
+    - **Config paths:** where your Kamal configs are. The default, `config/deploy*.yml`, finds `config/deploy.yml` and its destination files. Leave **GitHub App installation ID** empty: a token needs none.
 
-    You now have a project called **Demo fleet**, with 200 apps on 500 servers in eight regions, from `ams` to `tor`. Each app has three releases, `v10` to `v12`. Most servers run `v12`. About 6% of app placements run `v11`, and about 3% run nothing. About 3% of apps also run on one server where Git doesn't put them. About 3% of servers have quiet agents, and 2% have no agent. Every name is under `example.com`.
-
-    For a smaller fleet, set `SERVERS` and `APPS`. Running the task again replaces the demo fleet.
-
-    ```bash
-    docker exec -e SERVERS=40 -e APPS=12 meridian bin/rails meridian:demo
-    ```
+    Press **Create Project**. Meridian reads the repository and lists every config it found. A config Kamal can't parse shows its file and line.
   </Step>
 
-  <Step title="Look around">
-    Open **Board** in the sidebar, and try these in order:
+  <Step title="Look at the board">
+    Open **Board** in the sidebar. Each row is an [app](/reference/glossary#app), one config plus one destination, and each column is a server from your configs.
 
-    1. **Needs attention** lists what is wrong, worst first. Each item has a button, such as **Open atlas-0**, that opens the app or server.
-    2. Under **Every app on every server**, press **Drifted** to show only drifted cells. Press it again to show all of them.
-    3. Click an app's name in the grid. The inspector opens on the right, with the app's servers, its last three releases and a **Ship a version** box.
-    4. Switch **Apps × servers** to **Servers × apps** to turn the grid around.
-    5. Open **Map**. Each dot is a place, coloured by the worst state there. Lines join places that run the same apps. Click a dot to see its servers.
-    6. Type `atlas` in the search box at the top and press <kbd>Enter</kbd> to open the first match.
+    Every cell is **Unknown** for now. Git says what should run, but no [agent](/reference/glossary#agent) is reporting what does run. Install the agent on your servers to fill the cells in. See [Install the agent](/guides/agent).
 
     The [tour](/tour) covers every screen.
   </Step>
 </Steps>
-
-## What the demo can't do
-
-The demo has no real agents and no GitHub behind it:
-
-- About a minute after you add it, every server that has reported turns **stale**. Meridian marks a server stale when its agent has been silent for 45 seconds. Run `meridian:demo` again to bring the drift back.
-- **Deploy**, **Redeploy** and **Roll back** fail. They go through GitHub to the demo's repository, `example/fleet`, which doesn't exist.
-- **Settings** shows GitHub as **Not connected**.
 
 ## Clean up
 

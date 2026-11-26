@@ -33,6 +33,21 @@ class MapTest < ActionDispatch::IntegrationTest
     assert_select ".world__labels text", WorldMap.new.named_keys(singapore).size
   end
 
+  test "an app chip shows that app only, not every app whose name contains it" do
+    sign_in_as users(:viewer)
+    projects(:infra).apps.create!(service: "webhooks", config_path: "deploy/webhooks.yml").assignments.create!(server: Server.find_by!(name: "web-2.example.com"), role: "web")
+    projects(:infra).apps.create!(service: "edge", kind: App::ACCESSORIES, config_path: "deploy/edge.yml")
+
+    get map_path
+    assert_select ".chips a", text: /edge/, count: 0, message: "accessories-only configs are off the map"
+    assert_select ".chips a[href*='service=webhooks']"
+
+    get map_path(service: "web")
+    assert_response :success
+    assert_equal [ "web" ], WorldMap.new(service: "web").sites.flat_map(&:apps).map(&:service).uniq
+    assert_equal %w[ web webhooks ], Board.new(app: "web").apps.values.map(&:service).uniq.sort, "the free-text filter still matches part of a name"
+  end
+
   test "admins place a server by hand" do
     sign_in_as users(:admin)
     server = Server.find_by!(name: "jobs-1.example.com")

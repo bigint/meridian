@@ -3,7 +3,7 @@
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @map.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 <% sites = @map.sites %>
-<% services = App.distinct.order(:service).pluck(:service) %>
+<% services = App.deployable.distinct.order(:service).pluck(:service) %>
 <% problems = sites.group_by(&:state).slice(*Drift::ATTENTION_RANK.keys) %>
 <% deploying = sites.count { @map.deploying?(it) } %>
 
@@ -12,10 +12,10 @@
 <div class="chips">
   <% if services.size.between?(2, 8) %>
     <span class="chips__label">App</span>
-    <%= chip "All", services.size, current: @map.filters[:app].blank?, href: map_path(request.query_parameters.except("app", "place")) %>
+    <%= chip "All", services.size, current: @map.filters[:service].blank?, href: map_path(request.query_parameters.except("service", "place")) %>
     <% services.each do |service| %>
-      <%= chip service, App.where(service: service).count, current: @map.filters[:app] == service,
-            href: map_path(request.query_parameters.except("place").merge(app: (@map.filters[:app] == service ? nil : service))) %>
+      <%= chip service, App.deployable.where(service: service).count, current: @map.filters[:service] == service,
+            href: map_path(request.query_parameters.except("place").merge(service: (@map.filters[:service] == service ? nil : service))) %>
     <% end %>
     <span class="chips__rule" aria-hidden="true"></span>
   <% end %>
@@ -25,8 +25,9 @@
   <% if problems.empty? && deploying.zero? && sites.any? %><%= chip "Every place matches Git", nil, symbol: "✓", tone: "txt-ok" %><% end %>
 </div>
 
-<%= disclosure "Filters", open: @map.filters.except(:app).any? do %>
+<%= disclosure "Filters", open: @map.filters.except(:app, :service).any? do %>
   <%= form_with url: map_path, method: :get, class: "filters" do |form| %>
+    <%= form.hidden_field :service, value: @map.filters[:service] if @map.filters[:service] %>
     <div class="field"><%= form.label :app %><%= form.search_field :app, value: @map.filters[:app], placeholder: "Service" %></div>
     <div class="field"><%= form.label :project %><%= form.select :project, @projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: @map.filters[:project] } %></div>
     <% Board::LABELS.each do |key| %>

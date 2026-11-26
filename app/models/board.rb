@@ -107,6 +107,7 @@ class Board
       scope = scope.where(id: filters[:app_id]) if filters[:app_id]
       scope = scope.where(project_id: filters[:project]) if filters[:project]
       scope = scope.where("apps.service LIKE ? ESCAPE '\\'", "%#{App.sanitize_sql_like(filters[:app])}%") if filters[:app]
+      scope = scope.where(service: filters[:service]) if filters[:service]
       scope.to_a.index_by(&:id)
     end
   end

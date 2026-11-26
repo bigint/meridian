@@ -199,6 +199,6 @@ class WorldMap
     end
 
     def board
-      @board ||= Board.new(filters.slice(:project, :app, *Board::LABELS.map(&:to_sym)).merge(group: "none"))
+      @board ||= Board.new(filters.slice(:project, :app, :service, *Board::LABELS.map(&:to_sym)).merge(group: "none"))
     end
 end

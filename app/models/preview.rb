@@ -49,11 +49,10 @@ class Preview < ApplicationRecord
     end
 
     # Matches a workflow run to a preview by its run name: "<command> <config> pr-<n>",
-    # within the run's own repository: many repositories have a config/deploy.yml.
-    def track(run, project = Project.for_repo(run.dig("repository", "full_name")))
+    # within the run's own project: many repositories have a config/deploy.yml.
+    def track(run, project)
       command, config, destination = run["display_title"].to_s.split(" ", 3)
       return unless destination.to_s.match?(Project::Syncable::PREVIEW_DESTINATION)
-      return true unless project
 
       preview = Preview.joins(:app).find_by(apps: { project_id: project.id, config_path: config }, destination: destination) or return true
       return true unless preview.current_run?(run) && run["status"] == "completed"

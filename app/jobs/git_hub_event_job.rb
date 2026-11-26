@@ -19,10 +19,9 @@ class GitHubEventJob < ApplicationJob
       project.sync if payload["ref"] == "refs/heads/#{project.default_branch}"
     end
 
-    # Previews are matched within the run's repository, which the run names.
     def workflow_run(repo, payload)
       run = payload["workflow_run"] or return
-      Project.for_repo(repo)&.track_workflow_run(run.reverse_merge("repository" => payload["repository"]))
+      Project.for_repo(repo)&.track_workflow_run(run)
     end
 
     # Previews follow pull requests in an app's source repository.

@@ -137,26 +137,23 @@ class WorldMap
 
   # Places every name where it overlaps no other name and no dot. Bigger
   # places choose first; each tries beside its dot, then further out with a
-  # leader line, and keeps its first spot if nothing is free. Pass keys to
-  # name only some places; every dot is still kept clear.
-  def labels(keys = nil)
-    @labels ||= {}
-    @labels[keys] ||= begin
-      dots = sites.map { |site| box_around(site.x, site.y, radius(site)) }
-      dots << box_around(*hub, HUB_RADIUS) if hub
+  # leader line, and keeps its first spot if nothing is free. Only the places
+  # in keys are named; every dot is still kept clear.
+  def labels(keys)
+    dots = sites.map { |site| box_around(site.x, site.y, radius(site)) }
+    dots << box_around(*hub, HUB_RADIUS) if hub
 
-      named = keys ? sites.select { keys.include?(it.key) } : sites
-      items = named.sort_by { [ -it.servers.size, it.key ] }.map { [ it.key, [ it.x, it.y ], radius(it), it.name ] }
-      items.unshift([ :hub, hub, HUB_RADIUS, hub_name ]) if hub && (keys.nil? || keys.include?(:hub))
+    named = sites.select { keys.include?(it.key) }
+    items = named.sort_by { [ -it.servers.size, it.key ] }.map { [ it.key, [ it.x, it.y ], radius(it), it.name ] }
+    items.unshift([ :hub, hub, HUB_RADIUS, hub_name ]) if hub && keys.include?(:hub)
 
-      taken = []
-      items.to_h do |key, (x, y), r, text|
-        own = box_around(x, y, r)
-        candidates = label_positions(text, x, y, r)
-        choice = candidates.find { |label| (taken + dots - [ own ]).none? { overlap?(label.box, it) } } || candidates.first
-        taken << choice.box
-        [ key, choice ]
-      end
+    taken = []
+    items.to_h do |key, (x, y), r, text|
+      own = box_around(x, y, r)
+      candidates = label_positions(text, x, y, r)
+      choice = candidates.find { |label| (taken + dots - [ own ]).none? { overlap?(label.box, it) } } || candidates.first
+      taken << choice.box
+      [ key, choice ]
     end
   end
 

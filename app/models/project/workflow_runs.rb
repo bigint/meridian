@@ -5,7 +5,7 @@ module Project::WorkflowRuns
 
   def track_workflow_run(run)
     return unless run["head_branch"] == default_branch && meridian_workflow?(run)
-    return Preview.track(run) || Deploy.from_dispatch(self, run) if run["event"] == "workflow_dispatch"
+    return Preview.track(run, self) || Deploy.from_dispatch(self, run) if run["event"] == "workflow_dispatch"
 
     sync if last_synced_sha != run["head_sha"]
     Deploy.from_workflow_run(self, run)

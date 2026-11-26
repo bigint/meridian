@@ -11,13 +11,8 @@ Everything site-specific is set through environment variables, so it stays out o
 | `GITHUB_APP_WEBHOOK_SECRET` | yes | Verifies webhook signatures. |
 | `GITHUB_TOKEN` | no | Instead of a GitHub App: a personal access token with `repo` and `workflow` scopes. Simpler for a homelab or local development; an App limits access more tightly. |
 | `GITHUB_API_URL` | no | For GitHub Enterprise Server, e.g. `https://github.example.com/api/v3/`. |
-| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | no | Turns on OpenID Connect sign-in with any provider (Pocket ID, Authentik, Keycloak, Google…). |
-| `OIDC_NAME` | no | Button label, e.g. `Pocket ID`. |
-| `OIDC_REDIRECT_URI` | no | Defaults to `$MERIDIAN_URL/auth/oidc/callback`. |
 | `SOLID_QUEUE_IN_PUMA` | no | `true` by default. Set to `false` and run `bin/jobs` in a separate `job` role for large installs. |
 | `RAILS_LOG_LEVEL` | no | `info` by default. |
-
-OIDC users are matched to existing users by email address. New OIDC users start as viewers, and an admin promotes them under **Settings → People**.
 
 ## In the app
 

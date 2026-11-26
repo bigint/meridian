@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", default: "Alidade", null: false
     t.string "preview_domain"
@@ -102,16 +102,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_090000) do
     t.index ["actor_id"], name: "index_events_on_actor_id"
     t.index ["created_at"], name: "index_events_on_created_at"
     t.index ["subject_type", "subject_id"], name: "index_events_on_subject"
-  end
-
-  create_table "identities", force: :cascade do |t|
-    t.integer "user_id", null: false
-    t.string "provider", null: false
-    t.string "uid", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["provider", "uid"], name: "index_identities_on_provider_and_uid", unique: true
-    t.index ["user_id"], name: "index_identities_on_user_id"
   end
 
   create_table "placements", force: :cascade do |t|
@@ -238,7 +228,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_090000) do
   add_foreign_key "deploys", "releases"
   add_foreign_key "deploys", "users", column: "actor_id"
   add_foreign_key "events", "users", column: "actor_id"
-  add_foreign_key "identities", "users"
   add_foreign_key "placements", "apps"
   add_foreign_key "placements", "servers"
   add_foreign_key "previews", "apps"

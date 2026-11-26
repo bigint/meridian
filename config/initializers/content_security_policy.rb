@@ -11,7 +11,7 @@ Rails.application.configure do
     policy.connect_src :self
     policy.object_src :none
     policy.base_uri :self
-    policy.form_action :self, "https://github.com", *([ ENV["OIDC_ISSUER"] ] if ENV["OIDC_ISSUER"].present?)
+    policy.form_action :self, "https://github.com"
     policy.frame_ancestors :none
   end
 

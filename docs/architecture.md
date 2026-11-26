@@ -54,8 +54,8 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 
 | Model | Role |
 | --- | --- |
-| `Account` | The single row that holds settings: preview domain, OIDC and defaults. |
-| `User` | Email and password (Rails 8 authentication) or OIDC `Identity`. Role is `viewer`, `deployer` or `admin`. |
+| `Account` | The single row that holds settings: preview domain and defaults. |
+| `User` | Email and password (Rails 8 authentication). Role is `viewer`, `deployer` or `admin`. |
 | `Project` | One infra repository. It holds the GitHub installation, config globs, the last synced SHA and parse errors. |
 | `App` | One Kamal config and destination. It holds the service, config path, kind, hostnames and source repository. |
 | `Server` | One machine, unique by the `machine_id` its agent reports (by hostname before that). It holds labels, agent version and last-seen time. |

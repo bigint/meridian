@@ -71,8 +71,6 @@
           </dd>
           <dt>Webhooks</dt>
           <dd><%= GitHost::GitHub.webhook_secret.present? ? "Secret set" : "Set GITHUB_APP_WEBHOOK_SECRET" %></dd>
-          <dt>OpenID Connect</dt>
-          <dd><%= Meridian.oidc? ? "#{Meridian.oidc_name} (#{ENV["OIDC_ISSUER"]})" : "Off. Set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET." %></dd>
           <dt>Kamal</dt>
           <dd><code><%= KamalConfig::KAMAL_VERSION %></code></dd>
         </dl>

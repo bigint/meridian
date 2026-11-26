@@ -1,7 +1,7 @@
 <% content_for :title, "Welcome" %>
 <div class="flex-col gap-xs">
   <h1 class="page-header__title">Welcome to Meridian</h1>
-  <p class="txt-muted">Create the first admin. You can add more people, or sign in with OpenID Connect, later.</p>
+  <p class="txt-muted">Create the first admin. You can add more people later.</p>
 </div>
 
 <%= form_with model: @user, url: first_run_path, class: "fields" do |form| %>

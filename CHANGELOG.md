@@ -16,6 +16,7 @@
 - The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should". A getting-started checklist appears on new installs, and each app has a one-line status ("✓ Running v42 everywhere").
 - `bin/rails meridian:demo` can be run again over an existing demo fleet.
 - Keyboard shortcuts are gone for now.
+- OpenID Connect sign-in is gone for now. Sign in with email and password; the `OIDC_*` variables do nothing, and linked identities are deleted.
 
 ### World map
 

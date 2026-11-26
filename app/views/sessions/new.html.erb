@@ -13,6 +13,3 @@
   <%= form.submit "Sign in", class: "btn btn--primary btn--block" %>
 <% end %>
 
-<% if Meridian.oidc? %>
-  <%= button_to "Sign in with #{Meridian.oidc_name}", "/auth/oidc", method: :post, class: "btn btn--block", data: { turbo: false } %>
-<% end %>

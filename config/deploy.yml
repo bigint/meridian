@@ -29,10 +29,6 @@ env:
     - GITHUB_APP_ID
     - GITHUB_APP_PRIVATE_KEY
     - GITHUB_APP_WEBHOOK_SECRET
-    # Optional single sign-on:
-    # - OIDC_ISSUER
-    # - OIDC_CLIENT_ID
-    # - OIDC_CLIENT_SECRET
 
 # job:
 #   hosts:

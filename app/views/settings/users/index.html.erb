@@ -12,7 +12,6 @@
         <th scope="col">Name</th>
         <th scope="col">Email</th>
         <th scope="col">Role</th>
-        <th scope="col">Sign-in</th>
         <th scope="col" class="table__end"></th>
       </tr>
     </thead>
@@ -22,12 +21,11 @@
           <th scope="row"><%= safe_join([ avatar(user.display_name, small: true), user.display_name ], " ") %></th>
           <td><%= user.email_address %></td>
           <td><%= badge user.role, tone: (:accent if user.admin?) %></td>
-          <td><%= user.identities.any? ? "Password, OIDC" : "Password" %></td>
           <td class="table__end"><%= link_to "Edit", edit_settings_user_path(user), class: "btn btn--plain btn--small" %></td>
         </tr>
       <% end %>
       <% if @users.none? %>
-        <tr><td colspan="5" class="table__empty">Nothing here yet.</td></tr>
+        <tr><td colspan="4" class="table__empty">Nothing here yet.</td></tr>
       <% end %>
     </tbody>
   </table>

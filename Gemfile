@@ -43,9 +43,6 @@ gem "jwt"
 # Seals secret values with the repository public key (libsodium), as GitHub requires
 gem "rbnacl"
 
-# Optional single sign-on through any OpenID Connect provider
-gem "omniauth_openid_connect"
-gem "omniauth-rails_csrf_protection"
 
 # Jobs dashboard for admins
 gem "mission_control-jobs"

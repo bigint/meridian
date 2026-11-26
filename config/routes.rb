@@ -33,8 +33,6 @@ Rails.application.routes.draw do
 
   resource :session
   resource :first_run, only: %i[ show create ]
-  get "auth/:provider/callback", to: "sessions/omniauths#create", as: :omniauth_callback
-  get "auth/failure", to: "sessions/omniauths#failure"
 
   namespace :settings do
     root "accounts#show"

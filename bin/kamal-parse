@@ -51,6 +51,8 @@ module KamalParse
       envs = [ raw["env"] ]
       envs += Array(raw["servers"].is_a?(Hash) ? raw["servers"].values : []).grep(Hash).map { |role| role["env"] }
       envs += Array(raw["accessories"]&.values).grep(Hash).map { |accessory| accessory["env"] }
+      # Env set per server tag: env.tags.<tag>, with its own clear and secret.
+      envs += envs.grep(Hash).flat_map { |env| Array(env["tags"]&.values) }
       keys = envs.grep(Hash).flat_map { |env| Array(env["secret"]) }
       keys += Array(raw.dig("registry", "password")) if raw.dig("registry", "password").is_a?(Array)
       keys.map { |key| key.to_s.split(":", 2).last }.uniq.sort

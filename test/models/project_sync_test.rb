@@ -36,6 +36,28 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal [], db["secrets"]
   end
 
+  test "secret names include those set per server tag" do
+    files = { "deploy/tagged.yml" => <<~YAML }
+      service: tagged
+      image: example/tagged
+      servers:
+        web:
+          hosts:
+            - web-1.example.com: singapore
+      env:
+        secret: [ DATABASE_URL ]
+        tags:
+          singapore:
+            secret: [ "DATABASE_REPLICA_URL:SINGAPORE_REPLICA_URL" ]
+      registry: { server: ghcr.io, username: example, password: [ KAMAL_REGISTRY_PASSWORD ] }
+      builder: { arch: amd64 }
+    YAML
+    stub_github_files(@project, files, head: "f" * 40)
+
+    @project.sync
+    assert_equal %w[ DATABASE_URL KAMAL_REGISTRY_PASSWORD SINGAPORE_REPLICA_URL ], @project.apps.sole.secret_names
+  end
+
   test "parse errors carry file and line" do
     @project.sync
 

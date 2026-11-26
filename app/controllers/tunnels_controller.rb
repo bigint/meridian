@@ -4,11 +4,11 @@ class TunnelsController < ApplicationController
     @account = Account.current
   end
 
-  # Step-by-step setup for one app, in its own names.
+  # Step-by-step setup of a project's shared tunnel, in its own names, for
+  # the servers picked to run connectors.
   def new
-    @apps = App.ordered.includes(:project, :servers)
-    tunnels = Tunnel.all
-    app = @apps.find { it.id == params[:app].to_i } || (@apps - tunnels.map(&:app)).first || @apps.first
-    @setup = Tunnel::Setup.for(app, tunnels: tunnels) if app
+    @projects = Project.order(:name).to_a
+    project = @projects.find { it.id == params[:project].to_i } || @projects.first
+    @setup = Tunnel::Setup.for(project, hosts: Array(params[:hosts]).compact_blank) if project
   end
 end

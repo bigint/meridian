@@ -1,8 +1,8 @@
 <% content_for :title, "Tunnels" %>
-<% problems = @tunnels.count { it.state != :running } %>
-<% summary = if @tunnels.none? then "No app runs behind a Cloudflare Tunnel yet."
-             elsif problems.zero? then "#{pluralize(@tunnels.size, "app")} behind a Cloudflare Tunnel. Every connector is running."
-             else "#{pluralize(@tunnels.size, "app")} behind a Cloudflare Tunnel. #{problems} #{problems == 1 ? "needs" : "need"} attention."
+<% problems = @tunnels.count(&:problems?) %>
+<% summary = if @tunnels.none? then "No Cloudflare Tunnel yet."
+             elsif problems.zero? then "#{pluralize(@tunnels.size, "Cloudflare Tunnel")}. Every connector is running."
+             else "#{pluralize(@tunnels.size, "Cloudflare Tunnel")}. #{problems} #{problems == 1 ? "needs" : "need"} attention."
              end %>
 <%= page_header "Tunnels", meta: summary do %>
   <%= link_to new_tunnel_path, class: "btn btn--primary" do %><%= icon :plus %> Set up a tunnel<% end %>
@@ -10,57 +10,76 @@
 
 <% if @tunnels.none? %>
   <%= empty_state "No tunnels yet", icon_name: :tunnels do %>
-    <p>A tunnel serves an app through Cloudflare, so its servers need no open ports. Meridian reads tunnels from Git and the agents and never calls Cloudflare.</p>
+    <p>One Cloudflare Tunnel can serve every app, with a connector on each server and no open ports. Meridian reads it from Git and the agents and never calls Cloudflare.</p>
   <% end %>
-<% else %>
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">App</th>
-          <th scope="col">Hostnames</th>
-          <th scope="col">Token</th>
-          <th scope="col">Connectors</th>
-          <th scope="col" class="table__end"><span class="sr-only">Steps</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @tunnels.each do |tunnel| %>
-          <tr>
-            <th scope="row"><%= link_to tunnel.app.name, tunnel.app %></th>
-            <td class="mono txt-small nowrap"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
-            <td>
-              <% if tunnel.secret_name %>
-                <span class="mono txt-small block nowrap"><%= tunnel.secret_name %></span>
-                <%= tunnel.token_set? ? badge("set", tone: :ok, data: { tooltip: "Set from Meridian #{time_ago_in_words(tunnel.secret.last_set_at)} ago" }) : badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %>
-              <% else %>
-                <span class="txt-faint">none</span>
+<% end %>
+
+<% @tunnels.each do |tunnel| %>
+  <section class="card" aria-labelledby="tunnel-<%= tunnel.object_id %>">
+    <div class="card__header">
+      <h2 id="tunnel-<%= tunnel.object_id %>" class="flex items-center gap-s">
+        <%= icon :tunnels %><span class="mono"><%= tunnel.name %></span>
+        <span class="txt-small txt-muted"><%= tunnel.project.repo_full_name %> · <%= safe_join(tunnel.configs.map { tag.code(it.config_path) }, ", ") %></span>
+      </h2>
+      <%= link_to "Steps", new_tunnel_path(project: tunnel.project.id), class: "btn btn--plain" %>
+    </div>
+    <div class="card__meta">
+      <span>Token <code><%= tunnel.secret_name %></code>
+        <%= tunnel.token_set? ? badge("set", tone: :ok, data: { tooltip: "Set from Meridian #{time_ago_in_words(tunnel.secret.last_set_at)} ago" }) : badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %></span>
+      <span><%= tunnel.connectors.count { it.state == :running } %> of <%= tunnel.connectors.size %> connectors running</span>
+      <span>Serves <%= pluralize(tunnel.served.size, "app") %></span>
+    </div>
+    <div class="card__body">
+      <div class="grid-2">
+        <div class="stack">
+          <h3 class="walk__phase">Connectors</h3>
+          <ul class="flex-col gap-s">
+            <% tunnel.connectors.each do |connector| %>
+              <li class="flex items-center gap-s">
+                <%= case connector.state
+                    when :running then badge("running", tone: :ok)
+                    when :stopped then badge(connector.placement.state || "stopped", tone: :warn)
+                    when :missing then badge("not started", tone: :bad)
+                    else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
+                    end %>
+                <span class="mono txt-small nowrap"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
+              </li>
+            <% end %>
+          </ul>
+          <% tunnel.missing.each do |connector| %>
+            <p class="txt-small txt-muted">Start <span class="mono"><%= connector.host %></span>'s with <%= copyable tunnel.boot_command(connector) %></p>
+          <% end %>
+        </div>
+
+        <div class="stack">
+          <h3 class="walk__phase">Apps it can serve</h3>
+          <% if tunnel.served.any? %>
+            <ul class="flex-col gap-s">
+              <% tunnel.served.each do |coverage| %>
+                <li class="flex items-center gap-s flex-wrap">
+                  <%= badge("✓ every connector", tone: :ok) %>
+                  <%= link_to coverage.app.name, coverage.app %>
+                  <span class="mono txt-small txt-muted"><%= coverage.app.hostnames.join(", ") %></span>
+                </li>
               <% end %>
-            </td>
-            <td>
-              <ul class="flex-col gap-s">
-                <% tunnel.connectors.each do |connector| %>
-                  <li class="flex items-center gap-s">
-                    <%= case connector.state
-                        when :running then badge("running", tone: :ok)
-                        when :stopped then badge(connector.placement.state || "stopped", tone: :warn)
-                        when :missing then badge("not started", tone: :bad)
-                        else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
-                        end %>
-                    <span class="mono txt-small nowrap"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
-                  </li>
-                <% end %>
-              </ul>
-              <% if tunnel.missing? %>
-                <p class="txt-small txt-muted">Start it with <%= copyable tunnel.boot_command %></p>
-              <% end %>
-            </td>
-            <td class="table__end"><%= link_to "Steps", new_tunnel_path(app: tunnel.app.id), class: "btn btn--plain" %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+            </ul>
+          <% else %>
+            <p class="txt-muted">No app runs on every connector's server yet.</p>
+          <% end %>
+
+          <% tunnel.gaps.each do |coverage| %>
+            <%= alert_box :warn, title: "Don't route #{coverage.app.name} through this tunnel yet" do %>
+              <p>It isn't on <%= safe_join(coverage.missing.map { tag.code(it) }, ", ") %>, so Cloudflare could send its requests there, where kamal-proxy answers 404. Add those servers to <code><%= coverage.app.config_path %></code> first.</p>
+            <% end %>
+          <% end %>
+
+          <% if tunnel.elsewhere.any? %>
+            <p class="txt-small txt-muted">On no connector's server, so not for this tunnel: <%= safe_join(tunnel.elsewhere.map { link_to(it.app.name, it.app) }, ", ") %>.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </section>
 <% end %>
 
 <div class="grid-2">
@@ -83,7 +102,7 @@
   <div class="card">
     <div class="card__header">Meridian itself</div>
     <div class="card__body">
-      <p class="txt-muted">GitHub webhooks and agents must reach Meridian. To serve it through a tunnel, add the same connector to Meridian's own <code>config/deploy.yml</code> and set <code>proxy.ssl: false</code>. See <code>docs/cloudflare-tunnel.md</code>.</p>
+      <p class="txt-muted">GitHub webhooks and agents must reach Meridian. To serve it through the tunnel, run it on the connectors' servers, add a route for its hostname, and set <code>proxy.ssl: false</code>. See <code>docs/cloudflare-tunnel.md</code>.</p>
     </div>
   </div>
 </div>

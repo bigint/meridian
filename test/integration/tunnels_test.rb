@@ -1,73 +1,63 @@
 require "test_helper"
 
 class TunnelsTest < ActionDispatch::IntegrationTest
-  setup { sign_in_as users(:viewer) }
+  setup do
+    sign_in_as users(:viewer)
+    @project = projects(:infra)
+    @a, @b = %w[ a b ].map { Server.create!(name: "#{it}.example.com", hostname: "#{it}.example.com", last_seen_at: 1.second.ago) }
+  end
 
-  test "lists apps behind a tunnel with each connector's state and the boot command" do
-    project = projects(:infra)
-    running = Server.create!(name: "a.example.com", hostname: "a.example.com", last_seen_at: 1.second.ago)
-    Server.create!(name: "b.example.com", hostname: "b.example.com", last_seen_at: 1.second.ago)
-    running.placements.create!(container_id: "c1", name: "shop-cloudflared", kind: "accessory", service: "shop-cloudflared", state: "running", observed_at: Time.current)
-    project.apps.create!(service: "shop", destination: "production", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ],
-      accessories: [ { "name" => "cloudflared", "service" => "shop-cloudflared", "image" => "cloudflare/cloudflared:2026", "hosts" => %w[ a.example.com b.example.com ] } ])
+  test "shows the shared tunnel, its connectors and which apps it can serve" do
+    make_app("edge", kind: App::ACCESSORIES, accessories: %w[ a b ].map { connector(it) })
+    @a.placements.create!(container_id: "c1", name: "edge-cloudflared-a", kind: "accessory", service: "edge-cloudflared-a", state: "running", observed_at: Time.current)
+    make_app("shop", hostnames: [ "shop.example.com" ], on: [ @a, @b ])
+    make_app("blog", hostnames: [ "blog.example.com" ], on: [ @a ])
 
     get tunnels_path
 
     assert_response :success
-    assert_select "tbody th a", text: "shop · production"
-    assert_select "tbody td", text: /shop\.example\.com/
+    assert_select ".page-header__meta", text: /1 Cloudflare Tunnel. 1 needs attention/
+    assert_select ".card__header", text: /edge/
     assert_select ".badge", text: "running"
     assert_select ".badge", text: "not started"
-    assert_select ".copyable code", text: "kamal accessory boot cloudflared -c deploy/shop.yml -d production"
-    assert_select ".page-header__meta", text: /1 app behind a Cloudflare Tunnel. 1 needs attention/
-    assert_select "a[href=?]", new_tunnel_path(app: project.apps.find_by!(service: "shop").id), text: "Steps"
+    assert_select ".copyable code", text: "kamal accessory boot cloudflared-b -c deploy/edge.yml"
+    assert_select "li", text: /shop.*shop\.example\.com/m
+    assert_select ".alert", text: /Don't route blog through this tunnel yet.*b\.example\.com/m
   end
 
-  test "spells out the steps for the chosen app, in its own names" do
-    app = projects(:infra).apps.create!(service: "occasions", config_path: "deploy/occasions.yml", hostnames: [ "occasions.example.net" ])
+  test "spells out the setup for the picked servers, with the edge config to commit" do
+    make_app("shop", hostnames: [ "shop.example.com" ], on: [ @a, @b ])
+    make_app("blog", hostnames: [ "blog.example.com" ], on: [ @a ])
 
-    get new_tunnel_path(app: app.id)
+    get new_tunnel_path(hosts: [ "a.example.com", "b.example.com" ])
 
     assert_response :success
-    assert_select "select[name=app] option[selected]", text: "occasions"
+    assert_select "input[type=checkbox][name='hosts[]'][checked]", 2
     assert_select ".walk__step", 7
-    assert_select ".walk__step--done", 0
-    assert_select ".walk__text", text: /Networking → Tunnels/
-    assert_select ".copyable code", text: "occasions"
-    assert_select ".copyable code", text: "occasions.example.net"
-    assert_select ".copyable code", text: "http://kamal-proxy:80"
-    assert_select ".copyable code", text: "OCCASIONS_TUNNEL_TOKEN=$OCCASIONS_TUNNEL_TOKEN"
-    assert_select ".code-block code", text: /TUNNEL_TOKEN:OCCASIONS_TUNNEL_TOKEN/
-    assert_select ".code-block code", text: "kamal accessory boot cloudflared -c deploy/occasions.yml"
+    assert_select ".copyable code", text: "CLOUDFLARE_TUNNEL_TOKEN=$CLOUDFLARE_TUNNEL_TOKEN"
+    assert_select ".code-block__bar", text: /deploy\/edge\.yml/
+    assert_select ".code-block code", text: /cloudflared-a:.*host: a\.example\.com.*cloudflared-b:.*host: b\.example\.com/m
+    assert_select ".code-block code", text: "kamal accessory boot all -c deploy/edge.yml"
+    assert_select ".copyable code", text: "shop.example.com"
+    assert_select ".copyable code", { text: "blog.example.com", count: 0 }
+    assert_select ".alert", text: /blog isn't on every one of these servers/
   end
 
-  test "ticks off the steps Meridian can see are done" do
-    project = projects(:infra)
-    server = Server.create!(name: "a.example.com", hostname: "a.example.com", last_seen_at: 1.second.ago)
-    server.placements.create!(container_id: "c1", name: "shop-cloudflared", kind: "accessory", service: "shop-cloudflared", state: "running", observed_at: Time.current)
-    app = project.apps.create!(service: "shop", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ],
-      accessories: [ { "name" => "cloudflared", "service" => "shop-cloudflared", "image" => "cloudflare/cloudflared:2026", "hosts" => [ "a.example.com" ], "secrets" => [ "SHOP_TUNNEL_TOKEN" ] } ])
-    project.secret_names.create!(name: "SHOP_TUNNEL_TOKEN", last_set_at: 1.minute.ago)
+  test "picking one server makes every app on it ready to route" do
+    make_app("blog", hostnames: [ "blog.example.com" ], on: [ @a ])
 
-    get new_tunnel_path(app: app.id)
+    get new_tunnel_path(hosts: [ "a.example.com" ])
 
-    assert_select ".walk__step--done .walk__title", text: /Save the token/
-    assert_select ".walk__step--done .walk__title", text: /Add the connector/
-    assert_select ".walk__step--done .walk__title", text: /Start the connector/
-    assert_select ".walk__step--done", 4
-    assert_select ".badge", text: "1 of 1 running"
+    assert_select ".copyable code", text: "blog.example.com"
+    assert_select ".alert", count: 0
   end
 
-  test "the overview links to the setup" do
-    get tunnels_path
-    assert_select ".page-header a.btn--primary[href=?]", new_tunnel_path, text: /Set up a tunnel/
-  end
-
-  test "says so when no app runs behind a tunnel" do
+  test "says so when there is no tunnel" do
     get tunnels_path
 
     assert_response :success
     assert_select ".empty__title", text: "No tunnels yet"
+    assert_select ".page-header a.btn--primary[href=?]", new_tunnel_path, text: /Set up a tunnel/
   end
 
   test "warns about nested preview hostnames and links admins to settings" do
@@ -95,4 +85,16 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     get tunnels_path
     assert_select "nav[aria-label=Manage] a[href=?]", tunnels_path, text: "Tunnels"
   end
+
+  private
+    def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
+      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames,
+        accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
+      on.each { app.assignments.create!(server: it, role: "web") }
+      app
+    end
+
+    def connector(server)
+      { "name" => "cloudflared-#{server}", "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ "#{server}.example.com" ], "secrets" => [ "CLOUDFLARE_TUNNEL_TOKEN" ] }
+    end
 end

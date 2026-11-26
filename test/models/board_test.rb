@@ -9,6 +9,16 @@ class BoardTest < ActiveSupport::TestCase
     @server = Server.create!(name: "web-1.example.com", hostname: "web-1.example.com", labels: { "region" => "sgp" }, last_seen_at: Time.current)
   end
 
+  test "configs that only run accessories stay off the board" do
+    project = projects(:infra)
+    project.apps.create!(service: "edge", kind: App::ACCESSORIES, config_path: "deploy/edge.yml")
+    project.apps.create!(service: "shop", config_path: "deploy/shop.yml")
+
+    services = Board.new.apps.values.map(&:service)
+    assert_includes services, "shop"
+    assert_not_includes services, "edge"
+  end
+
   test "refreshes are throttled to one per group per second" do
     with_cache(ActiveSupport::Cache::MemoryStore.new) do
       assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) do

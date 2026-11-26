@@ -6,38 +6,31 @@ class TunnelTest < ActiveSupport::TestCase
     @counter = 0
   end
 
-  test "an accessory is a tunnel by its image" do
-    app = make_app("shop", accessories: [ accessory("tunnel", image: "cloudflare/cloudflared:2026.11.2"), accessory("db", image: "postgres:17") ])
+  test "connectors that read the same token are one tunnel, named after their config" do
+    edge = make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("cloudflared-a", "a.example.com"), connector("cloudflared-b", "b.example.com") ])
 
-    assert_equal [ [ app, "tunnel" ] ], Tunnel.all.map { [ it.app, it.name ] }
+    tunnel = Tunnel.all.sole
+    assert_equal "edge", tunnel.name
+    assert_equal [ edge ], tunnel.configs
+    assert_equal %w[ a.example.com b.example.com ], tunnel.connector_hosts
+    assert_equal "CLOUDFLARE_TUNNEL_TOKEN", tunnel.secret_name
   end
 
-  test "an accessory synced before images were reported is a tunnel by the name cloudflared" do
-    app = make_app("shop", accessories: [ accessory("cloudflared", image: nil), accessory("db", image: nil) ])
+  test "different tokens are different tunnels" do
+    make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com") ])
+    make_app("other", accessories: [ connector("cloudflared-b", "b.example.com", secret: "OTHER_TUNNEL_TOKEN") ])
 
-    assert_equal [ [ app, "cloudflared" ] ], Tunnel.all.map { [ it.app, it.name ] }
+    assert_equal %w[ CLOUDFLARE_TUNNEL_TOKEN OTHER_TUNNEL_TOKEN ], Tunnel.all.map(&:secret_name).sort
   end
 
-  test "each app has its own token secret, named after its service" do
-    assert_equal "SALEOR_API_TUNNEL_TOKEN", Tunnel.secret_name("saleor-api")
-    assert_includes Tunnel.snippet("SHOP_TUNNEL_TOKEN"), "- TUNNEL_TOKEN:SHOP_TUNNEL_TOKEN"
+  test "an accessory synced before images were reported is a connector by the name cloudflared" do
+    make_app("shop", accessories: [ { "name" => "cloudflared", "hosts" => [ "a.example.com" ] }, { "name" => "db", "hosts" => [ "a.example.com" ] } ])
+
+    assert_equal [ "cloudflared" ], Tunnel.all.sole.connectors.map(&:name)
   end
 
-  test "a tunnel knows its token secret and whether Meridian set it" do
-    make_app("shop", accessories: [ accessory("cloudflared").merge("secrets" => [ "SHOP_TUNNEL_TOKEN" ]) ])
-    make_app("blog", accessories: [ accessory("cloudflared").merge("secrets" => [ "BLOG_TUNNEL_TOKEN" ]) ])
-    @project.secret_names.create!(name: "SHOP_TUNNEL_TOKEN", last_set_at: 1.hour.ago)
-
-    tunnels = Tunnel.all.index_by { it.app.service }
-
-    assert_equal "SHOP_TUNNEL_TOKEN", tunnels["shop"].secret_name
-    assert tunnels["shop"].token_set?
-    assert_equal "BLOG_TUNNEL_TOKEN", tunnels["blog"].secret_name
-    assert_not tunnels["blog"].token_set?
-  end
-
-  test "apps without a tunnel are ignored" do
-    make_app("blog", accessories: [ accessory("db", image: "postgres:17") ])
+  test "apps without a connector are no tunnel" do
+    make_app("blog", accessories: [ { "name" => "db", "image" => "postgres:17", "service" => "blog-db", "hosts" => [ "a.example.com" ] } ])
 
     assert_empty Tunnel.all
   end
@@ -45,83 +38,85 @@ class TunnelTest < ActiveSupport::TestCase
   test "a connector is running, stopped, missing or unknown" do
     running, stopped, missing, quiet = %w[ a b c d ].map { server("#{it}.example.com", last_seen_at: 5.seconds.ago) }
     quiet.update!(last_seen_at: 1.hour.ago)
-    make_app("shop", accessories: [ accessory("cloudflared", hosts: %w[ a.example.com b.example.com c.example.com d.example.com e.example.com ]) ])
-    place(running, "shop-cloudflared", "running")
-    place(stopped, "shop-cloudflared", "exited")
+    make_app("edge", accessories: %w[ a b c d e ].map { connector("cloudflared-#{it}", "#{it}.example.com") })
+    place(running, "edge-cloudflared-a", "running")
+    place(stopped, "edge-cloudflared-b", "exited")
 
     states = Tunnel.all.sole.connectors.to_h { [ it.host, it.state ] }
 
     assert_equal({ "a.example.com" => :running, "b.example.com" => :stopped, "c.example.com" => :missing, "d.example.com" => :unknown, "e.example.com" => :unknown }, states)
-    assert_equal "exited", Tunnel.all.sole.connectors.find { it.state == :stopped }.placement.state
   end
 
-  test "a server that never reported is unknown, not missing" do
-    server("a.example.com", last_seen_at: nil)
-    make_app("shop", accessories: [ accessory("cloudflared", hosts: [ "a.example.com" ]) ])
+  test "a missing connector has the command that starts it" do
+    server("a.example.com", last_seen_at: 1.second.ago)
+    make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com") ])
 
-    assert_equal :unknown, Tunnel.all.sole.connectors.sole.state
+    tunnel = Tunnel.all.sole
+    assert_equal "kamal accessory boot cloudflared-a -c deploy/edge.yml", tunnel.boot_command(tunnel.missing.sole)
   end
 
-  test "a server is found by hostname or name, and none are created" do
-    named = server("web-1", hostname: "10.0.0.1", last_seen_at: 1.second.ago)
-    make_app("shop", accessories: [ accessory("cloudflared", hosts: [ "web-1", "10.0.0.2" ]) ])
+  test "an app is safe to serve only if it runs on every connector's server" do
+    a, b = server("a.example.com", last_seen_at: 1.second.ago), server("b.example.com", last_seen_at: 1.second.ago)
+    make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("cloudflared-a", "a.example.com"), connector("cloudflared-b", "b.example.com") ])
+    everywhere = make_app("shop", hostnames: [ "shop.example.com" ], on: [ a, b ])
+    partly = make_app("blog", hostnames: [ "blog.example.com" ], on: [ a ])
+    make_app("api", hostnames: [ "api.example.com" ], on: [ server("c.example.com", last_seen_at: 1.second.ago) ])
+    make_app("worker", on: [ a, b ])
+
+    tunnel = Tunnel.all.sole
+
+    assert_equal [ everywhere ], tunnel.served.map(&:app)
+    assert_equal [ [ partly, [ "b.example.com" ] ] ], tunnel.gaps.map { [ it.app, it.missing ] }
+    assert_equal [ "api" ], tunnel.elsewhere.map { it.app.service }
+  end
+
+  test "only connector trouble needs attention, not an app missing from a server" do
+    a = server("a.example.com", last_seen_at: 1.second.ago)
+    make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com"), connector("cloudflared-b", "b.example.com") ])
+    make_app("blog", hostnames: [ "blog.example.com" ], on: [ a ])
+    place(a, "edge-cloudflared-a", "running")
+    place(server("b.example.com", last_seen_at: 1.second.ago), "edge-cloudflared-b", "running")
+
+    tunnel = Tunnel.all.sole
+    assert tunnel.gaps.any?
+    assert_not tunnel.problems?
+  end
+
+  test "the token's secret says whether Meridian set it" do
+    make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com") ])
+    @project.secret_names.create!(name: "CLOUDFLARE_TUNNEL_TOKEN", last_set_at: 1.hour.ago)
+
+    assert Tunnel.all.sole.token_set?
+  end
+
+  test "servers are found by hostname or name, never created" do
+    server("web-1", hostname: "10.0.0.1", last_seen_at: 1.second.ago)
+    make_app("edge", accessories: [ connector("cloudflared-a", "web-1"), connector("cloudflared-b", "nowhere.example.com") ])
 
     assert_no_difference -> { Server.count } do
-      connectors = Tunnel.all.sole.connectors
-      assert_equal named, connectors.first.server
-      assert_nil connectors.last.server
+      assert_equal [ "web-1", nil ], Tunnel.all.sole.connectors.map { it.server&.name }
     end
   end
 
-  test "the same accessory on another app's server does not count" do
-    web = server("a.example.com", last_seen_at: 1.second.ago)
-    make_app("shop", accessories: [ accessory("cloudflared", hosts: [ "a.example.com" ]) ])
-    place(web, "blog-cloudflared", "running")
+  test "queries stay constant however many tunnels there are" do
+    make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com") ])
+    few = count_queries { Tunnel.all.each(&:coverage) }
 
-    assert_equal :missing, Tunnel.all.sole.state
-  end
+    5.times { |i| make_app("edge-#{i}", accessories: [ connector("cloudflared-#{i}", "s#{i}.example.com", secret: "T#{i}_TUNNEL_TOKEN") ]) }
 
-  test "problems sort first and set the tunnel's state" do
-    web = server("a.example.com", last_seen_at: 1.second.ago)
-    other = server("b.example.com", last_seen_at: 1.second.ago)
-    make_app("alpha", accessories: [ accessory("cloudflared", hosts: [ "a.example.com" ]) ])
-    make_app("beta", accessories: [ accessory("cloudflared", hosts: [ "a.example.com", "b.example.com" ]) ])
-    place(web, "alpha-cloudflared", "running")
-    place(web, "beta-cloudflared", "running")
-
-    assert_equal %w[ beta alpha ], Tunnel.all.map { it.app.service }
-    assert_equal %i[ missing running ], Tunnel.all.map(&:state)
-    assert_equal other, Tunnel.all.first.connectors.last.server
-  end
-
-  test "the boot command names the config and destination" do
-    make_app("shop", destination: "production", accessories: [ accessory("cloudflared") ])
-    make_app("blog", accessories: [ accessory("cloudflared") ])
-
-    commands = Tunnel.all.map(&:boot_command)
-
-    assert_includes commands, "kamal accessory boot cloudflared -c deploy/shop.yml -d production"
-    assert_includes commands, "kamal accessory boot cloudflared -c deploy/blog.yml"
-  end
-
-  test "the query count does not grow with the tunnels" do
-    web = server("a.example.com", last_seen_at: 1.second.ago)
-    make_app("one", accessories: [ accessory("cloudflared", hosts: [ "a.example.com" ]) ])
-    few = count_queries { Tunnel.all }
-
-    10.times { |index| make_app("app#{index}", accessories: [ accessory("cloudflared", hosts: [ "a.example.com", "x#{index}.example.com" ]) ]) }
-    place(web, "app3-cloudflared", "running")
-
-    assert_equal few, count_queries { Tunnel.all }
+    assert_equal few, count_queries { Tunnel.all.each(&:coverage) }
   end
 
   private
-    def make_app(service, destination: "", accessories:)
-      @project.apps.create!(service: service, destination: destination, config_path: "deploy/#{service}.yml", accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
+    def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
+      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames,
+        accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
+      on.each { app.assignments.create!(server: it, role: "web") }
+      app
     end
 
-    def accessory(name, image: "cloudflare/cloudflared:2026.11.2", hosts: [ "a.example.com" ])
-      { "name" => name, "image" => image, "hosts" => hosts }.compact
+    def connector(name, host, secret: "CLOUDFLARE_TUNNEL_TOKEN")
+      { "name" => name, "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ host ], "secrets" => [ secret ] }
     end
 
     def server(name, hostname: name, last_seen_at:)

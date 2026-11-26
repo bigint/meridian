@@ -1,14 +1,24 @@
-# An app that reaches the internet through Cloudflare Tunnel: one app with a
-# cloudflared accessory. Git says which servers should run the connector, the
-# agents say whether they do. Meridian never asks Cloudflare.
+# A Cloudflare Tunnel: every cloudflared accessory in a project that reads
+# the same token, usually one per server in an accessories-only config
+# (templates/kamal/edge.yml). Git says where the connectors should run and
+# which apps run beside them; the agents say whether the connectors run.
+# Meridian never asks Cloudflare.
+#
+# The tunnel routes each app's hostname to http://kamal-proxy:80 on whichever
+# connector Cloudflare picks, usually the nearest. So an app is safe to serve
+# through the tunnel only if it runs on every connector's server; anywhere
+# else kamal-proxy answers 404.
 class Tunnel
   IMAGE = "cloudflare/cloudflared"
   LEGACY_NAME = "cloudflared"
+  SECRET = "CLOUDFLARE_TUNNEL_TOKEN"
 
   # Least to most worrying. A tunnel is as healthy as its worst connector.
   STATES = %i[ running unknown stopped missing ].freeze
 
-  Connector = Data.define(:host, :server, :placement) do
+  Connector = Data.define(:host, :server, :placement, :accessory, :config) do
+    def name = accessory["name"]
+
     def state
       if placement then placement.running? ? :running : :stopped
       elsif server&.reporting? && !server.stale? then :missing
@@ -17,80 +27,74 @@ class Tunnel
     end
   end
 
-  # What it takes to put one app behind a tunnel, in that app's own names,
-  # and which of those steps Meridian can see are done: the token set from
-  # its Secrets page, the connector in the config, the connector running.
-  # The steps in Cloudflare and in .kamal/secrets it can't see.
-  class Setup
-    attr_reader :app, :tunnel, :secret
-
-    def self.for(app, tunnels: Tunnel.all)
-      tunnel = tunnels.find { it.app == app }
-      new(app, tunnel: tunnel, secret: app.project.secret_names.find_by(name: tunnel&.secret_name || Tunnel.secret_name(app.service)))
-    end
-
-    def initialize(app, tunnel: nil, secret: nil)
-      @app, @tunnel, @secret = app, tunnel, secret
-    end
-
-    def secret_name = tunnel&.secret_name || Tunnel.secret_name(app.service)
-    def secrets_line = "#{secret_name}=$#{secret_name}"
-    def snippet = Tunnel.snippet(secret_name)
-    def boot_command = Tunnel.boot_command(app, tunnel&.name || LEGACY_NAME)
-    def hostname = app.hostnames.first
-
-    def token_saved? = secret&.last_set_at.present?
-    def in_config? = tunnel.present?
-    def running? = tunnel&.state == :running
+  # An app with a hostname and the connector hosts it doesn't run on. None
+  # missing means Cloudflare can send its requests to any connector.
+  Coverage = Data.define(:app, :missing, :total) do
+    def full? = missing.empty?
+    def none? = missing.size == total
+    def partial? = !full? && !none?
   end
 
-  attr_reader :app, :accessory, :connectors, :secret
+  attr_reader :project, :secret_name, :connectors, :secret
 
-  # secret is the SecretName row for the token, if Meridian knows the name.
-  def initialize(app, accessory, connectors, secret = nil)
-    @app, @accessory, @connectors, @secret = app, accessory, connectors, secret
+  def initialize(project, secret_name, connectors, secret: nil, apps: [], servers: {})
+    @project, @secret_name, @connectors, @secret, @apps, @servers = project, secret_name, connectors, secret, apps, servers
   end
 
-  # One tunnel and one token per app: Cloudflare spreads a tunnel's requests
-  # over all its connectors, so a tunnel shared by apps on different servers
-  # would send requests to servers that don't run the app.
-  def self.secret_name(service) = "#{service.to_s.upcase.gsub(/[^A-Z0-9]+/, "_")}_TUNNEL_TOKEN"
-
-  def self.snippet(secret_name) = Templates.render("kamal/cloudflared.yml", secret: secret_name)
-
-  def self.boot_command(app, accessory_name)
-    "kamal accessory boot #{accessory_name} -c #{app.config_path}#{" -d #{app.destination}" if app.destination.present?}"
-  end
-
-  def name = accessory["name"]
-
-  def secret_name = Tunnel.token_secret(app, accessory)
-
+  # One tunnel per token. Its name is the config its connectors live in.
+  def name = configs.one? ? configs.first.service : secret_name
+  def configs = connectors.map(&:config).uniq
+  def connector_hosts = connectors.map(&:host).uniq
   def token_set? = secret&.last_set_at.present?
 
   def state = connectors.map(&:state).max_by { STATES.index(it) } || :unknown
+  def missing = connectors.select { it.state == :missing }
 
-  def missing? = connectors.any? { it.state == :missing }
+  def coverage = @coverage ||= Tunnel.coverage(@apps, connector_hosts, @servers)
+  def served = coverage.select(&:full?)
+  def gaps = coverage.select(&:partial?)
+  def elsewhere = coverage.select(&:none?)
+  # Meridian can't see Cloudflare's routes, so an app missing from a
+  # connector's server is advice, not a problem: it may not be routed here.
+  def problems? = state != :running
 
-  def boot_command = Tunnel.boot_command(app, name)
+  def boot_command(connector)
+    config = connector.config
+    "kamal accessory boot #{connector.name} -c #{config.config_path}#{" -d #{config.destination}" if config.destination.present?}"
+  end
 
-  # Problems first, then by app. Five queries however many tunnels there are.
+  # Problems first. A handful of queries however many tunnels there are.
   def self.all
-    pairs = App.ordered.flat_map { |app| app.accessories.select { cloudflared?(it) }.map { |accessory| [ app, accessory ] } }
+    pairs = App.ordered.includes(:project).flat_map { |app| app.accessories.select { cloudflared?(it) }.map { |accessory| [ app, accessory ] } }
+    return [] if pairs.empty?
+
     servers = servers_by_host(pairs.flat_map { |_, accessory| accessory["hosts"] }.uniq)
     placements = Placement.where(kind: "accessory", service: pairs.map { |_, accessory| accessory["service"] }.uniq)
       .running_first.group_by { [ it.server_id, it.service ] }
-    secrets = SecretName.where(name: pairs.filter_map { token_secret(*it) }.uniq).index_by { [ it.project_id, it.name ] }
+    groups = pairs.group_by { |app, accessory| [ app.project, token_secret(app, accessory) || "#{app.service}/#{accessory["name"]}" ] }
+    secrets = SecretName.where(name: groups.keys.map(&:last)).index_by { [ it.project_id, it.name ] }
+    apps = App.deployable.where(project_id: groups.keys.map(&:first)).includes(:servers).ordered.group_by(&:project_id)
 
-    tunnels = pairs.map do |app, accessory|
-      connectors = accessory["hosts"].map do |host|
-        server = servers[host]
-        Connector.new(host, server, server && placements[[ server.id, accessory["service"] ]]&.first)
+    tunnels = groups.map do |(project, secret_name), members|
+      connectors = members.flat_map do |config, accessory|
+        accessory["hosts"].map do |host|
+          server = servers[host]
+          Connector.new(host, server, server && placements[[ server.id, accessory["service"] ]]&.first, accessory, config)
+        end
       end
-      new(app, accessory, connectors, secrets[[ app.project_id, token_secret(app, accessory) ]])
+      new(project, secret_name, connectors, secret: secrets[[ project.id, secret_name ]], apps: apps.fetch(project.id, []), servers: servers)
     end
 
-    tunnels.sort_by.with_index { |tunnel, index| [ -STATES.index(tunnel.state), index ] }
+    tunnels.sort_by.with_index { |tunnel, index| [ tunnel.problems? ? 0 : 1, -STATES.index(tunnel.state), index ] }
+  end
+
+  # Every app with a hostname, and the hosts among these it doesn't run on.
+  def self.coverage(apps, hosts, servers)
+    wanted = hosts.to_h { [ it, servers[it]&.id ] }
+    apps.select { it.hostnames.any? }.map do |app|
+      on = app.servers.map(&:id)
+      Coverage.new(app, wanted.reject { |_, id| id && on.include?(id) }.keys, hosts.size)
+    end
   end
 
   # The repository secret a connector reads its token from. Configs synced
@@ -109,5 +113,4 @@ class Tunnel
     found = Server.where(hostname: hosts).or(Server.where(name: hosts)).to_a
     hosts.index_with { |host| found.find { it.hostname == host } || found.find { it.name == host } }.compact
   end
-  private_class_method :servers_by_host
 end

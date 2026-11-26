@@ -108,6 +108,46 @@ class SnapshotTest < ActiveSupport::TestCase
     assert_no_match(/SECRET|bin\/rails|mounts/, job.to_json)
   end
 
+  test "an agent at an IP Git doesn't list never claims another IP's server" do
+    git = Server.create!(name: "10.0.0.5", hostname: "10.0.0.5")
+    server = ingest(@payload.merge("machine_id" => "m-9", "hostname" => "10.0.0.9"), token: agent_tokens(:fleet))
+
+    assert_not_equal git, server
+    assert_nil git.reload.machine_id
+  end
+
+  test "a rebuilt machine takes back the server Git places once the old one has been silent long enough" do
+    old = ingest(@payload, token: agent_tokens(:fleet))
+    rebuilt = @payload.merge("machine_id" => "rebuilt")
+
+    travel 2.minutes
+    early = ingest(rebuilt, token: agent_tokens(:fleet))
+    assert_not_equal old, early, "a short silence is not a rebuild"
+    early.destroy
+
+    travel Server::RECLAIM_AFTER
+    assert_equal old, ingest(rebuilt, token: agent_tokens(:fleet))
+    assert_equal "rebuilt", old.reload.machine_id
+    assert_equal "in_sync", Board.new(server_id: old.id).cells.find { it.app.service == "web" }.state
+  end
+
+  test "a silent server Git doesn't place is never taken over" do
+    lone = Server.create!(name: "spare", hostname: "spare", machine_id: "m-old", last_seen_at: 1.day.ago)
+
+    assert_not_equal lone, ingest(@payload.merge("machine_id" => "m-new", "hostname" => "spare"), token: agent_tokens(:fleet))
+  end
+
+  test "the agent's interval is kept, and nonsense is ignored" do
+    assert_equal 60, ingest(@payload.merge("interval_seconds" => 60)).interval_seconds
+    assert_nil ingest(@payload.merge("interval_seconds" => "60")).interval_seconds
+  end
+
+  test "labels must be an object" do
+    assert_not snapshot(@payload.merge("labels" => "region=sgp")).valid?
+    assert_not snapshot(@payload.merge("labels" => [ %w[ region sgp ] ])).valid?
+    assert snapshot(@payload.except("labels")).valid?
+  end
+
   private
     def ingest(payload = @payload, token: agent_tokens(:web_1))
       snapshot(payload, token: token).ingest

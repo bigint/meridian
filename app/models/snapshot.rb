@@ -17,10 +17,10 @@ class Snapshot
   validates :machine_id, :hostname, presence: true
   # New app writes a server's hostname into a Kamal config.
   validates :hostname, format: { with: Server::HOST_FORMAT, message: "must be a host name" }, allow_blank: true
-  validate :containers_shape
+  validate :containers_shape, :labels_shape, :token_fits_machine
 
   def initialize(payload, token:)
-    @payload = payload.to_h.deep_stringify_keys
+    @payload = payload.is_a?(Hash) ? payload.deep_stringify_keys : {}
     @token = token
   end
 
@@ -28,6 +28,8 @@ class Snapshot
   def hostname = payload["hostname"].to_s.strip.first(255).presence
   def agent_version = payload["agent_version"].to_s.first(64)
   def truncated? = payload["truncated"] == true
+  # The agent's configured interval, before jitter. Older agents don't send it.
+  def interval_seconds = (payload["interval_seconds"] if payload["interval_seconds"].is_a?(Integer) && payload["interval_seconds"].between?(1, 1.day))
 
   def labels
     Hash(payload["labels"]).to_h { |key, value| [ key.to_s.first(64), value.to_s.first(128) ] }.first(32).to_h
@@ -46,7 +48,7 @@ class Snapshot
 
   # Only what Meridian needs survives into the job: never env, commands or mounts.
   def to_job
-    payload.slice("machine_id", "hostname", "agent_version", "labels", "truncated")
+    payload.slice("machine_id", "hostname", "agent_version", "labels", "truncated", "interval_seconds")
       .merge("containers" => containers.map { it.slice(*%w[ id name image service role destination version kind state health started_at ]) })
   end
 
@@ -57,7 +59,7 @@ class Snapshot
     Server.transaction do
       server = claim_server
       was_quiet = !server.reporting? || server.stale?
-      server.assign_attributes(machine_id: machine_id, labels: labels, agent_version: agent_version, **location)
+      server.assign_attributes(machine_id: machine_id, labels: labels, agent_version: agent_version, interval_seconds: interval_seconds, **location)
       server_changed = server.changed?
       server.update!(last_seen_at: Time.current)
       @changed = record_placements(server) || server_changed || was_quiet
@@ -73,24 +75,44 @@ class Snapshot
       errors.add(:containers, "has more than #{MAX_CONTAINERS}") if Array(payload["containers"]).size > MAX_CONTAINERS
     end
 
-    def claim_server
-      server = token.server || Server.find_by(machine_id: machine_id) || unclaimed_server || Server.create!(name: hostname, hostname: hostname)
+    def labels_shape
+      errors.add(:labels, "must be an object") unless payload["labels"].nil? || payload["labels"].is_a?(Hash)
+    end
 
-      if server.machine_id.present? && server.machine_id != machine_id
-        raise Rejected, "This token belongs to another server"
+    # Refused in the request, so the agent hears it, not only the job.
+    def token_fits_machine
+      if machine_id && bound_elsewhere?
+        errors.add(:base, "This token belongs to another server. Give each server its own token, or use a fleet token")
       end
+    end
 
-      token.update!(server: server) unless token.fleet? || token.server
-      server
+    def bound_elsewhere?
+      token.server&.machine_id.present? && token.server.machine_id != machine_id
+    end
+
+    def claim_server
+      if token.server
+        raise Rejected, "This token belongs to another server" if bound_elsewhere?
+        token.server
+      else
+        server = Server.find_by(machine_id: machine_id) || unclaimed_server || Server.create!(name: hostname, hostname: hostname)
+        token.update!(server: server) unless token.fleet?
+        server
+      end
     end
 
     # Git knows servers by the host Kamal SSHes to; the agent knows its own
-    # hostname. Match exactly, or by the first DNS label when that is unique.
+    # hostname. Match exactly, or by the first DNS label when that is unique
+    # (never for IPs, whose first label is shared). A server Git places whose
+    # agent has been silent for RECLAIM_AFTER can be claimed again: the
+    # machine was rebuilt, with a new machine id.
     def unclaimed_server
-      candidates = Server.where(machine_id: nil)
+      candidates = Server.where(machine_id: nil).or(Server.where(id: Assignment.select(:server_id), last_seen_at: ...Server::RECLAIM_AFTER.ago))
       candidates.find_by(hostname: hostname) || candidates.find_by(name: hostname) || begin
+        return if Server.ip?(hostname)
+
         short = hostname.split(".").first
-        matches = candidates.select { [ it.hostname, it.name ].any? { |name| name.split(".").first == short } }
+        matches = candidates.select { [ it.hostname, it.name ].any? { |name| !Server.ip?(name) && name.split(".").first == short } }
         matches.sole if matches.one?
       end
     end

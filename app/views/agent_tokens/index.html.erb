@@ -78,7 +78,7 @@
 <% end %>
 
 <%= titled_section "Silent agents", count: @silent.size do %>
-  <p class="txt-small txt-muted">Agents that haven't reported for more than <%= distance_of_time_in_words(Server::STALE_AFTER) %>.</p>
+  <p class="txt-small txt-muted">Agents that haven't reported for three of their intervals, and at least <%= distance_of_time_in_words(Server::STALE_AFTER) %>.</p>
   <div class="table-wrap">
     <table class="table">
       <thead>

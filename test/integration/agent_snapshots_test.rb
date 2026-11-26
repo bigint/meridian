@@ -43,6 +43,63 @@ class AgentSnapshotsTest < ActionDispatch::IntegrationTest
     assert_no_match token, response.body
   end
 
+  test "bodies that aren't snapshots are refused, not crashed on or queued" do
+    [ "[1]", "\"x\"", "42" ].each do |body|
+      post agent_snapshots_path, params: body, headers: headers("meridian_web1token")
+      assert_response :unprocessable_entity, body
+    end
+
+    assert_no_enqueued_jobs do
+      post agent_snapshots_path, params: JSON.parse(@body).merge("labels" => "region=sgp").to_json, headers: headers("meridian_web1token")
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "an oversized body is refused before Rails parses it, token or not" do
+    parsed = 0
+    json = ActionDispatch::Request.parameter_parsers[:json]
+    ActionDispatch::Request.parameter_parsers = ActionDispatch::Request.parameter_parsers.merge(json: ->(raw) { parsed += 1; json.call(raw) })
+
+    big = { "machine_id" => "m", "hostname" => "h", "containers" => [], "pad" => "x" * (1.megabyte + 1) }.to_json
+    post agent_snapshots_path, params: big, headers: headers("nope")
+    assert_response :content_too_large
+    post agent_snapshots_path, params: big, headers: headers("meridian_web1token")
+    assert_response :content_too_large
+    assert_equal 0, parsed
+  ensure
+    ActionDispatch::Request.parameter_parsers = ActionDispatch::Request.parameter_parsers.merge(json: json)
+  end
+
+  test "a per-server token is refused on a second machine" do
+    perform_enqueued_jobs { post agent_snapshots_path, params: @body, headers: headers("meridian_web1token") }
+
+    assert_no_enqueued_jobs do
+      post agent_snapshots_path, params: JSON.parse(@body).merge("machine_id" => "another-machine").to_json, headers: headers("meridian_web1token")
+    end
+    assert_response :unprocessable_entity
+    assert_match "belongs to another server", response.parsed_body["errors"].join
+  end
+
+  test "a fleet token's rate limit is per server" do
+    store = Agent::SnapshotsController.cache_store
+    counts = ActiveSupport::Cache::MemoryStore.new
+    store.define_singleton_method(:increment) { |*args, **options| counts.increment(*args, **options) }
+    body = JSON.parse(@body)
+
+    statuses = 40.times.flat_map do |i|
+      4.times.map do
+        post agent_snapshots_path, params: body.merge("machine_id" => "m#{i}", "hostname" => "host-#{i}").to_json, headers: headers("meridian_fleettoken")
+        response.status
+      end
+    end
+    assert_equal [ 202 ], statuses.uniq
+
+    121.times { post agent_snapshots_path, params: body.merge("machine_id" => "m0").to_json, headers: headers("meridian_fleettoken") }
+    assert_response :too_many_requests
+  ensure
+    store.singleton_class.remove_method(:increment)
+  end
+
   private
     def headers(token)
       { "Authorization" => "Bearer #{token}", "Content-Type" => "application/json" }

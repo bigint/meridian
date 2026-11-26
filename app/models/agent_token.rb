@@ -23,8 +23,10 @@ class AgentToken < ApplicationRecord
     active.find_by(digest: digest(token))&.tap { it.touch(:last_used_at) }
   end
 
+  # Agents on an open cable are hung up now, not at the next recheck.
   def revoke
     update!(revoked_at: Time.current)
+    AgentChannel.disconnect(self)
   end
 
   def revoked?

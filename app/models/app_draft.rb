@@ -36,6 +36,7 @@ class AppDraft
   validates :hostname, format: { with: /\A[a-z0-9.-]+\.[a-z]{2,}\z/i, message: "must be a domain name" }, allow_blank: true
   validates :destination, format: { with: /\A[a-z0-9_-]+\z/ }, allow_blank: true
   validates :version, format: { with: App::VERSION_FORMAT }
+  validates :app_port, numericality: { only_integer: true, in: 1..65_535 }, allow_nil: true
   validates :registry, format: { with: %r{\A[a-z0-9][a-z0-9.-]*(:\d{1,5})?(/[a-z0-9._-]+)*\z}i, message: "must be a registry host, such as ghcr.io" }
   validate :servers_chosen, :path_free, :names_free, :kamal_accepts_it
 

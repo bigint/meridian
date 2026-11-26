@@ -25,6 +25,7 @@
 - New app refuses a service name another config in the project already uses (with the same destination) and a hostname another app already serves. Both passed, since only the config path was checked, and the two apps then fought over the same containers or kamal-proxy host.
 - A New app label selector with a term that isn't `key=value` (`web`, or a leading space) is a form error. It raised and the page answered 500.
 - New app writes its config where the project's config paths find it. A `deploy/**/*.yml` glob gave the literal path `deploy/shop*/*.yml`, and a project whose paths had no `*` got `config/deploy-shop.yml`, which sync then ignored; the form now says so instead.
+- New app's port must be a TCP port, 1 to 65535. Ports such as 0, -1 or 70000, and text (read as 0), were proposed and Kamal accepted them.
 
 ## v0.1.0 (2026-11-26)
 

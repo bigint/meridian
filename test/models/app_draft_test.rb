@@ -123,6 +123,14 @@ class AppDraftTest < ActiveSupport::TestCase
     end
   end
 
+  test "the port must be a TCP port" do
+    [ 0, -1, 70_000, "abc" ].each do |port|
+      assert build(app_port: port).tap(&:validate).errors.key?(:app_port), port.inspect
+    end
+    assert_equal 3000, build(app_port: "").port
+    assert build(app_port: 8080).valid?
+  end
+
   test "the registry must be a registry host" do
     Dir.mktmpdir do |dir|
       marker = File.join(dir, "ran")

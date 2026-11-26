@@ -65,6 +65,39 @@ class DeployableTest < ActiveSupport::TestCase
     assert @app.current_deploy.reload.succeeded?
   end
 
+  test "a late or replayed run event never moves a deploy back, but a re-run does" do
+    deploy = @app.deploys.create!(version: "v42", commit_sha: "c" * 40)
+    run = { "id" => 9, "head_sha" => "c" * 40 }
+
+    Deploy.from_workflow_run(@project, run.merge("status" => "completed", "conclusion" => "success", "updated_at" => 1.minute.ago.iso8601))
+    Deploy.from_workflow_run(@project, run.merge("status" => "in_progress", "updated_at" => 3.minutes.ago.iso8601))
+    assert_equal [ "completed", "success" ], [ deploy.reload.status, deploy.conclusion ]
+
+    Deploy.from_workflow_run(@project, run.merge("status" => "queued", "run_attempt" => 2, "updated_at" => Time.current.iso8601))
+    assert_equal [ "queued", nil ], [ deploy.reload.status, deploy.conclusion ]
+  end
+
+  test "an older run never takes a deploy over from a newer one" do
+    deploy = @app.deploys.create!(version: "v42", commit_sha: "c" * 40)
+
+    Deploy.from_workflow_run(@project, { "id" => 12, "head_sha" => "c" * 40, "status" => "completed", "conclusion" => "success", "updated_at" => 2.minutes.ago.iso8601 })
+    Deploy.from_workflow_run(@project, { "id" => 11, "head_sha" => "c" * 40, "status" => "completed", "conclusion" => "failure", "updated_at" => 1.minute.ago.iso8601 })
+    assert_equal [ 12, "success" ], [ deploy.reload.ci_run_id, deploy.conclusion ]
+  end
+
+  test "a redeploy at another app's deploy commit keeps its own run" do
+    stub_github_writes(@project, commit: "d" * 40)
+    @app.deploy("v43", actor: @actor)
+    blog = @project.apps.find_by!(service: "blog")
+
+    Deploy.from_dispatch(@project, { "id" => 50, "event" => "workflow_dispatch", "display_title" => "deploy deploy/blog.yml ", "head_sha" => "d" * 40,
+      "status" => "completed", "conclusion" => "failure", "updated_at" => 1.minute.ago.iso8601 })
+    Deploy.from_workflow_run(@project, { "id" => 49, "head_sha" => "d" * 40, "status" => "completed", "conclusion" => "success", "updated_at" => Time.current.iso8601 })
+
+    assert_equal [ 50, "failure" ], [ blog.current_deploy.ci_run_id, blog.current_deploy.conclusion ]
+    assert_equal [ 49, "success" ], [ @app.current_deploy.ci_run_id, @app.current_deploy.conclusion ]
+  end
+
   test "redeploys are tracked from dispatched runs named after the config" do
     run = { "id" => 31, "event" => "workflow_dispatch", "display_title" => "deploy deploy/web.yml production", "head_sha" => "c" * 40, "status" => "in_progress" }
     deploy = Deploy.from_dispatch(@project, run)

@@ -41,13 +41,20 @@ class Deploy < ApplicationRecord
     deploy
   end
 
+  # GitHub may deliver a run's events out of order, and a delivery can be
+  # replayed, so an event older than the one already seen changes nothing.
+  # Run ids only grow, so an older run never takes over from a newer one:
+  # a redeploy made at another app's deploy commit keeps its own run.
   def track(run)
+    return if stale?(run)
+
     self.ci_run_id = run["id"]
     self.ci_url = run["html_url"]
-    self.status = STATUSES.include?(run["status"]) ? run["status"] : "in_progress"
+    self.status = status_of(run)
     self.conclusion = run["conclusion"]
     self.started_at ||= run["run_started_at"]
     self.finished_at = run["updated_at"] if status == "completed"
+    self.ci_updated_at = run["updated_at"]
     save!
   end
 
@@ -68,4 +75,18 @@ class Deploy < ApplicationRecord
       [ server, versions, versions.include?(version) ]
     end
   end
+
+  private
+    def status_of(run)
+      STATUSES.include?(run["status"]) ? run["status"] : "in_progress"
+    end
+
+    def stale?(run)
+      return false unless ci_run_id
+      return run["id"].to_i < ci_run_id if run["id"].to_i != ci_run_id
+
+      updated = run["updated_at"]&.to_time
+      return false unless updated && ci_updated_at
+      updated < ci_updated_at || (updated == ci_updated_at && STATUSES.index(status_of(run)) < STATUSES.index(status))
+    end
 end

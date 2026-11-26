@@ -1,5 +1,112 @@
 ---
 title: "Apps and destinations"
+description: "An app in Meridian is one Kamal config with one destination. How Meridian finds configs in your infra repository and what it reads from each."
+icon: "boxes"
 ---
 
-This page is being written.
+An app in Meridian is one Kamal config together with one destination. That is exactly what one `kamal deploy -c <config> -d <destination>` deploys, so each app has one version, one release history and one row on the board.
+
+Pages name an app by its service, then its destination: `shop · production`. An app without a destination is named by its service alone.
+
+## How Meridian finds configs
+
+Each [project](/guides/projects) has **Config paths**, a comma-separated list of globs. The default is `config/deploy*.yml`. Meridian matches every file in the repository against them, with `*` stopping at `/` and `**` crossing directories. Only `.yml` and `.yaml` files count.
+
+A matched file named `<base>.<name>.yml` is a destination file when `<base>.yml` or `<base>.yaml` also matches. Kamal loads it on top of the base config when you pass `-d <name>`. Every other matched file is a base config.
+
+<Tree>
+  <Tree.Folder name="config" defaultOpen>
+    <Tree.File name="deploy.yml" />
+    <Tree.File name="deploy.staging.yml" />
+    <Tree.File name="deploy.production.yml" />
+    <Tree.File name="deploy.staging.version" />
+    <Tree.File name="deploy.production.version" />
+    <Tree.File name="deploy-blog.yml" />
+    <Tree.File name="deploy-blog.version" />
+  </Tree.Folder>
+</Tree>
+
+`config/deploy.yml` sets `service: shop` and `config/deploy-blog.yml` sets `service: blog`. With the default glob, this repository holds three apps:
+
+| App | Config | Destination | Version file |
+| --- | --- | --- | --- |
+| `shop · production` | `config/deploy.yml` | `production` | `config/deploy.production.version` |
+| `shop · staging` | `config/deploy.yml` | `staging` | `config/deploy.staging.version` |
+| `blog` | `config/deploy-blog.yml` | none | `config/deploy-blog.version` |
+
+`config/deploy-blog.yml` is a base config, because its name has no `.<name>` part before `.yml`.
+
+<Warning>
+`config/deploy.blog.yml` would be the `blog` destination of `config/deploy.yml`, not an app of its own, because `kamal deploy -c config/deploy.yml -d blog` loads it. Name separate apps with a `-`, as **New app** does.
+</Warning>
+
+A base config with destination files is never an app by itself. The repository above has no plain `shop` app, because `kamal deploy -c config/deploy.yml` without `-d` is not what you run for it. A base config with no destination files is one app.
+
+<Note>
+Preview overlays, `<base>.pr-<n>.yml`, are never read as configs or destinations. Meridian writes them for [previews](/guides/previews) and tracks them separately.
+</Note>
+
+Another layout puts one config per app in a folder. Set the config paths to `kamal/*.yml`, and `kamal/shop.yml` and `kamal/shop.staging.yml` become the app `shop · staging`.
+
+## What Meridian reads from a config
+
+Meridian parses each config and destination with Kamal itself. It keeps these values:
+
+| Value | From |
+| --- | --- |
+| Service | `service` |
+| Image | `image` |
+| Roles and their hosts | `servers`. Each host becomes a [server](/concepts/servers-and-agents), and each role on it an assignment. |
+| Accessories | `accessories`, with their hosts and images |
+| Hostnames | `proxy.host` and `proxy.hosts` of every role that runs kamal-proxy |
+| Secret names | `env.secret`, per-role and per-tag `env.secret`, accessories' `env.secret`, and `registry.password` when it is a list |
+| Kind | The `meridian.kind` label |
+| Source repository | The `meridian.source` label |
+
+Meridian never asks Kamal for a secret's value. Only the names reach the [Secrets](/guides/secrets) page.
+
+## Kind and source repository
+
+Two Docker labels in the config tell Meridian what an app is and where its code lives. They stay in Git, next to everything else about the app.
+
+```yaml config/deploy.yml
+service: shop
+image: acme/shop
+
+labels:
+  meridian.kind: rails
+  meridian.source: acme/shop
+```
+
+`meridian.kind` is one of `static`, `node`, `rails` or `other`. A config without the label, or with another value, is `other`. **New app** writes the label for you.
+
+`meridian.source` is the GitHub repository that holds the app's code and Dockerfile, as `owner/name`. [Previews](/guides/previews) follow pull requests in that repository. Without the label, an app gets no previews.
+
+Take a label out of the config, and the next sync clears it in Meridian too.
+
+## Configs that only run accessories
+
+A config labelled `meridian.kind: accessories` runs only accessories, such as the `cloudflared` connectors of a [Cloudflare Tunnel](/guides/cloudflare-tunnel). Kamal never deploys an app from it. Meridian leaves it off the board and the map, and refuses to deploy, redeploy or roll it back. Start its accessories with `kamal accessory boot all -c <config>`.
+
+## When a config changes or breaks
+
+Every sync compares the files behind each app by blob SHA. Meridian reads the release history again only for an app whose config, destination file or version file changed.
+
+A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews. The project's page lists the error with its file and line. Kamal reports a key path such as `servers/web/hosts`, and Meridian finds that key's line in the YAML.
+
+When a config is deleted from Git, its app goes at the next sync, with its deploys and releases. Its open previews end too, and the activity log says what happened to each one. See [previews](/guides/previews).
+
+## Where New app writes a config
+
+**New app** writes the config to the project's first config path with exactly one `*` in it, with the service name in place of the `*`. With `config/deploy*.yml`, the service `shop` gets `config/deploy-shop.yml`. With `kamal/*.yml`, it gets `kamal/shop.yml`. A path with `**/` counts as the same path without it. See [Add a new app](/guides/new-app).
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Versions and releases" icon="tag" href="/concepts/versions-and-releases">
+    The version file next to each config, and what a release is.
+  </Card>
+  <Card title="Infra repository" icon="folder-tree" href="/reference/infra-repository">
+    Every file Meridian reads and writes, and its exact format.
+  </Card>
+</Columns>

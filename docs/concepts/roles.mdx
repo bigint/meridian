@@ -1,5 +1,81 @@
 ---
-title: "Roles"
+title: "People and roles"
+sidebarTitle: "Roles"
+description: "Viewers read, deployers also ship, and admins run Meridian. How people sign in, how the first admin is created, and what each role can do."
+icon: "shield"
 ---
 
-This page is being written.
+import Roles from "/snippets/roles.mdx";
+
+Everyone who signs in to Meridian has one of three roles. A **viewer** sees everything except live logs and traffic. A **deployer** can also deploy, roll back and read live logs. An **admin** does everything else, from adding projects to managing people. A new person is a viewer unless an admin picks another role.
+
+<Roles />
+
+Seeing a page is never restricted by role. Viewers see every app, server, preview, tunnel, agent, secret name and activity entry. Roles limit what a person can change, plus live logs and traffic, which can hold secrets.
+
+A button that a person's role doesn't allow is hidden. A request made anyway is refused with **You don't have permission to do that.** Requests that don't ask for a page get `403 Forbidden`.
+
+## The first admin
+
+A fresh Meridian has no people. Every page sends you to the welcome page, `/first_run`, which creates the first admin. It asks for a **Setup code** as well as a name, email and password.
+
+The setup code proves that you run the server. It is 20 hexadecimal characters, derived from `SECRET_KEY_BASE`, so Meridian stores it nowhere. Get it in one of two ways:
+
+<CodeGroup>
+
+```bash Kamal
+kamal app logs | grep "setup code"
+# or
+kamal app exec 'bin/rails meridian:setup_code'
+```
+
+```bash Docker
+docker logs meridian 2>&1 | grep "setup code"
+# or
+docker exec meridian bin/rails meridian:setup_code
+```
+
+</CodeGroup>
+
+Meridian writes the code to its log each time someone opens the welcome page. Open the page first, then read the log.
+
+The welcome page works only while no person exists. After the first admin, it sends everyone to sign in. The first admin lands on **Projects**, ready to add the infra repository.
+
+<Note>
+The code changes when `SECRET_KEY_BASE` changes. Changing `SECRET_KEY_BASE` also signs everyone out, because session cookies are signed with it.
+</Note>
+
+## Adding people
+
+Admins add people in **Settings**, under **People**, with **Add person**. Give a name, an email, a password of at least 12 characters, and a role. The person can sign in at once. Meridian sends no email and has no invitations, so share the password with them privately.
+
+Meridian has no single sign-on. Each person signs in with an email and a password.
+
+To change someone's role, name, email or password, an admin presses **Edit** next to them. Three rules keep an install usable:
+
+- Meridian always has one admin. The last admin can't be made a deployer or viewer.
+- An admin can't remove their own account.
+- A new password signs that person out of every other session.
+
+A role change takes effect at once. Meridian closes the person's open live connections, so a page they have open can't keep streaming what their old role allowed.
+
+## Signing in
+
+People sign in at `/session/new` with their email and password. A password is 12 to 72 characters long. Meridian allows 10 tries from one IP address in 3 minutes, then asks it to try again later.
+
+A session lasts until the person signs out from the account menu in the top bar, or until an admin changes their password. The cookie is signed, `HttpOnly` and `SameSite=Lax`. Behind HTTPS it is also `Secure`.
+
+## Machines are not people
+
+Agents and GitHub don't sign in. Agents send a bearer token to `/agent/snapshots` and `/cable`. GitHub signs each webhook with the webhook secret. Neither has a role, and neither can open a page. See [Endpoints](/reference/endpoints).
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Manage people" icon="users" href="/guides/people">
+    Add, edit and remove people, step by step.
+  </Card>
+  <Card title="Security" icon="lock" href="/operate/security">
+    What Meridian holds, what it never holds, and why.
+  </Card>
+</Columns>

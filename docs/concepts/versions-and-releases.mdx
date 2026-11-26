@@ -1,5 +1,109 @@
 ---
 title: "Versions and releases"
+description: "Each app's version lives in a one-line file next to its Kamal config. Deploy, roll back and redeploy are changes to that file, and releases are its history."
+icon: "tag"
 ---
 
-This page is being written.
+Kamal has no version key in its YAML. You pass `--version` on the command line. Meridian keeps that version in Git instead, in a one-line **version file** next to the app's config. Every deploy and rollback is a commit to that file, and the file's history is the app's list of releases.
+
+## The version file
+
+The version file sits beside the config and takes its name, with `.version` in place of `.yml`:
+
+| Config | Destination | Version file |
+| --- | --- | --- |
+| `config/deploy.yml` | none | `config/deploy.version` |
+| `config/deploy.yml` | `production` | `config/deploy.production.version` |
+| `kamal/shop.yaml` | `staging` | `kamal/shop.staging.version` |
+
+The file holds one line, the image tag to run:
+
+```text config/deploy.production.version
+v42
+```
+
+A version is a Docker image tag. It starts with a letter, digit or `_`, then has up to 127 more letters, digits, `_`, `.` or `-`. Meridian refuses anything else, because CI passes the value to Kamal as `--version` and a leading `-` would read as a flag.
+
+The image must already be in your registry. The deploy workflow runs `kamal deploy --skip-push`, so it never builds. Your source repository's own CI builds and pushes the image, and the version file says which tag goes out.
+
+An app has no version file until its first deploy through Meridian, or until you commit one. Without it, Meridian can show what runs but can't say whether it is the right version. See [no version file](#without-a-version-file).
+
+## Releases
+
+A release is one commit that changed the version file. Its version is what the file held after that commit. Meridian reads the 20 most recent such commits at each sync where the file changed, and keeps every release it has seen. The newest release, by the time the commit landed on the branch, is what Git says should run. [Drift](/concepts/drift) compares every server with it.
+
+Each release shows its version, the first line of its commit message, its author, its short SHA and its age. The board's inspector shows the last three. The app's page shows the last 20 and marks the newest.
+
+A commit counts as a release whoever made it. A deploy from Meridian, a merge of a pull request that edits the file, and a commit you push by hand are all releases.
+
+### Without a version file
+
+When an app has no version file, each commit to its config is a release instead. For an app with a destination, that is each commit to the destination file. The release's version is the commit's short SHA. Meridian can't compare those with the image tags that servers run, so an app without a version file shows as unknown on every server that runs it. The app's page says so under **Configuration**.
+
+## Deploy
+
+A deploy writes a version to the version file in one commit on the default branch. Deployers and admins type the version in **Ship a version** on the app's page, or in the board's inspector, and press **Deploy**. The version box suggests the app's past releases.
+
+The commit looks like this:
+
+```text
+deploy(shop-production): v42
+
+Meridian-Actor: Ada Lovelace <ada@example.com>
+```
+
+The subject names the service, then the destination after a `-` when there is one. The trailer names the person who pressed the button.
+
+Meridian sends the file's current blob SHA with the write. If someone else changed the file since Meridian read it, GitHub refuses the write and nothing is overwritten. Meridian also refuses a version that the file already holds, because a commit that changes nothing would never start the workflow. Use **Redeploy** for that.
+
+<Note>
+Deploys and rollbacks always commit straight to the default branch, even when the project opens pull requests for other changes. They change one line. A branch rule that blocks direct pushes blocks them too, and Meridian shows GitHub's refusal.
+</Note>
+
+## Roll back
+
+**Roll back** reverts the newest release. The version file goes back to what it held in the parent of that release's commit, in a new commit:
+
+```text
+rollback(shop-production): v41
+
+This reverts commit 3f9c2a1d0b7e6f5a4c3b2a1908f7e6d5c4b3a291.
+
+Meridian-Actor: Ada Lovelace <ada@example.com>
+```
+
+The button sits on the newest release, and appears once an app with a version file has at least two releases. Meridian checks with GitHub that the release is still the newest commit to the file. If Git moved on since the last sync, the rollback stops with a conflict, so a change that Meridian hasn't seen yet is never undone. If the file didn't exist before that commit, there is nothing to roll back to.
+
+To go back further than one release, deploy the older version. The version box lists past releases.
+
+## Redeploy
+
+**Redeploy** runs the deploy workflow again for the version that the file holds now. Use it after you rotate a secret, or when a deploy failed for a reason outside the image. Meridian reads the file from GitHub when you press the button, not from its last sync, and sends a `workflow_dispatch` with the config, destination and version. Nothing is committed.
+
+Redeploy needs a version file, because Kamal needs an image tag.
+
+## Deploy status
+
+A deploy's status comes from the runs of the deploy workflow, `.github/workflows/meridian-deploy.yml`. Runs of every other workflow are ignored. Meridian matches a run to apps by its commit SHA, through the releases or deploys at that commit, and hears about runs from `workflow_run` webhooks and from polling every 30 seconds.
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | Meridian made the commit. No run has been seen yet. |
+| `queued` | The run is waiting for a runner. |
+| `in_progress` | Kamal is running. |
+| `completed` | The run ended. Its conclusion shows instead, such as **Success** or **Failure**. |
+
+A version-file commit made outside Meridian gets a deploy too, attributed to **Git**, once its workflow run arrives.
+
+Kamal deploys every host in one CI job, so CI can't say how far it got on each server. Meridian reads that from the agents. Under **Current deploy**, each server shows the versions it runs and turns to **Running v42** when its agent reports that version.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Deploy and roll back" icon="rocket" href="/guides/deploy">
+    The steps, from the board or the app's page.
+  </Card>
+  <Card title="CI workflow" icon="route" href="/reference/ci-workflow">
+    What the deploy workflow does with a changed version file.
+  </Card>
+</Columns>

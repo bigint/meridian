@@ -1,5 +1,144 @@
 ---
-title: "Index"
+title: "Meridian"
+sidebarTitle: "Introduction"
+description: "An open-source control room for Kamal: every app on every server, deploys and rollbacks, new apps and pull request previews, with Git as the record of everything."
+icon: "house"
+mode: "custom"
 ---
 
-This page is being written.
+<div className="px-6 lg:px-10 pt-20 pb-24 max-w-6xl mx-auto">
+
+  <div className="max-w-3xl">
+    <p className="text-sm font-semibold tracking-wide text-primary dark:text-primary-light">Open source · MIT licence · v0.1.0</p>
+    <h1 className="mt-4 text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-gray-50">Meridian</h1>
+    <p className="mt-6 text-2xl leading-snug text-gray-700 dark:text-gray-200">An open-source control room for <a href="https://kamal-deploy.org" className="underline decoration-primary/40 underline-offset-4">Kamal</a>. See every app on every server, deploy, roll back, add apps and preview pull requests.</p>
+    <p className="mt-6 text-lg text-gray-500 dark:text-gray-400">A meridian is the line navigators measure every position against. Here that line is Git.</p>
+    <div className="mt-10 flex flex-wrap gap-3">
+      <a href="/quickstart" className="inline-flex items-center rounded-full bg-primary dark:bg-primary-light px-5 py-2.5 text-sm font-semibold text-white dark:text-gray-950 no-underline">Try it in two minutes</a>
+      <a href="/install" className="inline-flex items-center rounded-full border border-gray-300 dark:border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-900 dark:text-gray-100 no-underline">Install for real</a>
+    </div>
+  </div>
+
+  <div className="mt-16">
+    <Frame caption="The board: what needs attention first, in plain sentences, then every app on every server.">
+      <img className="block dark:hidden" src="/screenshots/board.png" alt="Meridian's board: Getting started, Needs attention, and a grid of apps against servers coloured by drift state, with an app's inspector open on the right" />
+      <img className="hidden dark:block" src="/screenshots/board-dark.png" alt="Meridian's board: Getting started, Needs attention, and a grid of apps against servers coloured by drift state, with an app's inspector open on the right" />
+    </Frame>
+  </div>
+
+  <div className="mt-24 max-w-3xl">
+    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">What it does</h2>
+    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Meridian reads your Kamal configs from Git, and a small agent on each server reports what runs there. The board shows where the two disagree. Every change you make in Meridian is a commit, and your CI runs Kamal.</p>
+  </div>
+
+  <div className="mt-10">
+    <Columns cols={3}>
+      <Card title="See the fleet" icon="table" href="/guides/board-and-map">
+        Every app on every server, in sync, drifted, missing, stray, stale or unknown. A map of where it all runs.
+      </Card>
+      <Card title="Deploy and roll back" icon="rocket" href="/guides/deploy">
+        Type a version and press Deploy. Meridian commits a one-line version file, and CI runs `kamal deploy`.
+      </Card>
+      <Card title="Add apps" icon="box" href="/guides/new-app">
+        A form writes a Kamal config for a static, Node or Rails app, checks it with Kamal and opens a pull request.
+      </Card>
+      <Card title="Preview pull requests" icon="eye" href="/guides/previews">
+        Each pull request in an app's repository runs as a `pr-<n>` Kamal destination, removed when it closes.
+      </Card>
+      <Card title="Set secrets" icon="key" href="/guides/secrets">
+        Names come from your configs. Values go straight to GitHub Actions secrets and are never kept.
+      </Card>
+      <Card title="Watch it live" icon="gauge" href="/guides/live-stats-and-logs">
+        CPU, memory, logs and requests from each server, streamed while you look.
+      </Card>
+    </Columns>
+  </div>
+
+  <div className="mt-24 max-w-3xl">
+    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">How it works</h2>
+    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Meridian writes only to Git. GitHub Actions runs Kamal, and Kamal reaches your servers over SSH. The agent on each server only ever connects out to Meridian, so Meridian needs no way in.</p>
+  </div>
+
+  <div className="mt-8">
+
+```mermaid
+flowchart LR
+  op([Operator]) -->|HTTPS| m[Meridian]
+  m -->|"commits, pull requests"| gh[(GitHub)]
+  gh -->|webhooks| m
+  gh -->|Actions| k["kamal deploy"]
+  k -->|SSH| apps
+  subgraph servers ["Your servers"]
+    apps["apps and kamal-proxy"]
+    agent["meridian-agent"]
+  end
+  agent -.->|"outbound only"| m
+  style servers fill:none,stroke-dasharray:4 4
+```
+
+  </div>
+
+  <p className="mt-4 text-base text-gray-600 dark:text-gray-300"><a href="/concepts/how-it-works" className="font-semibold text-primary dark:text-primary-light">Read how Meridian works</a>, from a sync to a finished deploy.</p>
+
+  <div className="mt-24 max-w-3xl">
+    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">Principles</h2>
+    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Seven rules decide what Meridian does and, more often, what it refuses to do.</p>
+  </div>
+
+  <div className="mt-10">
+    <Columns cols={2}>
+      <Card title="1. Git is the record" icon="history">
+        Every change Meridian makes is a commit or a pull request to your infra repository, written as plain YAML. Uninstall Meridian and you lose only its activity log.
+      </Card>
+      <Card title="2. One deploy path" icon="route">
+        Meridian commits, and CI runs Kamal. Deploy status comes from CI.
+      </Card>
+      <Card title="3. Observe servers, never change them" icon="eye">
+        A read-only agent on each server reaches out to Meridian. Meridian never connects in.
+      </Card>
+      <Card title="4. Secrets are write-only" icon="lock">
+        Meridian stores secret names. Values go straight to GitHub and are never kept.
+      </Card>
+      <Card title="5. Generic" icon="globe">
+        No assumptions about providers, networks or hostnames.
+      </Card>
+      <Card title="6. Scale is a feature" icon="server">
+        Built for 500 servers and 200 apps from day one.
+      </Card>
+      <Card title="7. The Rails way" icon="gem">
+        Rails 8, Hotwire, SQLite, no Node, no build step, one container.
+      </Card>
+      <Card title="The decisions behind them" icon="book-open" href="/internals/decisions">
+        Every choice made where the spec was ambiguous, and why.
+      </Card>
+    </Columns>
+  </div>
+
+  <div className="mt-24 max-w-3xl">
+    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">Where next</h2>
+  </div>
+
+  <div className="mt-8">
+    <Columns cols={3}>
+      <Card title="Quickstart" icon="rocket" href="/quickstart">
+        Run Meridian in Docker with a demo fleet of 500 servers.
+      </Card>
+      <Card title="Install" icon="download" href="/install">
+        Connect GitHub, deploy with Kamal, add your infra repository.
+      </Card>
+      <Card title="Tour" icon="compass" href="/tour">
+        Every screen, what it shows and what you can do there.
+      </Card>
+      <Card title="Drift" icon="split" href="/concepts/drift">
+        The six states and the exact rule behind each one.
+      </Card>
+      <Card title="Install the agent" icon="radio" href="/guides/agent">
+        Two Kamal accessories, a token and one network.
+      </Card>
+      <Card title="Reference" icon="list" href="/reference/environment">
+        Every setting, endpoint, file format and command.
+      </Card>
+    </Columns>
+  </div>
+
+</div>

@@ -44,7 +44,11 @@
                 <p>It's missing on <%= safe_join(coverage.missing.map { tag.code(it) }, ", ") %>. Add them to <code><%= coverage.app.config_path %></code> and deploy it before routing it, or Cloudflare will send some of its requests where kamal-proxy answers 404.</p>
               <% end %>
             <% end %>
-            <%= render "shared/code_block", code: setup.edge_config, label: setup.config_path %>
+            <% if setup.hosts.any? %>
+              <%= render "shared/code_block", code: setup.edge_config, label: setup.config_path %>
+            <% else %>
+              <p class="walk__note">Pick at least one server on the right. A connector config needs a server to run on.</p>
+            <% end %>
           <% end %>
         </ol>
       </section>

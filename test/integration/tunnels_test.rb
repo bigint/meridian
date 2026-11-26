@@ -52,6 +52,14 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     assert_select ".alert", count: 0
   end
 
+  test "asks for a server instead of showing a config Kamal would reject" do
+    get new_tunnel_path
+
+    assert_response :success
+    assert_select ".walk__note", text: /Pick at least one server/
+    assert_select ".code-block__bar", text: /deploy\/edge\.yml/, count: 0
+  end
+
   test "says so when there is no tunnel" do
     get tunnels_path
 

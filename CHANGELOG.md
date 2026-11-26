@@ -19,6 +19,7 @@
 - Agents must report a plain host name, and New app refuses servers whose hostname isn't one and registries that aren't registry hosts. A hostname such as `web-9<%= … %>`, from any agent token, reached the generated config verbatim (even through a label selector the admin never saw it match), and its Ruby ran on Meridian's server while Kamal checked the config, then in CI once merged. The tunnel setup page leaves out picked hosts that aren't host names.
 - New app never overwrites a file. Making `shop` with a destination when `deploy/shop.yml` already existed without one (or the other way round) passed the check, which only compared the same destination, and rewrote the existing app's config without its servers. Any of the new files already in Git, such as a config Kamal can't parse, is now refused too.
 - Every connector in a tunnel's edge config gets its own name. The setup page named each after its host's first DNS label, so servers known by IP (`10.0.0.1`, `10.0.0.2`) or sharing one (`web.sgp…`, `web.fra…`) got the same key, and YAML kept only the last: one connector instead of several. Edit connectors names IP connectors after the whole address too, and finds a free `-2`, `-3` suffix instead of reusing one an earlier change took.
+- The tunnel setup page asks for a server when none is picked, instead of showing an edge config with no hosts that Kamal rejects.
 
 ## v0.1.0 (2026-11-26)
 

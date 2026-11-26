@@ -37,4 +37,12 @@ class FrontendTest < ActionDispatch::IntegrationTest
       assert_response :success, path
     end
   end
+
+  test "a secret set by someone since removed says so" do
+    SecretName.create!(project: @project, name: "API_KEY", last_set_at: 1.day.ago, last_set_by: nil)
+
+    get secrets_path
+
+    assert_select "tr", text: /API_KEY.*1 day ago by a removed user/m
+  end
 end

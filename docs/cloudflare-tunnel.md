@@ -31,7 +31,7 @@ To serve a hostname the app doesn't answer to, set **HTTP Host Header** under **
 
 - **Connectors**, one per server, each in one state: **running**; a Docker state such as `exited`; **not started**, when the server's agent reports but has no such container (the page shows the `kamal accessory boot` command); or **unknown**, when the server isn't known or its agent hasn't reported lately.
 - **The token** secret, and whether Meridian has set it.
-- **Apps it can serve**: those that run on every connector's server. An app on only some of them gets a warning naming the servers it's missing from. Meridian can't see Cloudflare's routes, so this is advice, not an error: don't route that app through the tunnel until it runs everywhere. Apps on no connector's server are listed quietly.
+- **Apps it can serve**: those that run on every connector's server, in a role behind kamal-proxy (a server that runs only an app's workers has no route for it). An app on only some of them gets a warning naming the servers it's missing from. Meridian can't see Cloudflare's routes, so this is advice, not an error: don't route that app through the tunnel until it runs everywhere. Apps on no connector's server are listed quietly.
 
 ## Editing connectors
 

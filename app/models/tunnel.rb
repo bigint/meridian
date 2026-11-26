@@ -79,13 +79,23 @@ class Tunnel
   end
 
   # Every app with a hostname, and the hosts among these it doesn't run on.
+  # Only roles behind kamal-proxy count: on a server that runs just the
+  # app's workers, kamal-proxy has no route for it and answers 404.
   def self.coverage(apps, hosts, servers)
     wanted = hosts.to_h { [ it, servers[it]&.id ] }
     apps.select { it.hostnames.any? }.map do |app|
-      on = app.servers.map(&:id)
+      on = proxied_servers(app).map(&:id)
       Coverage.new(app, wanted.reject { |_, id| id && on.include?(id) }.keys, hosts.size)
     end
   end
+
+  # Apps recorded without roles count every server they run on.
+  def self.proxied_servers(app)
+    return app.servers if app.roles.empty?
+    hosts = app.roles.select { it["proxy"] }.flat_map { it["hosts"] }
+    app.servers.select { hosts.include?(it.hostname) || hosts.include?(it.name) }
+  end
+  private_class_method :proxied_servers
 
   # The repository secret a connector reads its token from. Configs synced
   # before the parser reported accessory secrets fall back to the app's.

@@ -72,6 +72,17 @@ class TunnelTest < ActiveSupport::TestCase
     assert_equal [ "api" ], tunnel.elsewhere.map { it.app.service }
   end
 
+  test "a server that runs only an app's workers doesn't serve it" do
+    a, b = server("a", last_seen_at: 1.second.ago), server("b", last_seen_at: 1.second.ago)
+    make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("cloudflared-a", "a"), connector("cloudflared-b", "b") ])
+    shop = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ],
+      roles: [ { "name" => "web", "hosts" => [ "a" ], "proxy" => true }, { "name" => "job", "hosts" => [ "b" ], "proxy" => false } ])
+    shop.assignments.create!(server: a, role: "web")
+    shop.assignments.create!(server: b, role: "job")
+
+    assert_equal [ [ shop, [ "b" ] ] ], Tunnel.all.sole.gaps.map { [ it.app, it.missing ] }
+  end
+
   test "only connector trouble needs attention, not an app missing from a server" do
     a = server("a.example.com", last_seen_at: 1.second.ago)
     make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com"), connector("cloudflared-b", "b.example.com") ])

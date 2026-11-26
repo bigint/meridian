@@ -57,6 +57,16 @@ push_saleor() {
   echo "$image: pushed $version"
 }
 
+# Umami at a release tag such as 3.5.0: ghcr.io/umami-software/umami labelled
+# for Kamal and pushed as localhost:5555/umami-software/umami:VERSION.
+push_umami() {
+  local version="${1:?usage: bin/lab push umami VERSION (a release tag, e.g. 3.5.0)}"
+  docker build -q --build-arg IMAGE="ghcr.io/umami-software/umami:$version" \
+    -t "localhost:5555/umami-software/umami:$version" "$LAB/umami" >/dev/null
+  docker push -q "localhost:5555/umami-software/umami:$version" >/dev/null
+  echo "umami: pushed $version"
+}
+
 ensure_secrets() {
   mkdir -p "$SECRETS" && chmod 700 "$SECRETS"
   [ -f "$SECRETS/id_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -C meridian-lab -f "$SECRETS/id_ed25519"
@@ -68,6 +78,10 @@ ensure_secrets() {
   [ -s "$SECRETS/saleor_postgres_password" ] || (openssl rand -hex 24 > "$SECRETS/saleor_postgres_password")
   [ -s "$SECRETS/saleor_secret_key" ] || (openssl rand -hex 50 > "$SECRETS/saleor_secret_key")
   [ -s "$SECRETS/saleor_rsa_private_key_b64" ] || (openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | base64 | tr -d "\n" > "$SECRETS/saleor_rsa_private_key_b64")
+  # Umami: its database password, the replica's replication password and its app secret.
+  [ -s "$SECRETS/umami_postgres_password" ] || (openssl rand -hex 24 > "$SECRETS/umami_postgres_password")
+  [ -s "$SECRETS/umami_replication_password" ] || (openssl rand -hex 24 > "$SECRETS/umami_replication_password")
+  [ -s "$SECRETS/umami_app_secret" ] || (openssl rand -hex 32 > "$SECRETS/umami_app_secret")
 }
 
 registry_login() {
@@ -86,13 +100,14 @@ case "${1:-}" in
     ;;
 
   push)
-    site="${2:?usage: bin/lab push SITE|all [VERSION] | saleor|saleor-dashboard VERSION}"
+    site="${2:?usage: bin/lab push SITE|all [VERSION] | saleor|saleor-dashboard|umami VERSION}"
     registry_login
     if [ "$site" = all ]; then
       for site in "${SITES[@]}"; do push_site "$site"; done
     else
       case "$site" in
         saleor|saleor-dashboard) push_saleor "$site" "${3:-}" ;;
+        umami) push_umami "${3:-}" ;;
         *) push_site "$site" "${3:-}" ;;
       esac
     fi
@@ -149,6 +164,9 @@ KAMAL_SSH_PRIVATE_KEY id_ed25519
 SALEOR_POSTGRES_PASSWORD saleor_postgres_password
 SALEOR_SECRET_KEY saleor_secret_key
 SALEOR_RSA_PRIVATE_KEY_B64 saleor_rsa_private_key_b64
+UMAMI_POSTGRES_PASSWORD umami_postgres_password
+UMAMI_REPLICATION_PASSWORD umami_replication_password
+UMAMI_APP_SECRET umami_app_secret
 EOF
     ;;
 
@@ -167,6 +185,10 @@ EOF
       -e SALEOR_POSTGRES_PASSWORD="$(cat "$SECRETS/saleor_postgres_password")" \
       -e SALEOR_SECRET_KEY="$(cat "$SECRETS/saleor_secret_key")" \
       -e SALEOR_RSA_PRIVATE_KEY_B64="$(cat "$SECRETS/saleor_rsa_private_key_b64")" \
+      -e UMAMI_POSTGRES_PASSWORD="$(cat "$SECRETS/umami_postgres_password")" \
+      -e UMAMI_REPLICATION_PASSWORD="$(cat "$SECRETS/umami_replication_password")" \
+      -e UMAMI_APP_SECRET="$(cat "$SECRETS/umami_app_secret")" \
+      -e CLOUDFLARE_TUNNEL_TOKEN="$(cat "$SECRETS/cloudflare_tunnel_token" 2>/dev/null)" \
       meridian-lab-runner "$@"
     ;;
 
@@ -188,7 +210,7 @@ EOF
     ;;
 
   *)
-    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | push saleor|saleor-dashboard VERSION | versions SITE | agents | secrets owner/repo | kamal owner/repo ARGS... | webhooks owner/repo | ssh [server] | status | down" >&2
+    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | push saleor|saleor-dashboard|umami VERSION | versions SITE | agents | secrets owner/repo | kamal owner/repo ARGS... | webhooks owner/repo | ssh [server] | status | down" >&2
     exit 1
     ;;
 esac

@@ -1,0 +1,8 @@
+| State | Mark | Means |
+| --- | --- | --- |
+| In sync | `✓` | Running exactly the version Git says. |
+| Drifted | `≠` | Running, but not the version Git says. A deploy may be rolling out, or stopped part-way. |
+| Missing | `✕` | Git says it should run here, but nothing is running. |
+| Stray | `?` | Running here, but Git doesn't put it here. |
+| Stale | `…` | The server's agent has gone quiet, so Meridian can't tell what runs there right now. |
+| Unknown | `–` | Nothing to compare yet: no agent on the server, or no version file for the app. |

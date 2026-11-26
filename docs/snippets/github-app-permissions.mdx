@@ -1,0 +1,10 @@
+| Permission | Access | Why |
+| --- | --- | --- |
+| Contents | Read and write | Read configs, commit deploys, rollbacks and preview overlays |
+| Pull requests | Read and write | Open pull requests for new apps and the CI workflow |
+| Actions | Read and write | Dispatch redeploys and preview runs |
+| Secrets | Read and write | Set secret values (write-only from Meridian's side) |
+| Workflows | Read and write | Add `.github/workflows/meridian-deploy.yml` |
+| Metadata | Read | Required by GitHub |
+
+Subscribe to three events: **Push**, **Pull request** and **Workflow run**.

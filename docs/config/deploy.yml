@@ -1,0 +1,29 @@
+# Meridian's documentation site, https://meridian.yoginth.com.
+#
+# Not deployed yet. The site needs a Dockerfile in docs/ that builds it and
+# serves it on port 80 with /up answering 200; it lands once the build is
+# chosen (see docs/internals/development.mdx). Then, from docs/:
+#
+#   kamal setup
+service: meridian-docs
+image: ghcr.io/bigint/meridian-docs
+
+servers:
+  web:
+    - docs.internal.example.com     # the host to run on
+
+proxy:
+  host: meridian.yoginth.com
+  ssl: true
+  app_port: 80
+  healthcheck:
+    path: /up
+
+registry:
+  server: ghcr.io
+  username: bigint
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64

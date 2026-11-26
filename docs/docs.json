@@ -1,0 +1,160 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Meridian",
+  "description": "An open-source control room for Kamal: every app on every server, deploys and rollbacks, new apps and pull request previews, with Git as the record of everything.",
+  "colors": {
+    "primary": "#4338ca",
+    "light": "#818cf8",
+    "dark": "#3730a3"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "/"
+  },
+  "favicon": "/favicon.svg",
+  "appearance": {
+    "default": "system"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/bigint/meridian"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/bigint/meridian"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/bigint/meridian"
+    }
+  },
+  "contextual": {
+    "options": ["copy", "view", "claude", "chatgpt"]
+  },
+  "seo": {
+    "metatags": {
+      "canonical": "https://meridian.yoginth.com",
+      "og:site_name": "Meridian"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["index", "quickstart", "install", "tour"]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/how-it-works",
+              "concepts/apps-and-destinations",
+              "concepts/versions-and-releases",
+              "concepts/drift",
+              "concepts/servers-and-agents",
+              "concepts/roles"
+            ]
+          },
+          {
+            "group": "Operate",
+            "pages": [
+              "operate/security",
+              "operate/settings",
+              "operate/backups",
+              "operate/scaling",
+              "operate/upgrading",
+              "operate/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Ship",
+            "pages": [
+              "guides/deploy",
+              "guides/new-app",
+              "guides/secrets",
+              "guides/previews"
+            ]
+          },
+          {
+            "group": "Observe",
+            "pages": [
+              "guides/board-and-map",
+              "guides/live-stats-and-logs",
+              "guides/traffic",
+              "guides/activity"
+            ]
+          },
+          {
+            "group": "Fleet",
+            "pages": [
+              "guides/agent",
+              "guides/projects",
+              "guides/cloudflare-tunnel",
+              "guides/people"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Configuration",
+            "pages": ["reference/environment", "reference/github-app"]
+          },
+          {
+            "group": "Git and CI",
+            "pages": ["reference/infra-repository", "reference/ci-workflow"]
+          },
+          {
+            "group": "Agent and server",
+            "pages": [
+              "reference/agent-protocol",
+              "reference/endpoints",
+              "reference/activity-events",
+              "reference/commands"
+            ]
+          },
+          {
+            "group": "Words",
+            "pages": ["reference/glossary"]
+          }
+        ]
+      },
+      {
+        "tab": "Internals",
+        "groups": [
+          {
+            "group": "How Meridian is built",
+            "pages": [
+              "internals/architecture",
+              "internals/decisions",
+              "internals/design"
+            ]
+          },
+          {
+            "group": "Working on Meridian",
+            "pages": ["internals/development", "internals/lab"]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "pages": ["changelog"]
+      }
+    ]
+  }
+}

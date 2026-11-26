@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# The documentation site in docs/, built with Mintlify's CLI (needs Node 20.17+).
+#
+#   bin/docs            preview at http://localhost:3333
+#   bin/docs check      what CI checks: validate, broken links, accessibility
+#   bin/docs changelog  regenerate docs/changelog.mdx from CHANGELOG.md
+set -euo pipefail
+
+MINT_VERSION=4.3.96
+root="$(cd "$(dirname "$0")/.." && pwd)"
+mint() { (cd "$root/docs" && npx --yes "mint@$MINT_VERSION" "$@"); }
+
+case "${1:-dev}" in
+  dev) mint dev --port "${PORT:-3333}" --no-open ;;
+  check)
+    mint validate
+    mint broken-links
+    mint a11y
+    ;;
+  changelog) ruby "$root/script/docs_changelog.rb" ;;
+  *) echo "usage: bin/docs [dev|check|changelog]" >&2; exit 1 ;;
+esac

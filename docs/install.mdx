@@ -16,7 +16,7 @@ docker run -d --name meridian -p 3000:80 -v meridian:/rails/storage \
   ghcr.io/bigint/meridian:v0.1.0
 ```
 
-Open <http://localhost:3000> and create the first admin. The setup code it asks for is in the container's log: `docker logs <container> | grep "setup code"`. To look around without connecting GitHub, seed a demo fleet:
+Open [http://localhost:3000](http://localhost:3000) and create the first admin. The setup code it asks for is in the container's log: `docker logs <container> | grep "setup code"`. To look around without connecting GitHub, seed a demo fleet:
 
 ```bash
 docker exec meridian bin/rails meridian:demo

@@ -78,6 +78,10 @@ class AgentSnapshotsTest < ActionDispatch::IntegrationTest
     end
     assert_response :unprocessable_entity
     assert_match "belongs to another server", response.parsed_body["errors"].join
+
+    travel Server::RECLAIM_AFTER + 1.minute
+    post agent_snapshots_path, params: JSON.parse(@body).merge("machine_id" => "another-machine").to_json, headers: headers("meridian_web1token")
+    assert_response :accepted, "a silent server's token goes with its rebuilt machine"
   end
 
   test "a fleet token's rate limit is per server" do

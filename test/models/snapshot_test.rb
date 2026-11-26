@@ -123,11 +123,11 @@ class SnapshotTest < ActiveSupport::TestCase
     travel 2.minutes
     early = ingest(rebuilt, token: agent_tokens(:fleet))
     assert_not_equal old, early, "a short silence is not a rebuild"
-    early.destroy
 
     travel Server::RECLAIM_AFTER
-    assert_equal old, ingest(rebuilt, token: agent_tokens(:fleet))
+    assert_equal old, ingest(rebuilt, token: agent_tokens(:fleet)), "the row the rebuild made while waiting moves onto Git's"
     assert_equal "rebuilt", old.reload.machine_id
+    assert_not Server.exists?(early.id)
     assert_equal "in_sync", Board.new(server_id: old.id).cells.find { it.app.service == "web" }.state
   end
 
@@ -147,10 +147,23 @@ class SnapshotTest < ActiveSupport::TestCase
     travel Server::RECLAIM_AFTER + 1.minute
     early = ingest(rebuilt, token: agent_tokens(:fleet))
     assert_not_equal old, early, "silent for less than three of its intervals: still alive"
-    early.destroy
 
     travel 30.minutes
     assert_equal old, ingest(rebuilt, token: agent_tokens(:fleet))
+  end
+
+  test "a rebuilt machine on its per-server token takes its server back once that is silent" do
+    old = ingest
+    rebuilt = @payload.merge("machine_id" => "rebuilt")
+
+    travel 2.minutes
+    assert_not snapshot(rebuilt).valid?, "the old machine may still be alive"
+    assert_raises(Snapshot::Rejected) { ingest(rebuilt) }
+
+    travel Server::RECLAIM_AFTER
+    assert snapshot(rebuilt).valid?
+    assert_equal old, ingest(rebuilt)
+    assert_equal [ "rebuilt", old ], [ old.reload.machine_id, agent_tokens(:web_1).reload.server ]
   end
 
   test "a silent server Git doesn't place is never taken over" do

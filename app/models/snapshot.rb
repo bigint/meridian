@@ -86,18 +86,32 @@ class Snapshot
       end
     end
 
+    # Another machine's token, while that machine may still be alive. Once its
+    # server is reclaimable, the token's new machine (a rebuild, booted with
+    # the same secret) takes the server back.
     def bound_elsewhere?
-      token.server&.machine_id.present? && token.server.machine_id != machine_id
+      bound = token.server
+      bound&.machine_id.present? && bound.machine_id != machine_id && !bound.reclaimable?
     end
 
     def claim_server
-      if token.server
-        raise Rejected, "This token belongs to another server" if bound_elsewhere?
-        token.server
-      else
-        server = Server.find_by(machine_id: machine_id) || unclaimed_server || Server.create!(name: hostname, hostname: hostname)
-        token.update!(server: server) unless token.fleet?
-        server
+      raise Rejected, "This token belongs to another server" if bound_elsewhere?
+
+      server = token.server || Server.find_by(machine_id: machine_id) || unclaimed_server || Server.create!(name: hostname, hostname: hostname)
+      # A rebuild that reported before the old machine had been silent long
+      # enough made a row of its own. Once it has, that row moves onto Git's.
+      server = reclaimable_server || server if server.machine_id == machine_id && server.assignments.none?
+      release_machine_id(server)
+      token.update!(server: server) unless token.fleet?
+      server
+    end
+
+    # Machine ids are unique, so the row this machine made, which Git doesn't
+    # place, goes when the machine moves onto another.
+    def release_machine_id(server)
+      Server.where(machine_id: machine_id).where.not(id: server.id).find_each do |own|
+        raise Rejected, "This machine already reports as #{own.name}" if own.assignments.exists?
+        own.destroy!
       end
     end
 

@@ -60,7 +60,7 @@ Upgrading from a template without `network: meridian`: create the network as abo
 
 ### One token per server, or one for the fleet
 
-- A **per-server token** binds to the first machine that uses it. Another machine using it gets `422` with the reason, and the agent logs the refusal. Kamal gives every host of an accessory the same secret, so with the template's `roles: [ web ]` on several hosts, use a fleet token (or one accessory per host).
+- A **per-server token** binds to the first machine that uses it. Another machine using it gets `422` with the reason, and the agent logs the refusal, until the first machine has been silent for 10 minutes and turned stale: then the token's new machine (a rebuild booted with the same secret) takes the server over. Kamal gives every host of an accessory the same secret, so with the template's `roles: [ web ]` on several hosts, use a fleet token (or one accessory per host).
 - A **fleet token** (tick "Fleet token") is shared by many servers. Each server is then identified by its `/etc/machine-id`. Revoking a fleet token silences every server that uses it.
 
 ### Matching servers to Git
@@ -71,7 +71,7 @@ Git names servers by the host Kamal connects to, such as `web-1.example.com` or 
 2. the first DNS label (`web-1` matches `web-1.example.com`), when only one server has it;
 3. an IP address is matched only whole.
 
-If the agent reported before Git listed the host, it made a server of its own; Git's name takes that server over when it is the only one sharing the host's first DNS label. If a machine is rebuilt with a new machine id, its agent takes the server back once the old one has been silent for 10 minutes and has turned stale (three of its intervals), but only when it reports Git's exact host: set `MERIDIAN_HOSTNAME` to it. A first DNS label alone never hands over a server that has had an agent.
+If the agent reported before Git listed the host, it made a server of its own; Git's name takes that server over when it is the only one sharing the host's first DNS label. If a machine is rebuilt with a new machine id, its agent takes the server back once the old one has been silent for 10 minutes and has turned stale (three of its intervals). On a fleet token that needs Git's exact host, so set `MERIDIAN_HOSTNAME` to it: a first DNS label alone never hands over a server that has had an agent. A rebuild that reports sooner gets a server of its own at first, which moves onto Git's once the old agent has been quiet that long.
 
 When neither matches, set `MERIDIAN_HOSTNAME` on the agent to the name used in your config.
 

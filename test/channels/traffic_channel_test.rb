@@ -53,4 +53,17 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     subscribe app_id: @app.id
     assert subscription.rejected?
   end
+
+  test "a reader removed mid-stream is hung up instead of renewed" do
+    subscribe app_id: @app.id
+    closed = []
+    connection.define_singleton_method(:close) { |**options| closed << options }
+    users(:deployer).destroy!
+    travel LiveLogs::RENEW_EVERY + 1.second
+
+    assert_no_broadcasts AgentChannel.broadcasting_for(@web_1) do
+      TrafficChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
+    end
+    assert_equal [ { reason: "unauthorized" } ], closed
+  end
 end

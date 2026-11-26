@@ -79,4 +79,17 @@ class LogsChannelTest < ActionCable::Channel::TestCase
       LogsChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
     end
   end
+
+  test "a reader who is no longer a deployer is hung up instead of renewed" do
+    subscribe placement_ids: [ @web.id ]
+    closed = []
+    connection.define_singleton_method(:close) { |**options| closed << options }
+    users(:deployer).update!(role: "viewer")
+    travel LiveLogs::RENEW_EVERY + 1.second
+
+    assert_no_broadcasts AgentChannel.broadcasting_for(@web_1) do
+      LogsChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
+    end
+    assert_equal [ { reason: "unauthorized" } ], closed
+  end
 end

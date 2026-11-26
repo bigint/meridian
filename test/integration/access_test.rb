@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AccessTest < ActionDispatch::IntegrationTest
+  include ActionCable::TestHelper
+
   test "everything requires signing in" do
     [ root_path, apps_path, servers_path, projects_path, events_path ].each do |path|
       get path
@@ -101,5 +103,20 @@ class AccessTest < ActionDispatch::IntegrationTest
     sign_in_as users(:admin)
     patch settings_user_path(users(:admin)), params: { user: { role: "viewer" } }
     assert users(:admin).reload.admin?
+  end
+
+  test "a new role, signing out and being removed hang up the person's open cables" do
+    cables = "action_cable/#{users(:deployer).to_gid_param}"
+    sign_in_as users(:admin)
+
+    assert_broadcasts(cables, 1) { patch settings_user_path(users(:deployer)), params: { user: { role: "viewer" } } }
+    assert_no_broadcasts(cables) { patch settings_user_path(users(:deployer)), params: { user: { name: "Dee" } } }
+
+    sign_in_as users(:deployer)
+    assert_broadcasts(cables, 1) { delete session_path }
+
+    users(:deployer).sessions.create!
+    sign_in_as users(:admin)
+    assert_broadcasts(cables, 1) { delete settings_user_path(users(:deployer)) }
   end
 end

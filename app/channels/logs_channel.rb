@@ -6,6 +6,8 @@ class LogsChannel < ApplicationCable::Channel
   RENEW_EVERY = 10.seconds
 
   periodically every: RENEW_EVERY do
+    next hang_up unless reader&.can_deploy?
+
     @placements.each { LiveLogs.tail(it, backlog: 0) }
   end
 
@@ -21,7 +23,7 @@ class LogsChannel < ApplicationCable::Channel
     end
 
     def find_placements
-      return unless connection.current_user&.can_deploy?
+      return unless reader&.can_deploy?
 
       ids = params[:placement_ids]
       Placement.includes(:server).where(id: ids).to_a if ids.is_a?(Array) && ids.size <= MAX_PLACEMENTS && ids.all?(Integer)

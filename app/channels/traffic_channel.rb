@@ -4,6 +4,8 @@
 # LogsChannel does. The servers come from the app, never from the browser.
 class TrafficChannel < ApplicationCable::Channel
   periodically every: LogsChannel::RENEW_EVERY do
+    next hang_up unless reader&.can_deploy?
+
     LiveTraffic.watch(@app, @proxies)
     @proxies.each { LiveLogs.tail(it, backlog: 0) }
   end
@@ -20,6 +22,6 @@ class TrafficChannel < ApplicationCable::Channel
     end
 
     def find_app
-      App.find_by(id: params[:app_id]) if connection.current_user&.can_deploy? && params[:app_id].is_a?(Integer)
+      App.find_by(id: params[:app_id]) if reader&.can_deploy? && params[:app_id].is_a?(Integer)
     end
 end

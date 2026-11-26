@@ -81,6 +81,18 @@ class PreviewTest < ActiveSupport::TestCase
     assert_not_requested @deletes
   end
 
+  test "a deploy run GitHub cancelled for a newer one leaves the preview to that one" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    Preview.deploy(@app, number: 7, head_sha: "i" * 40, url: nil)
+    Preview.deploy(@app, number: 7, head_sha: "k" * 40, url: nil)
+
+    track("deploy deploy/api.yml pr-7", conclusion: "cancelled")
+    assert preview.reload.deploying?
+    track("deploy deploy/api.yml pr-7", conclusion: "failure")
+    track("deploy deploy/api.yml pr-7")
+    assert preview.reload.active?
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

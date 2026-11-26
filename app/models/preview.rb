@@ -43,12 +43,17 @@ class Preview < ApplicationRecord
       return true unless run["status"] == "completed" && project
 
       preview = Preview.joins(:app).find_by(apps: { project_id: project.id, config_path: config }, destination: destination) or return true
+      # A run GitHub cancelled because a newer one queued says nothing.
+      return true if run["conclusion"].in?(%w[ cancelled skipped ])
+
       success = run["conclusion"] == "success"
       # Only a preview still waiting on its removal is finished by one: a
       # remove run replayed by polling, or one that ends after the pull
       # request reopened, must not take down the preview deployed since.
       if command == "remove" && success && preview.removing? then preview.finish_removal
-      elsif command == "deploy" && preview.deploying? then preview.update!(state: success ? "active" : "failed")
+      # Runs for one preview run one at a time, so the last to finish is the
+      # newest, whether the state before it was deploying, active or failed.
+      elsif command == "deploy" && !preview.removing? && !preview.removed? then preview.update!(state: success ? "active" : "failed")
       end
       true
     end

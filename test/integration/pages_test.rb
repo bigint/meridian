@@ -131,6 +131,13 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "turbo-cable-stream-source[signed-stream-name=?]", Turbo::StreamsChannel.signed_stream_name([ :board, "fra" ])
   end
 
+  test "New app shows a missing repository under its field, not only at the top" do
+    sign_in_as users(:admin)
+    post apps_path, params: { app_draft: { project_id: 0, service: "shop", source_repo: "acme/shop", kind: "web", hostname: "shop.example.com" } }
+    assert_response :unprocessable_entity
+    assert_select ".field:has(#app_draft_project_id) .field__error", text: /can.t be blank/
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

@@ -115,6 +115,7 @@
 - A form that is sent and redirects back to the same page takes the server's values again (the version box empties after a deploy), while text typed during a live refresh is still kept.
 - The agent template on the Agents page boots its two accessories with one `kamal accessory boot` each, since the command takes one name, and says that `roles: [ web ]` boots them on web hosts only.
 - An unknown cell on the board shows `–`, the mark the badges, chips and docs give unknown, instead of `?`, which is the mark for stray.
+- New app shows a missing or unknown infra repository under the **Infra repository** field as well as at the top of the form. The field looked for the error on `project_id`, while it is on `project`.
 
 ### Upgrading
 

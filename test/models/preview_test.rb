@@ -144,6 +144,21 @@ class PreviewTest < ActiveSupport::TestCase
     assert @app.previews.sole.failed?
   end
 
+  test "a selector with stray spaces still finds the preview server" do
+    Server.find_by!(hostname: "web-2.example.com").update!(labels: { "role" => "preview" })
+    accounts(:main).update!(preview_selector: " role=preview,")
+
+    Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    assert_equal [ "web-2.example.com" ], YAML.safe_load(@writes.sole["content"]).dig("servers", "web")
+  end
+
+  test "a malformed selector saved earlier matches no server rather than crashing" do
+    accounts(:main).update_column(:preview_selector, "preview")
+
+    error = assert_raises(ArgumentError) { Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil) }
+    assert_equal "No server matches the preview selector", error.message
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

@@ -13,7 +13,7 @@
 
 Open a server's page and its CPU, memory, load and disk, and every container's CPU, memory, network and disk IO, update once a second.
 
-The agent holds one WebSocket open to `MERIDIAN_URL/cable`, outbound like everything else, authenticated with the same token. While nobody watches, nothing flows but ActionCable's pings. When someone opens the page, Meridian sends a 30-second lease and renews it while the page stays open. Until the lease runs out the agent streams Docker's stats for each running Kamal container and sends Meridian one frame a second, which Meridian relays to the open pages and never stores. Close the page and the agent stops within 30 seconds.
+The agent holds one WebSocket open to `MERIDIAN_URL/cable`, outbound like everything else, authenticated with the same token. While nobody watches, nothing flows but ActionCable's pings. When someone opens the page, Meridian sends a 30-second lease and renews it while the page stays open. Until the lease runs out the agent streams Docker's stats for each running Kamal container and sends Meridian one frame a second, which Meridian relays to the open pages and never stores. The page tells Meridian every 10 seconds that it is still open, and Meridian renews the lease only for a page it has heard from in the last 75 seconds. Close the page and the agent stops within 30 seconds; a page asleep or cut off stops it within about two minutes.
 
 Host numbers come from the host's `/proc`, mounted read-only at `/host/proc` (the template does this). Without it the page shows per-container numbers only. Disk usage is the host's root filesystem, read with `statfs` on the already-mounted `/host/etc/hostname`.
 
@@ -42,7 +42,7 @@ The full reference (every environment variable and the payload format) is in [`a
 
 ## Install with Kamal
 
-1. In Meridian, open **Agents → New token**. One token per server is safest. Copy the token; it is shown once.
+1. In Meridian, open **Agents → New token**. One token per server is safest, but see below for an accessory on several hosts. Copy the token; it is shown once.
 2. Add the two accessories from the Agents page, or from [`templates/kamal/agent-accessories.yml`](../templates/kamal/agent-accessories.yml), to a Kamal config whose `servers` cover your hosts, and put `MERIDIAN_TOKEN` in `.kamal/secrets`.
 3. Once per host, create the `meridian` Docker network the two accessories share, then boot them:
 
@@ -60,7 +60,7 @@ Upgrading from a template without `network: meridian`: create the network as abo
 
 ### One token per server, or one for the fleet
 
-- A **per-server token** binds to the first machine that uses it. If another machine tries it, the request is refused.
+- A **per-server token** binds to the first machine that uses it. Another machine using it gets `422` with the reason, and the agent logs the refusal. Kamal gives every host of an accessory the same secret, so with the template's `roles: [ web ]` on several hosts, use a fleet token (or one accessory per host).
 - A **fleet token** (tick "Fleet token") is shared by many servers. Each server is then identified by its `/etc/machine-id`. Revoking a fleet token silences every server that uses it.
 
 ### Matching servers to Git
@@ -68,7 +68,10 @@ Upgrading from a template without `network: meridian`: create the network as abo
 Git names servers by the host Kamal connects to, such as `web-1.example.com` or an IP address. The agent reports the machine's own hostname. Meridian matches them in this order:
 
 1. the exact hostname;
-2. the first DNS label (`web-1` matches `web-1.example.com`), when only one server has it.
+2. the first DNS label (`web-1` matches `web-1.example.com`), when only one server has it;
+3. an IP address is matched only whole.
+
+If the agent reported before Git listed the host, it made a server of its own; Git's name takes that server over when it is the only one sharing the host's first DNS label. If a machine is rebuilt with a new machine id, its agent takes the server back once the old one has been silent for 10 minutes.
 
 When neither matches, set `MERIDIAN_HOSTNAME` on the agent to the name used in your config.
 

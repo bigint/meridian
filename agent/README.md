@@ -75,7 +75,9 @@ and `Content-Type: application/json`:
 - `truncated` appears only when the snapshot went over 1 MiB and containers
   were dropped from the end to fit.
 - `interval_seconds` is `MERIDIAN_INTERVAL` in whole seconds (at least 1),
-  before jitter, so Meridian can tell a quiet agent from a slow one.
+  before jitter, so Meridian can tell a quiet agent from a slow one. Meridian
+  calls a server stale after three intervals, and never sooner than 45 s; it
+  assumes 15 when the key is missing.
 - Any 2xx response counts as delivered. After a 429 the agent waits at least
   the response's `Retry-After` (seconds or an HTTP date, capped at 5 minutes,
   plus up to 20% jitter) before the next try, even when its backoff is

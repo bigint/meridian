@@ -737,7 +737,16 @@ func TestSamplerSkipsAStalledContainer(t *testing.T) {
 	ls := startSampler(t, fd.docker(t), testHost(), nil, watches, func(s *sampler) { s.reconcileEvery = time.Hour })
 	watches <- 30
 	ls.frameWith(t, "both", func(f liveFrame) bool { return len(f.Containers) == 2 })
-	waitFor(t, "a1's stream to end", func() bool { return fd.activeFor(idA1) == 0 })
+	// Wait for the agent's end of a1's stream, not Docker's: a sample still
+	// being decoded when the clock jumps would arrive fresh and stay fresh.
+	// (The frame just received orders this read of win after its write.)
+	w := ls.win
+	waitFor(t, "a1's stream to end", func() bool {
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		st := w.streams[idA1]
+		return st != nil && st.done.Load()
+	})
 	// The clock jumps 10s: both are stale until a new sample lands, and only
 	// c3 is still streaming.
 	ls.clock.Advance(10 * time.Second)

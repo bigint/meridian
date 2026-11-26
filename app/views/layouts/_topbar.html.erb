@@ -10,7 +10,7 @@
       <%= form.search_field :q, placeholder: "Search apps, servers and projects", autocomplete: "off",
             data: { jump_target: "input", action: "input->jump#search keydown->jump#key" } %>
     <% end %>
-    <turbo-frame id="jump_results" target="_top" class="search__results"></turbo-frame>
+    <turbo-frame id="jump_results" target="_top" class="search__results" data-action="turbo:before-frame-render->jump#render turbo:frame-load->jump#loaded"></turbo-frame>
   </div>
 
   <div class="account">

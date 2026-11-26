@@ -45,4 +45,12 @@ class FrontendTest < ActionDispatch::IntegrationTest
 
     assert_select "tr", text: /API_KEY.*1 day ago by a removed user/m
   end
+
+  test "search results say which query they answer, as it was typed" do
+    get jump_path(q: " blog ")
+    assert_select "turbo-frame#jump_results ul.results[data-query=?]", " blog "
+
+    get jump_path(q: "nothing-like-this")
+    assert_select "turbo-frame#jump_results p.results__none[data-query=?]", "nothing-like-this"
+  end
 end

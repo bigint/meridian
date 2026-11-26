@@ -1,6 +1,7 @@
+<%# data-query is what was asked, as the box said it, so jump_controller.js can drop answers to what it no longer says. %>
 <turbo-frame id="jump_results" target="_top">
   <% if @results.any? %>
-    <ul class="results">
+    <ul class="results" data-query="<%= params[:q] %>">
       <% @results.each do |name, record, icon_name, kind| %>
         <li>
           <%= link_to record do %>
@@ -12,6 +13,6 @@
       <% end %>
     </ul>
   <% elsif @query.present? %>
-    <p class="results results__none">Nothing called “<%= @query %>”.</p>
+    <p class="results results__none" data-query="<%= params[:q] %>">Nothing called “<%= @query %>”.</p>
   <% end %>
 </turbo-frame>

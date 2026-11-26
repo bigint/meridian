@@ -63,7 +63,7 @@ class Preview < ApplicationRecord
   def url = "https://#{hostname}"
   def project = app.project
 
-  # Closed or expired: ask CI to `kamal remove`, then drop the overlay once it has.
+  # Closed or expired: ask CI to `kamal app remove`, then drop the overlay once it has.
   def close(actor: nil, reason: "closed")
     return if removing? || removed?
 

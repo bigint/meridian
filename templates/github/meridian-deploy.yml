@@ -116,7 +116,9 @@ jobs:
           args=(-c "${{ matrix.config }}")
           [ -n "${{ matrix.destination }}" ] && args+=(-d "${{ matrix.destination }}")
           if [ "${{ matrix.command }}" = "remove" ]; then
-            kamal remove "${args[@]}" --confirmed
+            # Only the app: a preview shares the base config's accessories,
+            # registry login and kamal-proxy, which `kamal remove` takes down.
+            kamal app remove "${args[@]}"
           else
             kamal deploy "${args[@]}" --version "${{ matrix.version }}" --skip-push
           fi

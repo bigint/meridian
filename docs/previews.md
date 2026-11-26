@@ -12,7 +12,7 @@ A pull request in an app's **source** repository can run as a Kamal destination,
 
    Meridian validates the overlay with Kamal before committing it.
 2. **CI deploys the pull request's head.** Meridian dispatches the workflow with `command=deploy`, `destination=pr-<n>` and `version=<head SHA>`. Your source repository's CI must push an image tagged with the commit SHA.
-3. **The pull request closes, or the preview expires** (7 days by default). Meridian dispatches `command=remove`, CI runs `kamal remove -d pr-<n>`, and once that run succeeds Meridian deletes the overlay.
+3. **The pull request closes, or the preview expires** (7 days by default). Meridian dispatches `command=remove`, CI runs `kamal app remove -d pr-<n>`, which removes the preview's containers, images and proxy route but leaves the accessories, registry login and kamal-proxy it shares with the app, and once that run succeeds Meridian deletes the overlay.
 4. **The app leaves Git.** When a sync finds its config gone, Meridian dispatches `command=remove` for each of its previews before forgetting the app. Kamal needs the base config to remove a destination, so when the config was deleted outright that run fails: remove the `<service>-pr-<n>` containers and the overlay by hand. A leftover overlay is never read as a config of its own.
 
 ## Requirements

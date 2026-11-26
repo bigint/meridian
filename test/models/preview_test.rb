@@ -128,6 +128,14 @@ class PreviewTest < ActiveSupport::TestCase
     assert_equal [ "deploying", "removing" ], [ stuck.reload.state, preview.reload.state ]
   end
 
+  test "CI removes only the preview's app, never the accessories it shares" do
+    script = YAML.safe_load(@project.workflow_template).dig("jobs", "kamal", "steps").find { it["name"] == "Kamal" }["run"]
+
+    assert_match(/^\s*kamal app remove "\$\{args\[@\]\}"$/, script)
+    assert_no_match(/^\s*kamal remove/, script)
+    assert_match "format('{0} {1} {2}', inputs.command, inputs.config, inputs.destination)", @project.workflow_template, "remove runs are still named remove <config> pr-<n>"
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

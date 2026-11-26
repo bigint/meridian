@@ -26,6 +26,21 @@ class ShellTest < ActionDispatch::IntegrationTest
     assert_select "#account[popover] form[action='/session'] button", text: /Sign out/
   end
 
+  test "the theme follows the system until someone picks one, and is rendered from the cookie" do
+    get root_path
+    assert_select "html:not([data-theme])"
+    assert_select "#account [data-controller=theme] button[data-theme-choice=system][aria-pressed=true]"
+
+    cookies[:theme] = "dark"
+    get root_path
+    assert_select "html[data-theme=dark]"
+    assert_select "#account button[data-theme-choice=dark][aria-pressed=true]"
+
+    cookies[:theme] = "purple"
+    get root_path
+    assert_select "html:not([data-theme])", { count: 1 }, "only light and dark are honoured"
+  end
+
   test "no view uses an inline style, which the CSP would block" do
     offenders = Dir[Rails.root.join("app/views/**/*.erb")].select { File.read(it).match?(/\sstyle="/) }
     assert_empty offenders.map { it.delete_prefix("#{Rails.root}/") }

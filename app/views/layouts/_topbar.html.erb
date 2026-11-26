@@ -23,6 +23,14 @@
         <p class="txt-strong"><%= current_user.display_name %></p>
         <p class="txt-small txt-muted truncate"><%= current_user.email_address %> · <%= current_user.role %></p>
       </div>
+      <div class="account__section account__theme" data-controller="theme" role="group" aria-labelledby="theme-label">
+        <span id="theme-label" class="account__label">Theme</span>
+        <div class="theme-switch">
+          <% [ [ "System", nil ], [ "Light", "light" ], [ "Dark", "dark" ] ].each do |name, value| %>
+            <button type="button" data-action="theme#pick" data-theme-target="option" data-theme-choice="<%= value || "system" %>" aria-pressed="<%= theme == value %>"><%= name %></button>
+          <% end %>
+        </div>
+      </div>
       <div class="account__section">
         <%= button_to session_path, method: :delete, class: "account__item" do %><%= icon :sign_out %> Sign out<% end %>
       </div>

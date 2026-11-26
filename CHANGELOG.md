@@ -11,6 +11,7 @@
 - Fixed: clicking a place on the map made Turbo throw and reload the whole page.
 - The sidebar shows names and collapses to an icon rail with « (» brings it back); each browser remembers the choice. Search and the account menu sit in a top bar. On phones the sidebar is a drawer behind a Menu button.
 - Built the way 37signals builds Rails apps: plain CSS in `app/assets/stylesheets/` (one file per concern, cascade layers, nesting, `light-dark()`), ERB partials and helpers, and no build step. Tailwind, ViewComponent and Lookbook were tried along the way and removed; see decision 28.
+- Light and dark themes: Meridian follows your system, or pick Light or Dark in the account menu; each browser remembers the choice.
 - Install snippets and one-time tokens have a copy button. Servers list their place (city and region) in its own column.
 - The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should". A getting-started checklist appears on new installs, and each app has a one-line status ("✓ Running v42 everywhere").
 - `bin/rails meridian:demo` can be run again over an existing demo fleet.

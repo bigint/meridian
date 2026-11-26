@@ -166,6 +166,14 @@
     border: 1px solid var(--color-line); border-radius: var(--radius-large); background: var(--color-canvas);
   }
   .account__who { padding: var(--space-s) var(--space); }
+  .account__theme { display: flex; align-items: center; justify-content: space-between; gap: var(--space-s); padding: var(--space-s) var(--space); }
+  .account__label { font-size: var(--text-s); color: var(--color-ink-muted); }
+  .theme-switch {
+    display: inline-flex; padding: 0.125rem; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface);
+    button { padding: 0.125rem 0.5rem; border: 0; border-radius: var(--radius-small); background: none; font-size: var(--text-s); color: var(--color-ink-muted); cursor: pointer;
+      &:hover { color: var(--color-ink); }
+      &[aria-pressed="true"] { background: var(--color-canvas); color: var(--color-ink); outline: 1px solid var(--color-line); outline-offset: -1px; } }
+  }
   .account__section { border-block-start: 1px solid var(--color-line); padding: var(--space-xs) 0; }
   .account__item {
     display: flex; align-items: center; gap: var(--space-s); inline-size: 100%;

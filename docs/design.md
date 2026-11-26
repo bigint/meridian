@@ -40,7 +40,7 @@ Inline `style` attributes are never used: the CSP blocks them, and a test fails 
 --color-ink: light-dark(#18181b, #f4f4f5);
 ```
 
-`light-dark()` follows the page's `color-scheme`: the system's by default, or the person's choice (`html[data-theme="light"|"dark"]`, from a cookie, so the server renders it with no flash).
+`light-dark()` follows the page's `color-scheme`: the system's by default, or the person's choice from **Theme: System / Light / Dark** in the account menu. `theme_controller.js` sets `html[data-theme]` and a `theme` cookie, so the server renders the same theme on the next page with no flash; System clears both. Nothing else in the CSS knows about themes.
 
 | Token | Use |
 | --- | --- |

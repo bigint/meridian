@@ -75,12 +75,13 @@ class Tunnel::ConnectorChange
     # connector cloudflared-blr-01, so kamal-fra-01's is cloudflared-fra-01.
     # Otherwise cloudflared-<first DNS label>. Unique either way.
     def name_for(host)
-      label, model = host.split(".").first, template.host.split(".").first
+      label, model = Tunnel.label_for(host), Tunnel.label_for(template.host)
       suffix = template.name.delete_prefix("cloudflared-")
       dropped = model.end_with?(suffix) ? model.delete_suffix(suffix) : ""
       base = "cloudflared-#{label.start_with?(dropped) ? label.delete_prefix(dropped) : label}"
       taken = tunnel.connectors.map(&:name) - removed_connectors.map(&:name) + added.take_while { it != host }.map { name_for(it) }
-      taken.include?(base) ? "#{base}-#{added.index(host) + 2}" : base
+      return base unless taken.include?(base)
+      (2..).lazy.map { "#{base}-#{it}" }.find { !taken.include?(it) }
     end
 
     # Each entry under accessories:, from the comments just above its key to
@@ -121,7 +122,7 @@ class Tunnel::ConnectorChange
     end
 
     def connector_lines(core, host)
-      label = host.split(".").first
+      label = Tunnel.label_for(host)
       core.join
         .sub(ENTRY, "  #{name_for(host)}:")
         .gsub(/^(\s+host:\s*)#{Regexp.escape(template.host)}(?=\s|$)/) { "#{$1}#{host}" }

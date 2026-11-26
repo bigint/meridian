@@ -93,6 +93,12 @@ class Tunnel
     (accessory["secrets"] || app.secret_names).find { it.end_with?("TUNNEL_TOKEN") }
   end
 
+  # The name a connector on this host goes by: the first DNS label, or a
+  # whole IP address, whose first part is shared by its neighbours.
+  def self.label_for(host)
+    host.match?(/\A[\d.:]+\z/) ? host.tr(".:", "-") : host.split(".").first
+  end
+
   # Configs synced before the parser reported images are found by name.
   def self.cloudflared?(accessory)
     accessory["image"] ? accessory["image"].start_with?(IMAGE) : accessory["name"] == LEGACY_NAME

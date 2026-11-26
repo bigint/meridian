@@ -50,9 +50,16 @@ class Tunnel::Setup
 
   private
     # One accessory per server, named after it, so Cloudflare lists each
-    # replica under the server's name.
+    # replica under the server's name. Servers whose short names clash
+    # (web.sgp.example.com and web.fra.example.com) go by their whole name.
     def connector_yaml(host)
-      label = host.split(".").first
+      label = labels.fetch(host)
       "  cloudflared-#{label}:\n    <<: *cloudflared\n    host: #{host}\n    options:\n      hostname: #{label}\n"
+    end
+
+    def labels
+      @labels ||= hosts.index_with { Tunnel.label_for(it) }.then do |short|
+        short.to_h { |host, label| [ host, short.values.count(label) > 1 ? host.tr(".:", "-") : label ] }
+      end
     end
 end

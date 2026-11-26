@@ -41,6 +41,26 @@ class Tunnel::ConnectorChangeTest < ActiveSupport::TestCase
     assert_equal [ [ "cloudflared-use1-az1-node-01", [ "use1-az1-node-01" ] ] ], connectors(parse(change.content)).map { [ it["name"], it["hosts"] ] }
   end
 
+  test "keeps finding a free name when short names clash, one change after another" do
+    source = Tunnel::Setup.new(@project, hosts: %w[ web.sgp.example.com ]).edge_config
+    first = change_for(source, hosts: %w[ web.sgp.example.com web.fra.example.com ])
+    assert first.valid?, first.errors.full_messages.to_sentence
+    assert_equal [ "kamal accessory boot cloudflared-web-2 -c deploy/edge.yml" ], first.boot_commands
+
+    @project.apps.find_by!(config_path: "deploy/edge.yml").update!(accessories: parse(first.content)["accessories"])
+    second = change_for(first.content, hosts: %w[ web.sgp.example.com web.fra.example.com web.lon.example.com ])
+    assert second.valid?, second.errors.full_messages.to_sentence
+    assert_equal [ "kamal accessory boot cloudflared-web-3 -c deploy/edge.yml" ], second.boot_commands
+  end
+
+  test "names a connector on an IP after the whole address" do
+    source = Tunnel::Setup.new(@project, hosts: %w[ 10.0.0.1 ]).edge_config
+    change = change_for(source, hosts: %w[ 10.0.0.1 10.0.0.2 ])
+
+    assert change.valid?, change.errors.full_messages.to_sentence
+    assert_includes change.content, "  cloudflared-10-0-0-2:\n    <<: *cloudflared\n    host: 10.0.0.2\n    options:\n      hostname: 10-0-0-2\n"
+  end
+
   test "says what's wrong instead of proposing" do
     source = file_fixture("edge/generated.yml").read
     current = %w[ aps2-az1-node-01 aps2-az1-node-02 apse1-az1-node-01 ]

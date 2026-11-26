@@ -28,6 +28,16 @@ class Tunnel::SetupTest < ActiveSupport::TestCase
     assert_no_match(/<%|evil/, setup.edge_config)
   end
 
+  test "names every connector apart, for servers known by IP or by clashing short names" do
+    { %w[ 10.0.0.1 10.0.0.2 10.0.0.3 ] => %w[ cloudflared-10-0-0-1 cloudflared-10-0-0-2 cloudflared-10-0-0-3 ],
+      %w[ web.sgp.example.com web.fra.example.com db.example.com ] => %w[ cloudflared-web-sgp-example-com cloudflared-web-fra-example-com cloudflared-db ] }.each do |hosts, names|
+      setup = Tunnel::Setup.new(@project, hosts: hosts)
+      result = KamalConfig.parse({ setup.config_path => setup.edge_config }, [ { "path" => setup.config_path, "destination" => nil } ]).sole
+
+      assert_equal names.zip(hosts.map { [ it ] }), result["accessories"].map { [ it["name"], it["hosts"] ] }
+    end
+  end
+
   test "says which apps the picked servers can serve" do
     both = Tunnel::Setup.new(@project, hosts: [ "a.example.com", "b.example.com" ])
     assert_equal [ @shop ], both.served.map(&:app)

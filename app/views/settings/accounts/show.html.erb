@@ -21,8 +21,14 @@
           <div class="field">
             <%= form.label :preview_domain, "Domain" %>
             <%= form.text_field :preview_domain, placeholder: "preview.example.com" %>
-            <p class="field__hint">Previews get <code>pr-&lt;n&gt;.&lt;app&gt;.&lt;this domain&gt;</code>. Needs a wildcard DNS record.</p>
+            <p class="field__hint">Previews are named under this domain, in the format chosen below. Needs a wildcard DNS record.</p>
             <%= field_errors(@account, :preview_domain) %>
+          </div>
+          <div class="field">
+            <%= form.label :preview_hostnames, "Hostnames" %>
+            <%= form.select :preview_hostnames, [ [ "pr-<n>.<app>.<domain>", "nested" ], [ "pr-<n>-<app>.<domain>", "flat" ] ] %>
+            <p class="field__hint">Flat names need one wildcard record, <code>*.&lt;domain&gt;</code>, for every app, and work with Cloudflare's free certificate. Only new previews change.</p>
+            <%= field_errors(@account, :preview_hostnames) %>
           </div>
           <div class="field">
             <%= form.label :preview_selector, "Preview servers" %>

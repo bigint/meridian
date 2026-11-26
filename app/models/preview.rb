@@ -25,7 +25,7 @@ class Preview < ApplicationRecord
       preview.assign_attributes(pr_url: url, head_sha: head_sha, state: "deploying")
       if preview.new_record? || preview.removed?
         preview.destination = "pr-#{number}"
-        preview.hostname = "pr-#{number}.#{app.service}.#{account.preview_domain}"
+        preview.hostname = account.preview_hostname(app.service, number)
         preview.overlay_path = app.project.destination_path(app.config_path, preview.destination)
         preview.expires_at = account.preview_ttl_days.days.from_now
         preview.commit_overlay

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_150000) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", default: "Alidade", null: false
     t.string "preview_domain"
@@ -21,6 +21,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_140000) do
     t.float "latitude"
     t.float "longitude"
     t.string "location_name"
+    t.string "preview_hostnames", default: "nested", null: false
   end
 
   create_table "agent_tokens", force: :cascade do |t|

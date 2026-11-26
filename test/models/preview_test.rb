@@ -25,6 +25,14 @@ class PreviewTest < ActiveSupport::TestCase
     assert_in_delta 7.days.from_now, preview.expires_at, 1.minute
   end
 
+  test "flat hostnames sit one level below the preview domain" do
+    accounts(:main).update!(preview_hostnames: "flat")
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+
+    assert_equal "pr-7-api.preview.example.com", preview.hostname
+    assert_equal({ "host" => "pr-7-api.preview.example.com" }, YAML.safe_load(@writes.sole["content"])["proxy"])
+  end
+
   test "a preview of a destination keeps that destination's settings" do
     web = @project.apps.find_by!(service: "web", destination: "production")
     web.update!(source_repo: "example/shop")

@@ -79,6 +79,21 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "code", text: "kamal accessory boot all -c deploy/blog.yml"
   end
 
+  test "the board's side panel offers no deploy for an accessories-only config" do
+    sign_in_as users(:deployer)
+    app = @project.apps.find_by!(service: "blog")
+    get root_path(inspect: app.id)
+    assert_select "[data-inspector] form[action=?]", app_deploys_path(app), count: 1
+
+    app.update!(kind: App::ACCESSORIES)
+    get root_path(inspect: app.id)
+
+    assert_select "[data-inspector]"
+    [ app_deploys_path(app), app_redeploy_path(app), app_rollbacks_path(app) ].each do |path|
+      assert_select "[data-inspector] form[action^=?]", path, count: 0
+    end
+  end
+
   test "an app runs its release everywhere only when no server runs another version too" do
     server = Server.create!(name: "shop-1.example.com", hostname: "shop-1.example.com", last_seen_at: Time.current)
     app = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", version_path: "deploy/shop.version")

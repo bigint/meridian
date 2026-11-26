@@ -118,6 +118,7 @@
 - New app shows a missing or unknown infra repository under the **Infra repository** field as well as at the top of the form. The field looked for the error on `project_id`, while it is on `project`.
 - The **Add CI workflow** pull request says the workflow removes previews with `kamal app remove`, the command it runs, rather than `kamal remove`.
 - The Logs page's notice for dropped lines reads "N lines skipped: logged faster than the agent sends". It said "over 512 KB/s", but the agent also drops live lines past 500 in 250 ms, whatever their size.
+- The board's side panel (`/?inspect=<id>`) for an accessories-only config shows no Deploy form, Redeploy or Roll back, as its app page already doesn't. Each could only fail.
 
 ### Upgrading
 

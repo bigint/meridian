@@ -1,6 +1,7 @@
 <%# The board's side panel: one app at a glance, and what you can do to it. %>
 <% cells = app_cells(app) %>
 <% releases = app.releases.limit(3).to_a %>
+<% can_ship = current_user.can_deploy? && app.deployable? %>
 <div class="stack-l" data-inspector>
   <div class="flex-col gap-s">
     <p class="panel__kicker">APP</p>
@@ -9,7 +10,7 @@
     <div><%= app_status app, cells %></div>
   </div>
 
-  <% if current_user.can_deploy? %>
+  <% if can_ship %>
     <%= form_with url: app_deploys_path(app), scope: :deploy, class: "card card--compact" do |form| %>
       <div class="card__body">
         <%= form.label :version, "Ship a version", for: "inspector-version", class: "txt-strong" %>
@@ -57,11 +58,11 @@
   <% end %>
 
   <div class="flex flex-wrap gap-s">
-    <% if current_user.can_deploy? && app.versioned? && app.latest_release %>
+    <% if can_ship && app.versioned? && app.latest_release %>
       <%= button_to "Redeploy", app_redeploy_path(app), class: "btn btn--small",
             form: { data: { turbo_confirm: "Run the deploy workflow again for the version in #{app.version_file_path}? Use this after rotating a secret." } } %>
     <% end %>
-    <% if current_user.can_deploy? && app.versioned? && releases.size > 1 %>
+    <% if can_ship && app.versioned? && releases.size > 1 %>
       <%= button_to "Roll back", app_rollbacks_path(app, release_id: releases.first.id), class: "btn btn--small btn--danger",
             form: { data: { turbo_confirm: "Revert #{releases.first.short_sha} so the version file goes back to its previous value? CI deploys the result." } } %>
     <% end %>

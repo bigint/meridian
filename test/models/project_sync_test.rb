@@ -90,6 +90,33 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal [ "api" ], @project.secret_names.find_by!(name: "NEW_SECRET").apps
   end
 
+  test "a config that prints doesn't spoil the parser's answer" do
+    files = infra_files.merge("deploy/chatty.yml" => <<~YAML)
+      <% puts "rendering chatty"; system("echo", "from a command") %>
+      service: chatty
+      image: example/chatty
+      servers: [ web-9.example.com ]
+      registry: { server: ghcr.io, username: example, password: [ KAMAL_REGISTRY_PASSWORD ] }
+      builder: { arch: amd64 }
+    YAML
+    stub_github_files(@project, files, head: "6" * 40)
+
+    assert @project.sync
+    assert @project.apps.exists?(service: "chatty")
+    assert_equal "6" * 40, @project.reload.last_synced_sha
+  end
+
+  test "a config that kills the parser keeps every app and says why" do
+    @project.sync
+    files = infra_files.merge("deploy/gone.yml" => "<% exit!(0) %>\nservice: gone\n")
+    stub_github_files(@project, files, head: "5" * 40)
+
+    assert @project.sync
+    assert_equal 4, @project.apps.count
+    assert_equal "The parser exited without a result", @project.reload.config_errors.sole["message"]
+    assert_equal "5" * 40, @project.last_synced_sha
+  end
+
   test "parse errors carry file and line" do
     @project.sync
 

@@ -22,7 +22,12 @@ class KamalConfig
         File.write(target, content)
       end
 
-      JSON.parse(run(dir, JSON.generate(configs: entries))).fetch("configs")
+      output = run(dir, JSON.generate(configs: entries))
+      begin
+        JSON.parse(output).fetch("configs")
+      rescue JSON::ParserError, KeyError
+        raise Error, "The parser exited without a result"
+      end
     end
   end
 

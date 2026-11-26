@@ -17,7 +17,15 @@ module Project::Syncable
     files = (configs.keys + configs.flat_map { |path, destinations| destinations.compact.map { destination_path(path, it) } })
       .index_with { |path| read_blob(tree.fetch(path)) }
 
-    results = entries.any? ? KamalConfig.parse(files, entries) : []
+    results = begin
+      entries.any? ? KamalConfig.parse(files, entries) : []
+    rescue KamalConfig::Error => error
+      # One config that hangs or kills the parser stops them all. Nothing
+      # parsed, so no app can be told apart from a removed one: keep them
+      # all, and say why on the project.
+      update!(last_synced_sha: sha, synced_at: Time.current, config_errors: [ { "class" => error.class.name, "message" => error.message, "file" => nil, "line" => nil } ])
+      return true
+    end
 
     # Everything that reads GitHub happens before the transaction: SQLite has
     # one writer, and a write lock held across hundreds of API calls would

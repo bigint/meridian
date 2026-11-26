@@ -108,5 +108,10 @@ module KamalParse
 end
 
 if $PROGRAM_NAME == __FILE__
-  puts JSON.generate(KamalParse.call(JSON.parse($stdin.read)))
+  # ERB in a config may print. Only the JSON goes to stdout; anything else
+  # written there, by Ruby or a command it runs, lands on stderr.
+  result = $stdout.dup
+  $stdout.reopen($stderr)
+  result.write(JSON.generate(KamalParse.call(JSON.parse($stdin.read))))
+  result.close
 end

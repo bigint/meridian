@@ -34,6 +34,7 @@
 - A secret name added by hand on the Secrets page without a value survives the next sync, which deleted it. A name that was set and that no config references any more says so, instead of listing the apps that used to.
 - Secret names are recorded from the apps a sync just wrote. When a push landed during a sync job, its second sync read the first one's apps from memory and missed new names until the next push.
 - A repository tree GitHub cuts short (it truncates trees of more than about 100,000 files) stops the sync. It was read as whole, so every config past the cut looked deleted and its app was destroyed.
+- One config that prints, hangs or kills the parser no longer stops the whole project syncing with no error shown. Output from ERB goes to stderr instead of corrupting the parser's answer, and a timeout or crash is shown on the project page while every app stays as it was.
 
 ## v0.1.0 (2026-11-26)
 

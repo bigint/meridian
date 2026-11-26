@@ -1,57 +1,29 @@
 <% content_for :title, "Agents" %>
-<%= page_header "Agents" %>
-<p class="txt-muted">Each server runs a small agent that reports its containers. Tokens let an agent report; revoke one to cut it off.</p>
+<%= page_header "Agents", meta: "Each server runs a small agent that reports its containers. A token lets it report; revoke the token to cut it off." %>
 
 <% if @token&.token %>
-  <div class="alert alert--warn" role="status">
-    <span class="alert__icon" aria-hidden="true">!</span>
-    <div class="alert__body">
-      <p class="alert__title">Copy this token now</p>
-      <p>Meridian keeps only a digest and can't show it again.</p>
-      <%= render "shared/code_block", code: @token.token, label: "MERIDIAN_TOKEN" %>
-    </div>
-  </div>
+  <%= alert_box :warn, title: "Copy this token now" do %>
+    <p>Meridian keeps only a digest and can't show it again.</p>
+    <%= render "shared/code_block", code: @token.token, label: "MERIDIAN_TOKEN" %>
+  <% end %>
 <% end %>
 
-<div class="grid-2 grid-2--wide">
-  <%= titled_section "Tokens", count: @tokens.size do %>
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Label</th>
-            <th scope="col">Server</th>
-            <th scope="col">Last used</th>
-            <% if current_user.admin? %><th scope="col" class="table__end"></th><% end %>
-          </tr>
-        </thead>
-        <tbody>
-          <% @tokens.each do |token| %>
-            <tr>
-              <th scope="row"><%= safe_join([ token.label, (badge("fleet") if token.fleet?) ].compact, " ") %></th>
-              <td><%= token.server ? link_to(token.server.name, token.server) : tag.span(token.fleet? ? "many" : "binds on first contact", class: "txt-faint") %></td>
-              <td class="nowrap"><%= token.revoked? ? badge("revoked", tone: :bad) : time_ago(token.last_used_at) %></td>
-              <% if current_user.admin? %>
-                <td class="table__end">
-                  <% unless token.revoked? %>
-                    <%= button_to "Revoke", agent_token_path(token), method: :delete, class: "btn btn--danger btn--small",
-                          form: { data: { turbo_confirm: "Revoke “#{token.label}”? Agents using it stop reporting." } } %>
-                  <% end %>
-                </td>
-              <% end %>
-            </tr>
-          <% end %>
-          <% if @tokens.none? %>
-            <tr><td colspan="<%= current_user.admin? ? 4 : 3 %>" class="table__empty">No tokens yet.</td></tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+<div class="split">
+  <%= titled_section "Install", class: "split__main" do %>
+    <p class="txt-muted">Add the agent to a Kamal config that reaches every host, as two accessories. It only makes outbound HTTPS requests, and reads Docker through a proxy that allows listing and inspecting containers, nothing else. More in <code>docs/agent.md</code>.</p>
+    <%= render "shared/code_block", code: render("agent_tokens/accessory", meridian_url: request.base_url), label: "config/deploy.yml" %>
+  <% end %>
 
-    <% if current_user.admin? %>
-      <div class="card">
-        <div class="card__header">New token</div>
-        <div class="card__body">
+  <div class="split__aside">
+    <div class="card">
+      <div class="card__header">Connect a server</div>
+      <div class="card__body">
+        <ol class="list-numbered txt-muted">
+          <li>Create a token<%= " (an admin can)" unless current_user.admin? %>.</li>
+          <li>Put it in <code>.kamal/secrets</code> as <code>MERIDIAN_TOKEN</code>.</li>
+          <li>Run <code>kamal accessory boot meridian_docker</code>, then <code>meridian_agent</code>.</li>
+        </ol>
+        <% if current_user.admin? %>
           <%= form_with model: AgentToken.new, url: agent_tokens_path, class: "stack" do |form| %>
             <div class="field">
               <%= form.label :label %>
@@ -64,17 +36,46 @@
             </label>
             <div><%= form.submit "Create token", class: "btn btn--primary" %></div>
           <% end %>
-        </div>
+        <% end %>
       </div>
-    <% end %>
-  <% end %>
-
-  <%= titled_section "Install" do %>
-    <p class="txt-muted">Add the agent to your Kamal config as an accessory on every host. It only makes outbound HTTPS requests and reads Docker through a proxy that allows listing and inspecting containers, nothing else.</p>
-    <%= render "shared/code_block", code: render("agent_tokens/accessory", meridian_url: request.base_url), label: "config/deploy.yml" %>
-    <p class="txt-small txt-muted">Put <code>MERIDIAN_TOKEN</code> in <code>.kamal/secrets</code>, then <code>kamal accessory boot meridian_agent</code> and <code>kamal accessory boot meridian_docker</code>. Details in <code>docs/agent.md</code>.</p>
-  <% end %>
+    </div>
+  </div>
 </div>
+
+<%= titled_section "Tokens", count: @tokens.size do %>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Label</th>
+          <th scope="col">Server</th>
+          <th scope="col">Last used</th>
+          <% if current_user.admin? %><th scope="col" class="table__end"><span class="sr-only">Actions</span></th><% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @tokens.each do |token| %>
+          <tr>
+            <th scope="row" class="nowrap"><span class="mono txt-small"><%= token.label %></span><%= badge("fleet", class: "ml-s") if token.fleet? %></th>
+            <td class="nowrap"><%= token.server ? link_to(token.server.name, token.server, class: "mono txt-small") : tag.span(token.fleet? ? "many" : "binds on first contact", class: "txt-faint") %></td>
+            <td class="nowrap"><%= token.revoked? ? badge("revoked", tone: :bad) : time_ago(token.last_used_at) %></td>
+            <% if current_user.admin? %>
+              <td class="table__end">
+                <% unless token.revoked? %>
+                  <%= button_to "Revoke", agent_token_path(token), method: :delete, class: "btn btn--small btn--plain btn--danger",
+                        form: { data: { turbo_confirm: "Revoke “#{token.label}”? Agents using it stop reporting." } } %>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+        <% if @tokens.none? %>
+          <tr><td colspan="<%= current_user.admin? ? 4 : 3 %>" class="table__empty">No tokens yet. Create one to connect the first server.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
 
 <%= titled_section "Silent agents", count: @silent.size do %>
   <p class="txt-small txt-muted">Agents that haven't reported for more than <%= distance_of_time_in_words(Server::STALE_AFTER) %>.</p>
@@ -90,13 +91,13 @@
       <tbody>
         <% @silent.each do |server| %>
           <tr>
-            <th scope="row"><%= link_to server.name, server %></th>
+            <th scope="row"><%= link_to server.name, server, class: "mono txt-small" %></th>
             <td><%= time_ago(server.last_seen_at) %></td>
             <td class="mono txt-small"><%= server.agent_version %></td>
           </tr>
         <% end %>
         <% if @silent.none? %>
-          <tr><td colspan="3" class="table__empty">None.</td></tr>
+          <tr><td colspan="3" class="table__empty">Every agent is reporting.</td></tr>
         <% end %>
       </tbody>
     </table>

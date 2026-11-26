@@ -59,7 +59,7 @@ class ApplicationHelperTest < ActionView::TestCase
   test "pagination appears only when there is another page" do
     assert_nil pagination(label: "1–5 of 5")
     render html: pagination(label: "1–50 of 51", next_url: "/apps?page=2")
-    assert_select "nav.pagination a[href='/apps?page=2']", text: "Next →"
+    assert_select "nav.pagination a[href='/apps?page=2']", text: "Next"
   end
 
   test "a titled section is labelled by its heading and can count" do

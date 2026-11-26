@@ -1,8 +1,8 @@
-# Meridian deploys itself with Kamal. Copy this file, fill in the four
-# placeholders, put the secrets in .kamal/secrets, then `kamal setup`.
-# See docs/install.md.
+# Meridian deploys itself with Kamal. Copy this file, fill in the five
+# numbered placeholders, put the secrets in .kamal/secrets, then
+# `kamal setup`. See docs/install.md.
 service: meridian
-image: ghcr.io/bigint/meridian
+image: ghcr.io/bigint/meridian             # 5. your registry, if you build the image yourself
 
 servers:
   web:

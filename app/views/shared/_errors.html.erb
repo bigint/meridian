@@ -1,9 +1,5 @@
 <% if record.errors.any? %>
-  <div class="alert alert--bad" role="alert">
-    <span class="alert__icon" aria-hidden="true">✕</span>
-    <div class="alert__body">
-      <p class="alert__title">Please fix <%= pluralize(record.errors.count, "problem") %></p>
-      <ul><% record.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
-    </div>
-  </div>
+  <%= alert_box :bad, title: "Please fix #{pluralize(record.errors.count, "problem")}" do %>
+    <ul><% record.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+  <% end %>
 <% end %>

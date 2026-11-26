@@ -1,8 +1,10 @@
 # Meridian agent: add under `accessories:` in a Kamal config that reaches
 # every host, then `kamal accessory boot meridian_docker meridian_agent`.
-# Put MERIDIAN_TOKEN in .kamal/secrets. Replace SERVICE with the config's service.
+# Put MERIDIAN_TOKEN in .kamal/secrets. Replace SERVICE with the config's
+# service.
   meridian_docker:
-    # Read-only Docker API: only GET /containers/json and /containers/{id}/json.
+    # Read-only Docker API: only GET /containers/json and
+    # /containers/{id}/json.
     image: tecnativa/docker-socket-proxy:v0.4.1
     roles: [ web ]
     env:

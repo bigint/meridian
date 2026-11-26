@@ -13,12 +13,23 @@ class AccessTest < ActionDispatch::IntegrationTest
     get new_session_path
     assert_redirected_to first_run_path
 
-    post first_run_path, params: { user: { name: "Ada", email_address: "first@example.com", password: "a long enough password" } }
+    post first_run_path, params: { setup_code: User.setup_code, user: { name: "Ada", email_address: "first@example.com", password: "a long enough password" } }
     assert_redirected_to projects_path
     assert User.find_by!(email_address: "first@example.com").admin?
 
     get first_run_path
     assert_redirected_to root_path
+  end
+
+  test "first run needs the setup code, so whoever reaches a fresh deploy first can't take it" do
+    User.delete_all
+
+    [ nil, "wrong" ].each do |code|
+      post first_run_path, params: { setup_code: code, user: { name: "Eve", email_address: "eve@example.com", password: "a long enough password" } }
+      assert_response :unprocessable_entity
+      assert_select ".alert", text: /Setup code doesn.t match/
+    end
+    assert_not User.exists?
   end
 
   test "viewers can read but not change projects" do
@@ -59,6 +70,19 @@ class AccessTest < ActionDispatch::IntegrationTest
     project = Project.find_by!(repo_full_name: "example/homelab")
     assert_equal %w[ kamal/*.yml config/deploy*.yml ], project.config_globs
     assert_equal "project.created", Event.recent.first.action
+  end
+
+  test "a new password signs the person out everywhere else" do
+    stolen = users(:viewer).sessions.create!
+    sign_in_as users(:admin)
+    admin_session = Current.session
+
+    patch settings_user_path(users(:viewer)), params: { user: { role: "viewer" } }
+    assert Session.exists?(stolen.id), "saving without a new password keeps sessions"
+
+    patch settings_user_path(users(:viewer)), params: { user: { password: "a brand new password" } }
+    assert_not Session.exists?(stolen.id)
+    assert Session.exists?(admin_session.id)
   end
 
   test "the last admin can't be demoted" do

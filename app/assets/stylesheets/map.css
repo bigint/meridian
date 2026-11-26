@@ -39,6 +39,6 @@
   }
 
   .world__legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-s) var(--space-xl); font-size: var(--text-s); color: var(--color-ink-muted);
-    > span { display: inline-flex; align-items: center; gap: var(--space-s); }
+    > span { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-s); }
     svg { inline-size: 1.5rem; block-size: 0.5rem; overflow: visible; } }
 }

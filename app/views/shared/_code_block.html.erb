@@ -1,7 +1,9 @@
 <div class="code-block" data-controller="clipboard">
   <div class="code-block__bar">
     <span><%= label %></span>
-    <button type="button" class="code-block__copy" data-action="clipboard#copy" data-clipboard-target="button">Copy</button>
+    <button type="button" class="code-block__copy" data-action="clipboard#copy" data-clipboard-target="button">
+      <%= icon :copy, class: "code-block__idle" %><%= icon :copied, class: "code-block__done" %><span data-clipboard-target="label">Copy</span>
+    </button>
   </div>
   <pre><code data-clipboard-target="source"><%= code %></code></pre>
 </div>

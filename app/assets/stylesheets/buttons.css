@@ -32,6 +32,8 @@
 
   .btn--danger { color: var(--color-bad); &:hover { background: var(--color-bad-soft); color: var(--color-bad); } }
   .btn--plain { border-color: transparent; background: none; color: var(--color-ink-muted); &:hover { color: var(--color-ink); } }
+  .btn--plain.btn--danger { color: var(--color-ink-muted); &:hover { background: var(--color-bad-soft); color: var(--color-bad); } }
+  .btn--icon { inline-size: 2rem; padding: 0; }
   .btn--small { block-size: 1.75rem; padding: 0 0.625rem; font-size: var(--text-s); gap: var(--space-xs); }
   .btn--block { inline-size: 100%; }
 

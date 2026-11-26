@@ -16,6 +16,12 @@
 - The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should". A getting-started checklist appears on new installs, and each app has a one-line status ("✓ Running v42 everywhere").
 - `bin/rails meridian:demo` can be run again over an existing demo fleet.
 - Keyboard shortcuts are gone for now.
+- Icons are [Lucide](https://lucide.dev)'s, vendored in `vendor/lucide` (ISC) and added with `bin/icons <name>`.
+- Fixed: on live pages (the Map, the Board), an open Filters panel closed again on the next refresh. Panels you open or close now stay that way.
+- The account menu lines up, shows your role, and switches theme with icons. Settings has Workspace and Previews sections, and Jobs lives only in the sidebar. The Agents page puts the install snippet and a new token side by side, with the tokens below; Revoke is quiet until you point at it.
+- Error pages (404, 500 and the rest) look like Meridian instead of Rails' defaults (`script/error_pages.rb`).
+- Security: creating the first admin needs a setup code from Meridian's log (or `bin/rails meridian:setup_code`), so whoever reaches a fresh deploy first can't take it. A new password signs that person out of every other session. In production Meridian answers only to `MERIDIAN_URL`'s host.
+- The project has a code of conduct, issue and pull request templates, and reports vulnerabilities through GitHub's private reporting form.
 - OpenID Connect sign-in is gone for now. Sign in with email and password; the `OIDC_*` variables do nothing, and linked identities are deleted.
 
 ### World map

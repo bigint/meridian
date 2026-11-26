@@ -136,6 +136,17 @@ module ApplicationHelper
     end
   end
 
+  ALERT_ICONS = { ok: :ok, warn: :warn, bad: :bad }.freeze
+
+  # A message in the flow of the page. Errors are announced at once; the
+  # rest politely.
+  def alert_box(tone = nil, title: nil, &body)
+    tag.div class: [ "alert", ("alert--#{tone}" if tone) ], role: (tone == :bad ? "alert" : "status") do
+      icon(ALERT_ICONS.fetch(tone, :info), class: "alert__icon") +
+        tag.div(safe_join([ (tag.p(title, class: "alert__title") if title), capture(&body) ].compact), class: "alert__body")
+    end
+  end
+
   def empty_state(title, icon_name: nil, &body)
     tag.div class: "empty" do
       safe_join([
@@ -150,9 +161,9 @@ module ApplicationHelper
     return unless previous_url || next_url
     tag.nav class: "pagination", aria: { label: "Pages" } do
       safe_join([
-        (previous_url ? link_to("← #{previous_label}", previous_url, class: "btn btn--small") : tag.span),
+        (previous_url ? link_to(icon(:previous) + previous_label, previous_url, class: "btn btn--small") : tag.span),
         tag.span(label, class: "txt-small txt-muted"),
-        (next_url ? link_to("#{next_label} →", next_url, class: "btn btn--small") : tag.span)
+        (next_url ? link_to(tag.span(next_label) + icon(:next), next_url, class: "btn btn--small") : tag.span)
       ])
     end
   end

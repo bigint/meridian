@@ -67,8 +67,8 @@ bin/dev          # the app on :3000
 bin/ci           # everything CI runs: lint, security, Rails and Go tests
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md); report vulnerabilities as [SECURITY.md](SECURITY.md) describes.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Icons are [Lucide](https://lucide.dev)'s, under the ISC licence in [vendor/lucide/LICENSE](vendor/lucide/LICENSE).

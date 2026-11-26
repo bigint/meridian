@@ -28,6 +28,7 @@ class Settings::UsersController < AdminController
     if last_admin_demoted?(attributes)
       redirect_to edit_settings_user_path(@user), alert: "There must always be one admin."
     elsif @user.update(attributes)
+      @user.sessions.where.not(id: Current.session.id).destroy_all if attributes.key?(:password)
       Event.record("user.updated", subject: @user, summary: "Updated #{@user.email_address} (#{@user.role})")
       redirect_to settings_users_path, notice: "Saved."
     else

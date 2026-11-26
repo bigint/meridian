@@ -1,7 +1,7 @@
 <%# Search on the left, the person on the right, and on phones the button
     that opens the navigation drawer. %>
 <div id="topbar" class="topbar">
-  <button type="button" popovertarget="sidebar" class="btn btn--small topbar__menu">Menu</button>
+  <button type="button" popovertarget="sidebar" class="btn btn--icon btn--plain topbar__menu" aria-label="Menu" title="Menu"><%= icon :menu %></button>
 
   <div class="search" data-controller="jump">
     <%= form_with url: jump_path, method: :get, data: { turbo_frame: "jump_results", jump_target: "form" } do |form| %>
@@ -17,22 +17,27 @@
     <button type="button" popovertarget="account" class="account__button" aria-label="Account: <%= current_user.display_name %>">
       <%= avatar current_user.display_name, small: true %>
       <span class="account__name"><%= current_user.display_name %></span>
+      <%= icon :chevron, class: "account__chevron" %>
     </button>
-    <div id="account" popover class="account__menu">
-      <div class="account__who">
-        <p class="txt-strong"><%= current_user.display_name %></p>
-        <p class="txt-small txt-muted truncate"><%= current_user.email_address %> · <%= current_user.role %></p>
+    <div id="account" popover class="menu account__menu">
+      <div class="menu__section account__who">
+        <%= avatar current_user.display_name %>
+        <div class="min-w-0">
+          <p class="txt-strong truncate"><%= current_user.display_name %></p>
+          <p class="txt-small txt-muted truncate"><%= current_user.email_address %></p>
+        </div>
+        <%= badge current_user.role.capitalize, tone: (:accent if current_user.admin?), class: "ml-auto" %>
       </div>
-      <div class="account__section account__theme" data-controller="theme" role="group" aria-labelledby="theme-label">
-        <span id="theme-label" class="account__label">Theme</span>
+      <div class="menu__section" data-controller="theme" role="group" aria-labelledby="theme-label">
+        <p id="theme-label" class="menu__label">Theme</p>
         <div class="theme-switch">
-          <% [ [ "System", nil ], [ "Light", "light" ], [ "Dark", "dark" ] ].each do |name, value| %>
-            <button type="button" data-action="theme#pick" data-theme-target="option" data-theme-choice="<%= value || "system" %>" aria-pressed="<%= theme == value %>"><%= name %></button>
+          <% [ [ "System", nil, :system ], [ "Light", "light", :light ], [ "Dark", "dark", :dark ] ].each do |name, value, icon_name| %>
+            <button type="button" data-action="theme#pick" data-theme-target="option" data-theme-choice="<%= value || "system" %>" aria-pressed="<%= theme == value %>"><%= icon icon_name %><%= name %></button>
           <% end %>
         </div>
       </div>
-      <div class="account__section">
-        <%= button_to session_path, method: :delete, class: "account__item" do %><%= icon :sign_out %> Sign out<% end %>
+      <div class="menu__section">
+        <%= button_to session_path, method: :delete, class: "menu__item", form_class: "block" do %><%= icon :sign_out %>Sign out<% end %>
       </div>
     </div>
   </div>

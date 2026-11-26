@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+# Vendors Lucide icons (https://lucide.dev, ISC licence) into vendor/lucide,
+# where IconsHelper reads them. Pinned to one release so icons never change
+# under us.
+#
+#   bin/icons              re-download every icon already vendored
+#   bin/icons bell x       add these icons (names from lucide.dev/icons)
+require "net/http"
+require "fileutils"
+
+VERSION = "1.81.0"
+DIR = File.expand_path("../vendor/lucide", __dir__)
+
+def fetch(path)
+  uri = URI("https://unpkg.com/lucide-static@#{VERSION}/#{path}")
+  response = Net::HTTP.get_response(uri)
+  abort "#{uri}: HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+  response.body
+end
+
+names = ARGV.any? ? ARGV : Dir[File.join(DIR, "*.svg")].map { File.basename(it, ".svg") }.sort
+abort "Name at least one icon: bin/icons bell" if names.empty?
+
+FileUtils.mkdir_p(DIR)
+File.write(File.join(DIR, "LICENSE"), fetch("LICENSE"))
+File.write(File.join(DIR, "VERSION"), "#{VERSION}\n")
+names.each do |name|
+  File.write(File.join(DIR, "#{name}.svg"), fetch("icons/#{name}.svg"))
+  puts "vendor/lucide/#{name}.svg"
+end

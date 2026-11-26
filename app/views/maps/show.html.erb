@@ -42,10 +42,10 @@
     <%= render "maps/world", map: @map, selected: @selected %>
 
     <% unless @map.hub %>
-      <div class="alert" role="status"><span class="alert__icon" aria-hidden="true">ⓘ</span><div class="alert__body"><p>
+      <%= alert_box do %><p>
         <% if current_user.admin? %><%= link_to "Set where Meridian runs", settings_account_path %><% else %>An admin can set where Meridian runs<% end %>
         to see agent reports and deploys flowing on the map.
-      </p></div></div>
+      </p><% end %>
     <% end %>
 
     <%= titled_section "Places", count: sites.size do %>
@@ -57,7 +57,7 @@
             <% rows.each do |site| %>
               <tr>
                 <th scope="row"><%= link_to site.name, map_place_path(site), class: (site == @selected ? "txt-accent txt-strong" : nil), aria: { current: (site == @selected ? "true" : nil) } %></th>
-                <td class="mono txt-small"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
+                <td class="mono txt-small nowrap"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
                 <td><div class="cells"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= version_cell cell %><% end %></div></td>
                 <td class="nowrap"><%= site.stale? ? badge("… quiet") : "reporting" %></td>
               </tr>

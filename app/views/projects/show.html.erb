@@ -31,18 +31,15 @@
       <ul class="flex-col gap-s" data-config-errors>
         <% @project.config_errors.each do |error| %>
           <li>
-            <div class="alert alert--bad" role="alert">
-              <span class="alert__icon" aria-hidden="true">✕</span>
-              <div class="alert__body">
-                <div>
-                  <code class="txt-strong"><%= [ error["file"], error["line"] ].compact.join(":") %></code>
-                  <% if error["file"] %>
-                    <%= link_to "view", "#{@project.repo_url}/blob/#{@project.last_synced_sha || @project.default_branch}/#{error["file"]}#{"#L#{error["line"]}" if error["line"]}", class: "link txt-small" %>
-                  <% end %>
-                </div>
-                <p><%= error["message"] %></p>
+            <%= alert_box :bad do %>
+              <div>
+                <code class="txt-strong"><%= [ error["file"], error["line"] ].compact.join(":") %></code>
+                <% if error["file"] %>
+                  <%= link_to "view", "#{@project.repo_url}/blob/#{@project.last_synced_sha || @project.default_branch}/#{error["file"]}#{"#L#{error["line"]}" if error["line"]}", class: "link txt-small" %>
+                <% end %>
               </div>
-            </div>
+              <p><%= error["message"] %></p>
+            <% end %>
           </li>
         <% end %>
       </ul>

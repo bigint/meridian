@@ -16,7 +16,7 @@ docker run -d --name meridian -p 3000:80 -v meridian:/rails/storage \
   ghcr.io/bigint/meridian:v0.1.0
 ```
 
-Open <http://localhost:3000> and create the first admin. To look around without connecting GitHub, seed a demo fleet:
+Open <http://localhost:3000> and create the first admin. The setup code it asks for is in the container's log: `docker logs <container> | grep "setup code"`. To look around without connecting GitHub, seed a demo fleet:
 
 ```bash
 docker exec meridian bin/rails meridian:demo
@@ -76,7 +76,7 @@ If you build the image yourself rather than pulling the published one, set `imag
 
 ## 4. Connect your infra repository (3 minutes)
 
-1. Sign in and create the first admin.
+1. Open Meridian and create the first admin. It asks for a setup code, so only someone who runs the server can do this: find it with `kamal app logs | grep "setup code"`, or run `kamal app exec 'bin/rails meridian:setup_code'`.
 2. Go to **Projects → Add project**. Enter `owner/name`, the branch, the installation ID and where your configs live: `config/deploy*.yml` by default, or for example `kamal/*.yml`.
 3. Meridian syncs. Every config appears on the board, and parse errors show their file and line.
 4. Press **Add CI workflow** and merge the pull request it opens. Add the `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` repository secrets, either on the Secrets page or in GitHub.

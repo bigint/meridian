@@ -34,7 +34,7 @@ module KamalParse
         "service" => config.service,
         "image" => config.image,
         "roles" => config.roles.map { |role| describe_role(role) },
-        "accessories" => config.accessories.map { |accessory| { "name" => accessory.name, "service" => accessory.service_name, "hosts" => accessory.hosts } },
+        "accessories" => config.accessories.map { |accessory| { "name" => accessory.name, "service" => accessory.service_name, "image" => accessory.image, "hosts" => accessory.hosts } },
         "hostnames" => config.roles.select(&:running_proxy?).flat_map { |role| role.proxy.hosts }.uniq,
         "app_port" => config.proxy&.app_port,
         "secrets" => secret_names(config.raw_config.to_h.deep_stringify_keys),

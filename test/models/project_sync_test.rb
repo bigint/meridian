@@ -27,6 +27,14 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "a" * 40, @project.reload.last_synced_sha
   end
 
+  test "sync records each accessory's image, so a tunnel is found by what it runs" do
+    @project.sync
+
+    db = @project.apps.find_by!(service: "api").accessories.sole
+    assert_equal "postgres:17", db["image"]
+    assert_equal "db-1.example.com", db["hosts"].sole
+  end
+
   test "parse errors carry file and line" do
     @project.sync
 

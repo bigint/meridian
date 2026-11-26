@@ -67,17 +67,6 @@ Git names servers by the host Kamal connects to, such as `web-1.example.com` or 
 
 When neither matches, set `MERIDIAN_HOSTNAME` on the agent to the name used in your config.
 
-## kamal-proxy routes (optional)
-
-kamal-proxy keeps its routes in `kamal-proxy.state`, inside the named volume `kamal-proxy-config`. To report routes:
-
-1. Mount that volume read-only into the agent, for example `kamal-proxy-config:/kamal-proxy:ro`.
-2. Set `MERIDIAN_PROXY_STATE=/kamal-proxy/kamal-proxy.state`.
-
-kamal-proxy rewrites the file in place, so the agent sometimes catches it half-written. When that happens it retries once, then skips routes for that snapshot.
-
-The only other way to read routes is `kamal-proxy list`, which needs `docker exec`. The agent never uses it. The research behind both points, with links to the source, is in [architecture.md](architecture.md#kamal-proxy-routes-read-only).
-
 ## Labels
 
 `MERIDIAN_LABELS=region=sgp,provider=ovh,role=web` sets the labels the board filters and groups by. Use any keys you like. `region`, `provider` and `role` get their own filters.

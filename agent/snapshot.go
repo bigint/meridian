@@ -25,7 +25,6 @@ type Snapshot struct {
 	Hostname     string            `json:"hostname"`
 	Labels       map[string]string `json:"labels"`
 	Containers   []Container       `json:"containers"`
-	ProxyRoutes  []ProxyRoute      `json:"proxy_routes,omitempty"`
 	Truncated    bool              `json:"truncated,omitempty"`
 }
 
@@ -121,8 +120,8 @@ func collectContainers(ctx context.Context, docker *dockerClient) ([]Container, 
 	return out, nil
 }
 
-// encodeCapped marshals s, dropping trailing containers (and then proxy
-// routes) until the document fits in limit bytes.
+// encodeCapped marshals s, dropping trailing containers until the document
+// fits in limit bytes.
 func encodeCapped(s Snapshot, limit int) ([]byte, bool, error) {
 	if s.Labels == nil {
 		s.Labels = map[string]string{}
@@ -148,9 +147,5 @@ func encodeCapped(s Snapshot, limit int) ([]byte, bool, error) {
 		b, _ := encode(n - 1)
 		return b, true, nil
 	}
-	s.ProxyRoutes = nil
-	if b, ok := encode(0); ok {
-		return b, true, nil
-	}
-	return nil, true, fmt.Errorf("snapshot exceeds %d bytes even without containers and proxy routes", limit)
+	return nil, true, fmt.Errorf("snapshot exceeds %d bytes even without containers", limit)
 }

@@ -16,8 +16,6 @@ anything, and it is built from the Go standard library alone.
   watching ([Live stats](#live-stats)) and, with `MERIDIAN_LOGS=1`,
   `GET /containers/{id}/logs` while someone is reading a container's logs
   ([Container logs](#container-logs)).
-- **kamal-proxy state** (optional): the `kamal-proxy.state` file in the
-  `kamal-proxy-config` volume, mounted read-only.
 - **Host identity**: `/host/etc/machine-id` and `/host/etc/hostname` if mounted.
 - **Host load** (optional, live stats only): `stat`, `meminfo` and `loadavg`
   under `/host/proc`, and the size of the filesystem holding
@@ -64,9 +62,6 @@ and `Content-Type: application/json`:
       "started_at": "2026-11-25T10:00:00.123456789Z"
     }
   ],
-  "proxy_routes": [
-    { "name": "web-web-production", "hosts": ["app.example.com"], "active_targets": ["web-web-production-3f2a9c1e…:80"] }
-  ],
   "truncated": true
 }
 ```
@@ -76,10 +71,8 @@ and `Content-Type: application/json`:
   container that never started.
 - `containers` is sorted by name and includes stopped containers, because Kamal
   keeps old versions around.
-- `proxy_routes` is left out when `MERIDIAN_PROXY_STATE` is unset or the file
-  cannot be read. A catch-all host appears as `"*"`.
 - `truncated` appears only when the snapshot went over 1 MiB and containers
-  (then proxy routes) were dropped from the end to fit.
+  were dropped from the end to fit.
 - Any 2xx response counts as delivered.
 
 ## Live stats
@@ -284,7 +277,6 @@ and only while the line is subscribed. They are never queued.
 | `MERIDIAN_LABELS`      | none                           | `region=sgp,provider=ovh` |
 | `MERIDIAN_MACHINE_ID`  | `/host/etc/machine-id`, then `/etc/machine-id` | stable host id. Required one way or another |
 | `MERIDIAN_HOSTNAME`    | `/host/etc/hostname`, then the container hostname | reported hostname |
-| `MERIDIAN_PROXY_STATE` | unset                          | path to the mounted `kamal-proxy.state` |
 | `MERIDIAN_LIVE`        | on                             | `0` or `false` turns the live stats line off entirely, container logs with it |
 | `MERIDIAN_LOGS`        | off                            | `1` or `true` lets Meridian tail the logs of Kamal containers ([Container logs](#container-logs)). Needs the live line |
 
@@ -326,14 +318,12 @@ accessories:
         MERIDIAN_URL: https://meridian.example.com
         DOCKER_HOST: tcp://<service>-docker-proxy:2375
         MERIDIAN_LABELS: region=sgp,provider=ovh
-        MERIDIAN_PROXY_STATE: /kamal-proxy/kamal-proxy.state
       secret:
         - MERIDIAN_TOKEN
     volumes:
       - /etc/machine-id:/host/etc/machine-id:ro
       - /etc/hostname:/host/etc/hostname:ro
       - /proc:/host/proc:ro                  # live host CPU, memory and load
-      - kamal-proxy-config:/kamal-proxy:ro
 ```
 
 Kamal accessories join the `kamal` network, so the agent reaches the proxy by
@@ -350,13 +340,6 @@ numbers but no `host` object. The agent reads only `stat`, `meminfo` and
 If you skip the proxy and mount the socket directly, note that the image runs
 as `nonroot` (uid 65532), which cannot open a `root:docker` socket. Add the
 host's docker group with `options: { group-add: "<docker gid>" }`.
-
-kamal-proxy keeps its state directory private to its own user. If the agent
-logs `permission denied` for the state file, run it as kamal-proxy's uid
-(`options: { user: "<uid>" }`, which `docker exec kamal-proxy id -u` shows).
-Snapshots keep flowing without `proxy_routes` in the meantime. kamal-proxy
-rewrites the file in place, so a read can catch it half-written. The agent
-retries once and otherwise leaves `proxy_routes` out of that snapshot.
 
 ## Development
 

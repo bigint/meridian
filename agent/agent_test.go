@@ -219,10 +219,9 @@ func TestClassify(t *testing.T) {
 func TestSnapshotShapeAndNoSecrets(t *testing.T) {
 	_, host := startUnixDocker(t)
 	a := testAgent(t, host, config{
-		machineID:  "0123456789abcdef0123456789abcdef",
-		hostname:   "app-1.example.com",
-		labels:     map[string]string{"region": "sgp", "provider": "ovh"},
-		proxyState: "testdata/proxy-state.json",
+		machineID: "0123456789abcdef0123456789abcdef",
+		hostname:  "app-1.example.com",
+		labels:    map[string]string{"region": "sgp", "provider": "ovh"},
 	})
 	body, err := a.snapshotBody(context.Background())
 	if err != nil {
@@ -239,7 +238,7 @@ func TestSnapshotShapeAndNoSecrets(t *testing.T) {
 	if err := json.Unmarshal(body, &doc); err != nil {
 		t.Fatal(err)
 	}
-	assertKeys(t, "snapshot", doc, "agent_version", "machine_id", "hostname", "labels", "containers", "proxy_routes")
+	assertKeys(t, "snapshot", doc, "agent_version", "machine_id", "hostname", "labels", "containers")
 
 	var containers []map[string]json.RawMessage
 	json.Unmarshal(doc["containers"], &containers)
@@ -248,12 +247,6 @@ func TestSnapshotShapeAndNoSecrets(t *testing.T) {
 	}
 	for _, c := range containers {
 		assertKeys(t, "container", c, "id", "name", "image", "service", "role", "destination", "version", "kind", "state", "health", "started_at")
-	}
-
-	var routes []ProxyRoute
-	json.Unmarshal(doc["proxy_routes"], &routes)
-	if len(routes) != 2 {
-		t.Fatalf("got %d proxy routes, want 2", len(routes))
 	}
 }
 
@@ -267,73 +260,6 @@ func assertKeys(t *testing.T, what string, m map[string]json.RawMessage, want ..
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("%s keys = %v, want %v", what, got, want)
-	}
-}
-
-func TestSnapshotOmitsUnreadableProxyState(t *testing.T) {
-	_, host := startUnixDocker(t)
-	a := testAgent(t, host, config{machineID: "m", proxyState: "testdata/does-not-exist"})
-	body, err := a.snapshotBody(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(body), "proxy_routes") {
-		t.Fatalf("proxy_routes should be omitted: %s", body)
-	}
-}
-
-func TestParseProxyStateCurrentShape(t *testing.T) {
-	routes, err := readProxyRoutes("testdata/proxy-state.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []ProxyRoute{
-		{Name: "web-web-production", Hosts: []string{"app.example.com", "www.example.com"}, ActiveTargets: []string{"web-web-production-" + shaProd + ":80"}},
-		{Name: "web-web", Hosts: []string{"*"}, ActiveTargets: []string{"web-web-" + shaNoDst + ":3000"}},
-	}
-	if !reflect.DeepEqual(routes, want) {
-		t.Fatalf("routes = %+v, want %+v", routes, want)
-	}
-}
-
-func TestParseProxyStateLegacyShape(t *testing.T) {
-	routes, err := readProxyRoutes("testdata/proxy-state-legacy.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []ProxyRoute{{Name: "web-web-production", Hosts: []string{"app.example.com"}, ActiveTargets: []string{"web-web-production-" + shaProd + ":80"}}}
-	if !reflect.DeepEqual(routes, want) {
-		t.Fatalf("routes = %+v, want %+v", routes, want)
-	}
-}
-
-func TestParseProxyStateTruncatedRetriesOnceThenFails(t *testing.T) {
-	retries := 0
-	restore := proxyRetryWait
-	proxyRetryWait = func() { retries++ }
-	defer func() { proxyRetryWait = restore }()
-
-	if _, err := readProxyRoutes("testdata/proxy-state-truncated.json"); err == nil {
-		t.Fatal("want error for truncated state file")
-	}
-	if retries != 1 {
-		t.Fatalf("retried %d times, want 1", retries)
-	}
-}
-
-func TestParseProxyStateRecoversWhenRewriteFinishes(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "kamal-proxy.state")
-	truncated, _ := os.ReadFile("testdata/proxy-state-truncated.json")
-	full, _ := os.ReadFile("testdata/proxy-state.json")
-	os.WriteFile(path, truncated, 0o644)
-
-	restore := proxyRetryWait
-	proxyRetryWait = func() { os.WriteFile(path, full, 0o644) }
-	defer func() { proxyRetryWait = restore }()
-
-	routes, err := readProxyRoutes(path)
-	if err != nil || len(routes) != 2 {
-		t.Fatalf("got %v, %v; want 2 routes after retry", routes, err)
 	}
 }
 

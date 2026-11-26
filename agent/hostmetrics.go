@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"math"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -178,4 +180,20 @@ func (h *hostMetrics) readLoad1() (float64, error) {
 		return 0, fmt.Errorf("loadavg: bad value %q", fields[0])
 	}
 	return v, nil
+}
+
+func readLimited(path string, limit int64) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("%s is larger than %d bytes", path, limit)
+	}
+	return data, nil
 }

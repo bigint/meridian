@@ -74,14 +74,6 @@ func (a *agent) snapshotBody(ctx context.Context) ([]byte, error) {
 		Labels:       a.cfg.labels,
 		Containers:   containers,
 	}
-	if a.cfg.proxyState != "" {
-		routes, err := readProxyRoutes(a.cfg.proxyState)
-		if err != nil {
-			a.log.Warn("kamal-proxy state unreadable; omitting proxy_routes", "error", err)
-		} else {
-			snap.ProxyRoutes = routes
-		}
-	}
 	body, truncated, err := encodeCapped(snap, maxPayload)
 	if err != nil {
 		return nil, err

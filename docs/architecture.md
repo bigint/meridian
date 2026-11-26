@@ -87,7 +87,7 @@ Meridian pins **kamal 2.12.0** and has been checked against **kamal-proxy 0.10.3
 - **Where it lives.** Kamal mounts that directory from the **named volume `kamal-proxy-config`** ([K commands/proxy.rb#L18](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/commands/proxy.rb#L18)). The directory has mode 0700.
 - **Partial writes.** The file is rewritten in place, not atomically ([P router.go#L407-L429](https://github.com/basecamp/kamal-proxy/blob/v0.10.3/internal/server/router.go#L407-L429)), so a reader can see half a file.
 - **Other ways to list routes.** `kamal-proxy list` uses a unix socket inside the container ([P cmd/list.go](https://github.com/basecamp/kamal-proxy/blob/v0.10.3/internal/cmd/list.go#L20-L60)), so reaching it requires `docker exec`. kamal-proxy has no HTTP endpoint that lists routes.
-- **Conclusion.** Route reporting is possible read-only. Mount `kamal-proxy-config` read-only into the agent, set `MERIDIAN_PROXY_STATE`, and run the agent as root so it can read the 0700 directory. If the JSON fails to parse, the agent retries once and then omits routes from that snapshot. The feature is off by default.
+- **Conclusion.** Route reporting is possible read-only, by mounting `kamal-proxy-config` read-only into an agent running as root so it can read the 0700 directory. The agent did this until Meridian found it never used the routes; see decision 35.
 
 ### Destination files
 

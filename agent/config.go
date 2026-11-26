@@ -20,7 +20,6 @@ type config struct {
 	labels     map[string]string
 	machineID  string
 	hostname   string
-	proxyState string
 	live       bool // hold the live stats line (MERIDIAN_LIVE)
 	logs       bool // tail container logs over the live line (MERIDIAN_LOGS)
 }
@@ -36,7 +35,6 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 	cfg := config{
 		token:      strings.TrimSpace(getenv("MERIDIAN_TOKEN")),
 		dockerHost: getenv("DOCKER_HOST"),
-		proxyState: getenv("MERIDIAN_PROXY_STATE"),
 		interval:   defaultInterval,
 		live:       true,
 	}

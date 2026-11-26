@@ -315,6 +315,7 @@ accessories:
   docker-proxy:
     image: tecnativa/docker-socket-proxy   # pin a version or digest
     roles: [web]
+    network: meridian   # not kamal: apps must not reach the proxy
     env:
       clear:
         CONTAINERS: 1   # allow GET /containers/*
@@ -325,6 +326,7 @@ accessories:
   agent:
     image: ghcr.io/example/meridian-agent   # your build of agent/Dockerfile
     roles: [web]
+    network: meridian
     env:
       clear:
         MERIDIAN_URL: https://meridian.example.com
@@ -338,9 +340,14 @@ accessories:
       - /proc:/host/proc:ro                  # live host CPU, memory and load
 ```
 
-Kamal accessories join the `kamal` network, so the agent reaches the proxy by
-its container name (`<service>-docker-proxy`). Do not give the proxy a `port:`.
-Port 2375 must never be published on the host.
+Kamal accessories join the `kamal` network unless told otherwise, and so do
+your apps: on it, any app container could ask the proxy for every container's
+environment, files and logs. Give the proxy and the agent a network of their
+own (`network: meridian` on both, after `docker network create meridian` once
+per host, for example with `kamal server exec`); the agent reaches the proxy
+by its container name (`<service>-docker-proxy`) there, and Meridian over the
+host's own routes. Do not give the proxy a `port:`. Port 2375 must never be
+published on the host.
 
 `CONTAINERS: 1` already covers the live stats and logs endpoints,
 `GET /containers/{id}/stats` and `GET /containers/{id}/logs`, so the proxy

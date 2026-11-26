@@ -44,14 +44,19 @@ The full reference (every environment variable and the payload format) is in [`a
 
 1. In Meridian, open **Agents → New token**. One token per server is safest. Copy the token; it is shown once.
 2. Add the two accessories from the Agents page, or from [`templates/kamal/agent-accessories.yml`](../templates/kamal/agent-accessories.yml), to a Kamal config whose `servers` cover your hosts, and put `MERIDIAN_TOKEN` in `.kamal/secrets`.
-3. Boot them:
+3. Once per host, create the `meridian` Docker network the two accessories share, then boot them:
 
    ```bash
+   kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
    kamal accessory boot meridian_docker
    kamal accessory boot meridian_agent
    ```
 
 `meridian_docker` is [`tecnativa/docker-socket-proxy`](https://github.com/Tecnativa/docker-socket-proxy) with `CONTAINERS=1` and `POST=0`. The agent talks to Docker only through it, so even a compromised agent can't start, stop or exec into containers.
+
+Both accessories run on their own `meridian` network (`network: meridian`), not on Kamal's `kamal` network where your apps run. The proxy answers anyone who can reach port 2375 with every container's environment, files and logs, so it must not sit next to app containers, preview deploys included. The agent still reaches `MERIDIAN_URL` from there, as long as that is an address the host itself can reach (a public or private hostname or IP), not the name of a container on the `kamal` network. Kamal creates only the `kamal` network itself, hence the one-time `docker network create`; on a new host, run it before booting the accessories.
+
+Upgrading from a template without `network: meridian`: create the network as above, add the two `network:` lines, then `kamal accessory reboot meridian_docker` and `kamal accessory reboot meridian_agent`.
 
 ### One token per server, or one for the fleet
 

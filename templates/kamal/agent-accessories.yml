@@ -1,12 +1,19 @@
 # Meridian agent: add under `accessories:` in a Kamal config that reaches
-# every host, then `kamal accessory boot meridian_docker meridian_agent`.
+# every host. Once per host, create the network the two share:
+#   kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
+# then `kamal accessory boot meridian_docker meridian_agent`.
 # Put MERIDIAN_TOKEN in .kamal/secrets. Replace SERVICE with the config's
 # service.
+#
+# Both run on their own `meridian` network, not Kamal's `kamal` network, so
+# app containers can't reach the socket proxy: through it they could read
+# every container's environment, files and logs.
   meridian_docker:
     # Read-only Docker API: only GETs under /containers (list, inspect
     # and, while someone is looking, stats and logs).
     image: tecnativa/docker-socket-proxy:v0.4.1
     roles: [ web ]
+    network: meridian
     env:
       clear:
         CONTAINERS: 1
@@ -17,6 +24,9 @@
   meridian_agent:
     image: ghcr.io/bigint/meridian-agent:v0.1.0
     roles: [ web ]
+    # Outbound to MERIDIAN_URL works from any network, as long as it is an
+    # address the host itself can reach (not a container name on `kamal`).
+    network: meridian
     env:
       clear:
         MERIDIAN_URL: %{meridian_url}

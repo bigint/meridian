@@ -18,7 +18,7 @@ Through its GitHub App, Meridian can write to your infra repository and set its 
 1. **Run it on a private network**: a VPN, a tailnet or an internal load balancer. Agents need to reach it, but people don't need to from the public internet.
 2. **If it must be public**, set a strong `SECRET_KEY_BASE` and keep `MERIDIAN_URL` on `https://`, so cookies are secure and HTTPS is forced.
 3. **Least privilege on GitHub.** Install the App only on the infra repository and the source repositories that need previews.
-4. **Least privilege on servers.** Run the agent behind the Docker socket proxy, as in the template.
+4. **Least privilege on servers.** Run the agent behind the Docker socket proxy, both on their own `meridian` network, as in the template. Never put the proxy on Kamal's `kamal` network or publish its port: anything that can reach port 2375 can read every container's environment variables, files and logs through it.
 5. **Back up** `storage/` (see [litestream.md](litestream.md)). Git keeps the important history anyway; losing Meridian's database loses only the audit trail and agent tokens.
 
 ## What Meridian does by design
@@ -27,7 +27,7 @@ Through its GitHub App, Meridian can write to your infra repository and set its 
 - **It never runs Kamal.** CI does, from the repository, where every change is a reviewed commit or pull request.
 - **Secret values are write-only.** A value is sealed in the request that receives it, sent to GitHub, and dropped. It is filtered from logs (`filter_parameters`), never assigned to a model, never passed to a job, and never broadcast. Tests assert all of this using a sentinel value.
 - **Kamal configs are parsed in a separate process with an empty environment.** ERB in a config is arbitrary Ruby from your infra repository, and it can't read Meridian's keys or memory.
-- **Agents are read-only and narrow.** The Docker API is limited to list, inspect and stats, and environment variables, commands and mounts are never collected. Live stats are numbers only (CPU, memory, network and disk rates) and are relayed to the open page, never stored.
+- **Agents are read-only and narrow.** The agent calls only list, inspect, stats and (with logs on) logs, never through an HTTP proxy, and environment variables, commands and mounts are never collected. The socket proxy itself allows every read under `/containers`, which is why only the agent shares its network. Live stats are numbers only (CPU, memory, network and disk rates) and are relayed to the open page, never stored.
 - **Logs are opt-in, Kamal-only and never stored.** An agent tails nothing unless started with `MERIDIAN_LOGS=1`, and only containers it recognises by Kamal's labels, checked on the server. Only deployers and admins can open logs, and every viewing is an `Event`. Lines are relayed to the open page; they pass through the cable database, which keeps messages for a minute, and are never written anywhere else.
 - **Webhooks** are verified with HMAC-SHA256 against the App's webhook secret.
 - **Rate limits** (Rails 8 `rate_limit`) apply to sign-in, snapshots, deploys, rollbacks, redeploys and secret writes.

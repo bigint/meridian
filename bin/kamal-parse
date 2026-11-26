@@ -11,6 +11,7 @@
 require "json"
 require "pathname"
 require "psych"
+require "erb"
 require "kamal"
 require "active_support/core_ext/object/blank"
 
@@ -68,7 +69,7 @@ module KamalParse
       candidates = [ destination && Pathname.new(path).sub_ext(".#{destination}.yml").to_s, path ].compact.select { |file| File.exist?(file) }
 
       if error.is_a?(Psych::SyntaxError)
-        [ candidates.find { |file| error.file.to_s.end_with?(file) } || candidates.last, error.line ]
+        [ candidates.find { |file| error.file.to_s.end_with?(file) } || unparsable(candidates) || candidates.last, error.line ]
       elsif (keys = key_path(error.message))
         candidates.each do |file|
           line = line_for(file, keys)
@@ -77,6 +78,20 @@ module KamalParse
         [ candidates.last, nil ]
       else
         [ candidates.last, nil ]
+      end
+    end
+
+    # Kamal loads YAML from rendered strings, so a syntax error names no
+    # file. The one at fault is the first, in Kamal's order (the base, then
+    # the destination file), that doesn't parse.
+    def unparsable(candidates)
+      candidates.reverse.find do |file|
+        Psych.parse(ERB.new(File.read(file)).result)
+        false
+      rescue Psych::SyntaxError
+        true
+      rescue Exception # rubocop:disable Lint/RescueException -- ERB can raise anything
+        false
       end
     end
 

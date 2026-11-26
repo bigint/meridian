@@ -144,6 +144,15 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_match "servers/web/hosts: should be an array", error["message"]
   end
 
+  test "a YAML syntax error in a destination file names that file" do
+    files = infra_files.merge("deploy/web.staging.yml" => "servers:\n  web:\n    - staging-1.example.com\nproxy: [unclosed\n")
+    stub_github_files(@project, files, head: "2" * 40)
+    @project.sync
+
+    error = @project.reload.config_errors.find { it["class"] == "Psych::SyntaxError" }
+    assert_equal [ "deploy/web.staging.yml", 4 ], error.values_at("file", "line")
+  end
+
   test "releases come from the version file when there is one" do
     stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ], [ "b" * 40, "v41\n" ] ] })
     @project.sync

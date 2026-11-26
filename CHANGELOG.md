@@ -37,6 +37,7 @@
 - One config that prints, hangs or kills the parser no longer stops the whole project syncing with no error shown. Output from ERB goes to stderr instead of corrupting the parser's answer, and a timeout or crash is shown on the project page while every app stays as it was.
 - Taking `meridian.source` or `meridian.kind` out of a config clears it in Meridian. The old values stuck, so pull requests in a repository the config no longer named kept getting previews on real servers, and an app once labelled `accessories` stayed off the board.
 - Saving a project with new config paths, branch, repository or installation syncs it at once. The scheduled sync skips a repository whose head hasn't moved, so the new paths took effect only after the next push or a press of Sync now.
+- A YAML syntax error in a destination file is reported against that file. It named the base config, with the destination file's line number, and linked to the wrong file.
 
 ## v0.1.0 (2026-11-26)
 

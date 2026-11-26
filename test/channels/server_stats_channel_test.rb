@@ -43,6 +43,18 @@ class ServerStatsChannelTest < ActionCable::Channel::TestCase
     end
   end
 
+  # Run again as an action, subscribed added a pubsub listener each time that
+  # unsubscribing never removed, so any viewer could pile them up.
+  test "a client can't run subscribed again as an action" do
+    subscribe server_id: @server.id
+    3.times { perform :subscribed }
+
+    assert_equal [ ServerStatsChannel.broadcasting_for(@server) ], subscription.streams
+    [ AgentChannel, LogsChannel, ServerStatsChannel, TrafficChannel ].each do |channel|
+      assert_not_includes channel.action_methods, "subscribed", channel.name
+    end
+  end
+
   test "an agent is rejected" do
     stub_connection current_user: nil, agent_token: agent_tokens(:web_1)
     subscribe server_id: @server.id

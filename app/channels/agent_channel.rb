@@ -9,15 +9,6 @@ class AgentChannel < ApplicationCable::Channel
   MAX_LOG_FRAMES_PER_SECOND = 100
   RECHECK_TOKEN_EVERY = 60.seconds
 
-  def subscribed
-    @server = find_server or return reject
-    stream_for @server
-
-    remaining = LiveStats.lease_remaining(@server)
-    transmit({ type: "watch", seconds: remaining }) if remaining.positive?
-    LiveLogs.open_tails(@server).each { transmit it }
-  end
-
   def stats(data)
     now = Time.current.to_f
     return if @last_relayed_at && now - @last_relayed_at < MIN_FRAME_GAP
@@ -44,6 +35,15 @@ class AgentChannel < ApplicationCable::Channel
   end
 
   private
+    def subscribed
+      @server = find_server or return reject
+      stream_for @server
+
+      remaining = LiveStats.lease_remaining(@server)
+      transmit({ type: "watch", seconds: remaining }) if remaining.positive?
+      LiveLogs.open_tails(@server).each { transmit it }
+    end
+
     # A chatty or broken agent can't flood the cable: past this, frames are dropped.
     def within_log_budget?
       now = Time.current.to_f

@@ -23,6 +23,7 @@
 - A late or replayed `workflow_run` delivery no longer moves a finished deploy back to In progress, and an older run no longer takes a deploy over from a newer one, so a redeploy made at another app's deploy commit shows its own result.
 - Roll back checks with Git that the release it reverts is still the newest. Clicked before Meridian had synced a newer version (one deployed a moment earlier, say), it reverted the older release and silently replaced the newer version with the one before both. Rolling back the commit that created the version file now says there is nothing to go back to, instead of "GitHub refused the commit: 404".
 - Redeploy runs the version in the version file now, read from Git, rather than the newest release Meridian had synced, which could be the version before one that had just landed. Apps without a version file have no Redeploy button: there was no image tag to give Kamal, so it passed the config commit's short SHA.
+- A redeploy or preview whose workflow GitHub can't find says so. GitHub's 404 was ignored, so with no `meridian-deploy.yml` on the default branch a redeploy was recorded though nothing ran, and a preview said Deploying for good.
 - Deploying the version already in the version file is refused with a pointer to Redeploy. The commit changed no file, so CI never ran and the deploy showed Pending forever.
 - Versions must be Docker image tags (letters, digits, `_`, `.` and `-`, not starting with `.` or `-`). A version such as `--skip-hooks` reached Kamal as a flag in CI, and ones with `+`, `:` or `@` always failed there, since Kamal names containers after the version.
 - When GitHub refuses a deploy or rollback commit for a reason other than a stale file, such as branch protection or a repository rule, Meridian shows GitHub's reason. Every 409 and 422 used to read "The version file changed in Git since this page loaded".
@@ -40,6 +41,18 @@
 - New app writes its config where the project's config paths find it. A `deploy/**/*.yml` glob gave the literal path `deploy/shop*/*.yml`, and a project whose paths had no `*` got `config/deploy-shop.yml`, which sync then ignored; the form now says so instead.
 - New app's port must be a TCP port, 1 to 65535. Ports such as 0, -1 or 70000, and text (read as 0), were proposed and Kamal accepted them.
 - Previews never run on a server whose hostname isn't a plain host name. An agent could report one with ERB in it and labels matching the preview selector, and since it ran nothing it was picked first: the overlay Meridian commits on its own carried the ERB, which ran on Meridian's server and in CI.
+- Preview hostnames are always valid host names, whatever the service is called.
+- Each role keeps its own `cmd`, `env` and options in a preview, so a `job` role runs its jobs.
+- A config with several destinations gets one preview per pull request, instead of several fighting over one `<config>.pr-<n>.yml`.
+- Pull requests from forks never get a preview, and the activity log says so when one opens. A fork's code ran on real servers with the app's secrets.
+- Settings checks the preview selector, and stray spaces or commas no longer turn previews off. A selector such as ` role=preview` or `preview` raised, and every pull request silently got no preview.
+- Preview CI runs are matched within their own repository, so two infra repositories with the same config path no longer remove each other's previews.
+- A preview run GitHub cancelled for a newer one no longer marks the preview failed, and the newest run's result counts.
+- A remove run that finishes late, or that polling replays, no longer takes down a preview deployed since, such as after the pull request reopened.
+- A preview is marked removed only once GitHub has deleted its overlay.
+- A failed removal goes back to Failed, with its overlay, so Destroy and expiry can try again.
+- One project GitHub refuses no longer stops every other preview from expiring.
+- CI removes a preview with `kamal app remove`. `kamal remove` also took down the accessories, registry login and kamal-proxy the preview shares with the app. See Upgrading below.
 - A config that fails to parse keeps its app. Sync used to destroy it, with its deploy history, releases and previews (leaving those preview containers running with nothing to remove them), and unlinked its containers, so the board showed its containers as stray until the typo was fixed and the app came back with a new id.
 - An app whose config is gone from Git has its previews removed (`command=remove`) before Meridian forgets it, and a leftover `<config>.pr-<n>.yml` is never read as a config of its own, which showed as a parse error forever.
 - Sync reads everything it needs from GitHub before it opens its database transaction. Commit history and version files were fetched inside it, so a first sync of many apps held SQLite's only write lock for minutes and snapshots and sign-ins failed meanwhile.
@@ -53,6 +66,45 @@
 - A YAML syntax error in a destination file is reported against that file. It named the base config, with the destination file's line number, and linked to the wrong file.
 - A `.yaml` file next to a config, such as `deploy/web.staging.yaml` beside `deploy/web.yml`, is no longer taken for a destination file, which made every sync fail looking for `deploy/web.staging.yml`. Like Kamal, Meridian reads only `<config>.<destination>.yml` as a destination, and now finds it for a `.yaml` config too.
 - The newest release is the commit that landed on the branch last. Releases were ordered by author date, so a version bump written on a branch and rebased or merged after a newer deploy counted as older: the board showed every server as drifted, and Roll back offered the wrong release.
+- The agent's accessory template keeps the Docker socket proxy off Kamal's `kamal` network. Every app container on a server, preview deploys included, could reach it there and read every container's environment variables, files and logs through it. The proxy and the agent now share a `meridian` network of their own. See Upgrading below.
+- The agent never sends Docker API calls through `HTTP_PROXY`. With one set to reach Meridian, every inspect response, environment variables included, went through that proxy too.
+- One container can't crowd out the other containers' logs on its server. Blank and short lines cost nothing against the agent's 512 KB a second, and full batches went out at once, so one container could send about 200 batches a second and Meridian dropped that server's batches past 100. Each line now costs 64 bytes on top of its text, and a container sends at most one batch per 250 ms.
+- A running container's logs no longer say "Container stopped" after 10 quiet minutes. The socket proxy closes idle streams, and the agent took that for the container stopping. It now reopens the stream from its last line, and reports a stop only when the container has stopped.
+- A watch lease with a huge negative length no longer keeps live stats streaming for centuries.
+- A server is stale after three of its agent's intervals, and never sooner than 45 seconds. Snapshots now carry `interval_seconds`; older agents count as 15. An agent with a 60-second interval used to show stale between every snapshot.
+- After a 429 the agent waits at least as long as `Retry-After` says, up to 5 minutes and jittered, instead of coming back on its own backoff.
+- Fleet tokens are rate-limited per server. Every server on one fleet token shared 120 snapshots a minute.
+- Snapshots over 1 MiB are refused before Rails parses them, with or without a valid token.
+- A per-server token used on a second machine is refused with 422 and the reason. It was accepted and the snapshot silently dropped.
+- Snapshot bodies that aren't JSON objects, or whose labels aren't one, are refused with 422 instead of a 500 or a job that always fails.
+- An agent reporting an IP address no longer claims another IP's server by its first octet: `10.0.0.9` could take `10.0.0.5`'s server.
+- A server an agent created before Git listed its host is taken over by Git's host name, instead of leaving a second server that never reports.
+- A rebuilt machine (a new machine id, the same hostname) claims the server Git places once the old agent has been silent for 10 minutes. It used to get a new server of its own.
+- Finished Solid Queue jobs are no longer kept for a day. Snapshot jobs grew the queue database by gigabytes a day.
+- A revoked agent token can no longer subscribe on a cable it opened before the revoke.
+- Revoking an agent token hangs up its open cables at once, instead of within a minute.
+- A laptop asleep or a dropped network no longer keeps an agent streaming for many minutes. The page renews its leases itself, and a page silent for 75 seconds lets them lapse.
+- A client can no longer run a channel's `subscribed` again as an action, which piled up cable listeners that never went away.
+- Demoting, removing or signing out a user ends the logs, traffic and stats streams they already had open.
+- Logs and traffic stream only what a page recorded in Activity. Subscribing over the cable directly read logs with no record.
+- An app's Traffic shows its previews' requests, including from servers set aside for previews.
+- Traffic keeps requests whose kamal-proxy line repeats a key, as logging `Content-Type` does.
+- A JSON log line whose values carry their own `toString` no longer makes the viewer drop that frame's lines.
+- A long-open logs page with many containers no longer remembers twenty times the lines it shows.
+- Signing in after a session ended goes back to the page you were on, never to a form's POST URL or a bare search frame.
+- A sign-in missing its email or password is a failed sign-in, not an error page.
+- Removing a user who deployed, set a secret or appears in Activity no longer fails.
+
+### Upgrading
+
+- In each existing infra repository, press **Add CI workflow** on the project page again. The new workflow deploys destination apps with `-d`, runs one deploy per app at a time, and removes previews with `kamal app remove`.
+- On each host, create the `meridian` Docker network once, add `network: meridian` to both agent accessories (`meridian_docker` and `meridian_agent`), then reboot them:
+
+  ```bash
+  kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
+  kamal accessory reboot meridian_docker
+  kamal accessory reboot meridian_agent
+  ```
 
 ## v0.1.0 (2026-11-26)
 

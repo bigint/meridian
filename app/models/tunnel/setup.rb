@@ -9,13 +9,13 @@ class Tunnel::Setup
 
   attr_reader :project, :tunnel, :secret
 
-  def self.for(project, hosts: nil, tunnels: Tunnel.all)
-    tunnel = tunnels.find { it.project == project }
+  def self.for(project, hosts: nil)
+    tunnel = Tunnel.all.find { it.project == project }
     new(project, tunnel: tunnel, hosts: hosts.presence || tunnel&.connector_hosts,
       secret: project.secret_names.find_by(name: tunnel&.secret_name || Tunnel::SECRET))
   end
 
-  def initialize(project, tunnel: nil, hosts: nil, secret: nil)
+  def initialize(project, tunnel:, hosts:, secret:)
     @project, @tunnel, @secret = project, tunnel, secret
     @hosts = hosts
   end

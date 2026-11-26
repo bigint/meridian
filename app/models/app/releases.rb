@@ -23,7 +23,7 @@ module App::Releases
     end
   end
 
-  def record_releases(fetched = fetch_releases)
+  def record_releases(fetched)
     fetched.each { |release| releases.create!(release) unless releases.exists?(commit_sha: release[:commit_sha]) }
   end
 

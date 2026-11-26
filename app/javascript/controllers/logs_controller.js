@@ -266,7 +266,7 @@ const plural = (count, word) => `${count.toLocaleString("en-US")} ${word}${count
 // new one almost always lands at the end), at most MAX_LINES of them, and
 // the page is only touched once per animation frame.
 export default class extends Controller {
-  static targets = [ "filter", "stream", "wrap", "follow", "status", "scroller", "lines", "empty", "jump", "chip" ]
+  static targets = [ "filter", "stream", "wrap", "follow", "status", "scroller", "lines", "empty", "jump" ]
   static values = { channel: Object, sources: Array, targets: Object, empty: String }
 
   connect() {

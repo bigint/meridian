@@ -16,8 +16,8 @@ class Tunnel::ConnectorChange
   validate :hosts_well_formed, :one_config, :one_host_per_connector, :some_hosts, :something_changes
   validate :kamal_accepts_it, if: -> { errors.none? }
 
-  def initialize(tunnel, hosts:, source: nil)
-    @tunnel, @hosts, @source = tunnel, Array(hosts).compact_blank.uniq, source
+  def initialize(tunnel, hosts:)
+    @tunnel, @hosts = tunnel, Array(hosts).compact_blank.uniq
   end
 
   def project = tunnel.project

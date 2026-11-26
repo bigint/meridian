@@ -60,20 +60,19 @@ class Snapshot
   # placement came, went or changed, the server's labels or place moved, or a
   # quiet agent is back. Most snapshots change nothing.
   def ingest
+    changed = false
     server = Server.transaction do
       server = claim_server
       was_quiet = !server.reporting? || server.stale?
       server.assign_attributes(machine_id: machine_id, labels: labels, agent_version: agent_version, interval_seconds: interval_seconds, **location)
       server_changed = server.changed?
       server.update!(last_seen_at: Time.current)
-      @changed = record_placements(server) || server_changed || was_quiet
+      changed = record_placements(server) || server_changed || was_quiet
       server
     end
-    Board.refresh_later(server) if changed?
+    Board.refresh_later(server) if changed
     server
   end
-
-  def changed? = @changed
 
   private
     def containers_shape

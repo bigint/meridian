@@ -41,14 +41,14 @@ class GitHost::GitHub
     @project = project
   end
 
-  def head_sha(branch = project.default_branch)
-    conditional("branches/#{branch}", ->(data) { data.commit.sha }) { client.branch(repo, branch, headers: it) }
+  def head_sha
+    conditional("branches/#{project.default_branch}", ->(data) { data.commit.sha }) { client.branch(repo, project.default_branch, headers: it) }
   end
 
   # The branch's latest workflow runs, newest first, shaped like a workflow_run webhook's.
-  def workflow_runs(branch: project.default_branch, limit: 20)
-    conditional("runs/#{branch}", ->(data) { data.workflow_runs.map { it.to_attrs.deep_stringify_keys } }) do
-      client.repository_workflow_runs(repo, branch: branch, per_page: limit, headers: it)
+  def workflow_runs
+    conditional("runs/#{project.default_branch}", ->(data) { data.workflow_runs.map { it.to_attrs.deep_stringify_keys } }) do
+      client.repository_workflow_runs(repo, branch: project.default_branch, per_page: 20, headers: it)
     end
   end
 
@@ -67,12 +67,12 @@ class GitHost::GitHub
     request { Base64.decode64(client.blob(repo, sha).content).force_encoding(Encoding::UTF_8) }
   end
 
-  def commits(path:, ref: project.default_branch, limit: 20)
+  def commits(path:, limit: 20)
     request do
       # The committer date says when a commit landed on the branch, as the
       # API orders them. The author date says when it was written, which a
       # rebased or merged pull request carries over from days before.
-      client.commits(repo, ref, path: path, per_page: limit).map do |commit|
+      client.commits(repo, project.default_branch, path: path, per_page: limit).map do |commit|
         landed = commit.commit.committer&.date || commit.commit.author.date
         GitHost::Commit.new(sha: commit.sha, author: commit.commit.author.name, committed_at: landed, message: commit.commit.message)
       end
@@ -99,8 +99,8 @@ class GitHost::GitHub
     request { client.create_contents(repo, path, message, content, **options).commit.sha }
   end
 
-  def delete_file(path, sha:, message:, branch: project.default_branch)
-    request { client.delete_contents(repo, path, message, sha, branch: branch) }
+  def delete_file(path, sha:, message:)
+    request { client.delete_contents(repo, path, message, sha, branch: project.default_branch) }
   end
 
   def parent_sha(sha)
@@ -112,9 +112,9 @@ class GitHost::GitHub
   end
 
   # Returns [number, url].
-  def create_pull_request(head:, title:, body:, base: project.default_branch)
+  def create_pull_request(head:, title:, body:)
     request do
-      pull = client.create_pull_request(repo, base, head, title, body)
+      pull = client.create_pull_request(repo, project.default_branch, head, title, body)
       [ pull.number, pull.html_url ]
     end
   end
@@ -131,9 +131,9 @@ class GitHost::GitHub
 
   # Octokit answers a 404 (no such workflow on that branch yet) with false
   # rather than an error, so nothing would run and nobody would know.
-  def dispatch_workflow(workflow, inputs:, ref: project.default_branch)
+  def dispatch_workflow(workflow, inputs:)
     request do
-      client.workflow_dispatch(repo, workflow, ref, inputs: inputs) or raise GitHost::NotFound, "#{repo} has no #{workflow} workflow on #{ref}: add the CI workflow first"
+      client.workflow_dispatch(repo, workflow, project.default_branch, inputs: inputs) or raise GitHost::NotFound, "#{repo} has no #{workflow} workflow on #{project.default_branch}: add the CI workflow first"
     end
   end
 

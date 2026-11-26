@@ -9,8 +9,6 @@ class Board
   # state is the worst of role_states: each role Git assigns here, and each
   # role running here that Git doesn't assign, has a state of its own.
   Cell = Data.define(:app, :server, :state, :versions, :roles, :health, :release, :role_states) do
-    def initialize(role_states: {}, **) = super
-
     # What the server reported running, never Git's version standing in for it.
     def version = versions.compact.first
     def roles_in(state) = role_states.select { |_, it| it == state }.keys
@@ -24,8 +22,6 @@ class Board
     def cell(row, column)
       row.is_a?(App) ? cells[[ row.id, column.id ]] : cells[[ column.id, row.id ]]
     end
-
-    def key = name.to_s.parameterize.presence || "all"
   end
 
   # Something a person should look at, in the order they should look at it.

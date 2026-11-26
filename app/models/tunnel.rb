@@ -30,7 +30,7 @@ class Tunnel
 
   attr_reader :project, :secret_name, :connectors, :secret
 
-  def initialize(project, secret_name, connectors, secret: nil, apps: [], servers: {})
+  def initialize(project, secret_name, connectors, secret:, apps:, servers:)
     @project, @secret_name, @connectors, @secret, @apps, @servers = project, secret_name, connectors, secret, apps, servers
   end
 

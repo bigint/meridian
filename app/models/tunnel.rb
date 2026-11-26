@@ -13,18 +13,11 @@ class Tunnel
   LEGACY_NAME = "cloudflared"
   SECRET = "CLOUDFLARE_TUNNEL_TOKEN"
 
-  # Least to most worrying. A tunnel is as healthy as its worst connector.
-  STATES = %i[ running unknown stopped missing ].freeze
+  STATES = Accessory::STATES
 
   Connector = Data.define(:host, :server, :placement, :accessory, :config) do
+    include Accessory::State
     def name = accessory["name"]
-
-    def state
-      if placement then placement.running? ? :running : :stopped
-      elsif server&.reporting? && !server.stale? then :missing
-      else :unknown
-      end
-    end
   end
 
   # An app with a hostname and the connector hosts it doesn't run on. None
@@ -58,17 +51,14 @@ class Tunnel
   # connector's server is advice, not a problem: it may not be routed here.
   def problems? = state != :running
 
-  def boot_command(connector)
-    config = connector.config
-    "kamal accessory boot #{connector.name} -c #{config.config_path}#{" -d #{config.destination}" if config.destination.present?}"
-  end
+  def boot_command(connector) = Accessory.boot_command(connector.config, connector.name)
 
   # Problems first. A handful of queries however many tunnels there are.
   def self.all
     pairs = App.ordered.includes(:project).flat_map { |app| app.accessories.select { cloudflared?(it) }.map { |accessory| [ app, accessory ] } }
     return [] if pairs.empty?
 
-    servers = servers_by_host(pairs.flat_map { |_, accessory| accessory["hosts"] }.uniq)
+    servers = Accessory.servers_by_host(pairs.flat_map { |_, accessory| accessory["hosts"] }.uniq)
     placements = Placement.where(kind: "accessory", service: pairs.map { |_, accessory| accessory["service"] }.uniq)
       .running_first.group_by { [ it.server_id, it.service ] }
     groups = pairs.group_by { |app, accessory| [ app.project, token_secret(app, accessory) || "#{app.service}/#{accessory["name"]}" ] }
@@ -106,11 +96,5 @@ class Tunnel
   # Configs synced before the parser reported images are found by name.
   def self.cloudflared?(accessory)
     accessory["image"] ? accessory["image"].start_with?(IMAGE) : accessory["name"] == LEGACY_NAME
-  end
-
-  # Found the way Server.for_host finds them, without creating any.
-  def self.servers_by_host(hosts)
-    found = Server.where(hostname: hosts).or(Server.where(name: hosts)).to_a
-    hosts.index_with { |host| found.find { it.hostname == host } || found.find { it.name == host } }.compact
   end
 end

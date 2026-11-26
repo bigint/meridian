@@ -32,7 +32,7 @@ class Tunnel::Setup
   def hosts = @hosts.presence || candidates.map(&:hostname)
 
   def apps = @apps ||= project.apps.deployable.includes(:servers).ordered.to_a
-  def coverage = @coverage ||= Tunnel.coverage(apps, hosts, Tunnel.servers_by_host(hosts))
+  def coverage = @coverage ||= Tunnel.coverage(apps, hosts, Accessory.servers_by_host(hosts))
   def served = coverage.select(&:full?)
   def gaps = coverage.select(&:partial?)
   def elsewhere = coverage.select(&:none?)

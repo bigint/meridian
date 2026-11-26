@@ -52,6 +52,21 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "[data-config-errors] code", text: "deploy/broken.yml:6"
   end
 
+  test "an app page shows its accessories with server and state" do
+    server = Server.create!(name: "db-1.example.com", hostname: "db-1.example.com", last_seen_at: 1.second.ago)
+    app = projects(:infra).apps.create!(service: "umami", config_path: "deploy/umami.yml",
+      accessories: [ { "name" => "db", "service" => "umami-db", "image" => "postgres:17-alpine", "hosts" => [ "db-1.example.com" ] } ])
+
+    get app_path(app)
+
+    assert_select "h2", text: /Accessories/
+    assert_select "th", text: "db"
+    assert_select "td", text: "postgres:17-alpine"
+    assert_select "a[href=?]", server_path(server), text: "db-1.example.com"
+    assert_select ".badge", text: "not started"
+    assert_select ".copyable code", text: "kamal accessory boot db -c deploy/umami.yml"
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

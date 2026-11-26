@@ -26,5 +26,6 @@ class AppsController < ApplicationController
     @app = App.find(params[:id])
     @board = Board.new(app_id: @app.id, group: "none")
     @releases = @app.releases.limit(20)
+    @accessories = Accessory.for(@app)
   end
 end

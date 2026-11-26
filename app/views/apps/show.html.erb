@@ -47,6 +47,35 @@
       </div>
     <% end %>
 
+    <% if @accessories.any? %>
+      <%= titled_section "Accessories", count: @accessories.size do %>
+        <p class="txt-small txt-muted">Run beside the app from the same config, such as databases and caches. Kamal starts them with <code>kamal accessory boot</code>; <code>kamal deploy</code> leaves them alone.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th scope="col">Accessory</th><th scope="col">Image</th><th scope="col">Server</th><th scope="col">State</th><th scope="col">Started</th></tr></thead>
+            <tbody>
+              <% @accessories.each do |accessory| %>
+                <% accessory.instances.each_with_index do |instance, index| %>
+                  <tr>
+                    <% if index.zero? %>
+                      <th scope="rowgroup" rowspan="<%= accessory.instances.size %>"><span class="mono"><%= accessory.name %></span></th>
+                      <td rowspan="<%= accessory.instances.size %>" class="mono txt-small"><%= accessory.image || "–" %></td>
+                    <% end %>
+                    <td class="nowrap"><span class="mono txt-small"><%= instance.server ? link_to(instance.host, instance.server) : instance.host %></span></td>
+                    <td><%= accessory_state_badge(instance) %></td>
+                    <td class="nowrap"><%= instance.placement&.started_at ? time_ago(instance.placement.started_at) : "–" %></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <% @accessories.select { it.missing.any? }.each do |accessory| %>
+          <p class="txt-small txt-muted">Start <span class="mono"><%= accessory.name %></span> with <%= copyable accessory.boot_command %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+
     <%= titled_section "Releases", count: @releases.size do %>
       <p class="txt-small txt-muted">From the Git history of <code><%= @app.release_source_path %></code>.</p>
       <% if @releases.any? %>
@@ -78,7 +107,6 @@
         <dt>Config</dt><dd><%= link_to @app.config_path, "#{@app.project.repo_url}/blob/#{@app.project.default_branch}/#{@app.config_path}", class: "mono" %> <%= tag.code(@app.destination_flag) if @app.destination_flag %></dd>
         <dt>Image</dt><dd><code><%= @app.image %></code></dd>
         <dt>Roles</dt><dd><%= @app.roles.map { "#{it["name"]} (#{pluralize(it["hosts"].size, "host")})" }.join(", ").presence || "–" %></dd>
-        <% if @app.accessories.any? %><dt>Accessories</dt><dd><%= @app.accessories.map { it["name"] }.join(", ") %></dd><% end %>
         <dt>Version file</dt><dd><%= @app.version_path ? tag.code(@app.version_path) : tag.span("none yet: drift can't compare versions until one exists", class: "txt-muted") %></dd>
         <dt>Source</dt><dd><%= @app.source_repo.presence || tag.span("not set: add the meridian.source label to get previews", class: "txt-muted") %></dd>
         <dt>Secrets</dt><dd><%= @app.secret_names.join(", ").presence || "–" %></dd>

@@ -36,12 +36,7 @@
           <ul class="flex-col gap-s">
             <% tunnel.connectors.each do |connector| %>
               <li class="flex items-center gap-s">
-                <%= case connector.state
-                    when :running then badge("running", tone: :ok)
-                    when :stopped then badge(connector.placement.state || "stopped", tone: :warn)
-                    when :missing then badge("not started", tone: :bad)
-                    else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
-                    end %>
+                <%= accessory_state_badge(connector) %>
                 <span class="mono txt-small nowrap"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
               </li>
             <% end %>

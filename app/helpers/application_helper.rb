@@ -147,6 +147,16 @@ module ApplicationHelper
     end
   end
 
+  # An accessory on one host: running, its Docker state, not started, or unknown.
+  def accessory_state_badge(instance)
+    case instance.state
+    when :running then badge("running", tone: :ok)
+    when :stopped then badge(instance.placement.state || "stopped", tone: :warn)
+    when :missing then badge("not started", tone: :bad)
+    else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
+    end
+  end
+
   # A short value to paste somewhere else, with a copy button beside it.
   def copyable(text)
     tag.span class: "copyable", data: { controller: "clipboard" } do

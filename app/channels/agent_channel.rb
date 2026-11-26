@@ -9,6 +9,12 @@ class AgentChannel < ApplicationCable::Channel
   MAX_LOG_FRAMES_PER_SECOND = 100
   RECHECK_TOKEN_EVERY = 60.seconds
 
+  # Hangs up every agent connected with token, for good: call it when the
+  # token is revoked, rather than wait for the next recheck.
+  def self.disconnect(token)
+    ActionCable.server.remote_connections.where(current_user: nil, agent_token: token).disconnect(reconnect: false)
+  end
+
   def stats(data)
     now = Time.current.to_f
     return if @last_relayed_at && now - @last_relayed_at < MIN_FRAME_GAP
@@ -54,7 +60,7 @@ class AgentChannel < ApplicationCable::Channel
 
     def find_server
       token, machine_id = connection.agent_token, params[:machine_id].to_s.strip.first(128).presence
-      return unless token && machine_id
+      return unless token && machine_id && AgentToken.active.exists?(token.id) # revoked since the cable opened
 
       server = token.server || Server.find_by(machine_id: machine_id)
       server if server&.machine_id == machine_id

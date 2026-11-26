@@ -211,4 +211,18 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     def run_periodic_checks
       AgentChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
     end
+
+  test "a token revoked since the cable opened can't subscribe again" do
+    agent_tokens(:web_1).revoke
+
+    subscribe machine_id: "m-web-1"
+
+    assert subscription.rejected?
+  end
+
+  test "revoking a token hangs up its agents for good" do
+    assert_broadcast_on "action_cable/#{agent_tokens(:web_1).to_gid_param}", { type: "disconnect", reconnect: false } do
+      AgentChannel.disconnect(agent_tokens(:web_1))
+    end
+  end
 end

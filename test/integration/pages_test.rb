@@ -124,6 +124,13 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select ".page-header__meta", text: /all matching Git/
   end
 
+  test "a server page follows its own region's refreshes, even with nothing on the board" do
+    server = Server.create!(name: "db-9.example.com", hostname: "db-9.example.com", labels: { "region" => "fra" }, last_seen_at: Time.current)
+
+    get server_path(server)
+    assert_select "turbo-cable-stream-source[signed-stream-name=?]", Turbo::StreamsChannel.signed_stream_name([ :board, "fra" ])
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

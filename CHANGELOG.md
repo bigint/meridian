@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- A server's page refreshes live even when nothing of it is on the board yet, such as a database host that runs only accessories. It listened only to the regions of its board cells, so with none it waited on a stream nothing sent to.
 - Open boards, maps and server pages always get the last change. The once-a-second refresh dropped every change after the first in each second, so a server that reported its new version just after a refresh went out stayed drifted on screen until something else changed. A server whose region label changes is now refreshed in the region it left too.
 - The map groups servers into one place only within 60 km, one metro area. The threshold was six map units, about 240 km, so Amsterdam and Brussels became one place named after one of them.
 - The board's header says "all matching Git" only when every cell was compared and is in sync. With no agent reporting yet, or apps without a version file, every cell was unknown and the header still said everything matched.

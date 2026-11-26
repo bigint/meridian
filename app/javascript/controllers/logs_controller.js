@@ -69,6 +69,66 @@ function parseAnsi(message) {
   return segments
 }
 
+// Structured logs: a line that is one JSON object (kamal-proxy, slog, pino,
+// zap, logfmt-free Rails JSON loggers…) reads as its level, its message and
+// then key=value fields, most useful first. Empty fields and a timestamp
+// that only repeats Docker's are left out; the whole object is one click away.
+const LEVEL_KEYS = [ "level", "lvl", "severity", "log.level", "@level" ]
+const MESSAGE_KEYS = [ "msg", "message", "@message" ]
+const TIME_KEYS = [ "time", "ts", "timestamp", "@timestamp" ]
+const FIRST_KEYS = [ "error", "err", "status", "method", "host", "path", "duration", "service" ]
+const INLINE_FIELDS = 6  // key=value pairs drawn on the line; the rest are searchable and one click away
+const NUMERIC_LEVELS = { 10: "trace", 20: "debug", 30: "info", 40: "warn", 50: "error", 60: "fatal" } // pino and bunyan
+
+function levelTone(level) {
+  const word = String(level).toLowerCase()
+  if (/^(err|error|fatal|panic|crit|critical|alert|emerg|emergency)/.test(word)) return "bad"
+  if (/^warn/.test(word)) return "warn"
+  if (/^(info|notice)/.test(word)) return "info"
+  return "quiet"
+}
+
+function shown(value) {
+  if (typeof value === "string") return /[\s"=]/.test(value) ? JSON.stringify(value) : value
+  return JSON.stringify(value)
+}
+
+// [{ text, classes }] runs for a JSON line, or null when it isn't one.
+function parseStructured(message) {
+  const text = message.trim()
+  if (!text.startsWith("{") || !text.endsWith("}")) return null
+  let object
+  try { object = JSON.parse(text) } catch { return null }
+  if (!object || typeof object !== "object" || Array.isArray(object)) return null
+
+  const pick = keys => { const key = keys.find(key => typeof object[key] === "string" || typeof object[key] === "number"); return key && [ key, object[key] ] }
+  const level = pick(LEVEL_KEYS), said = pick(MESSAGE_KEYS)
+  const skip = new Set([ level?.[0], said?.[0], ...TIME_KEYS.filter(key => typeof object[key] === "string" || typeof object[key] === "number") ])
+
+  const segments = []
+  if (level) {
+    const name = typeof level[1] === "number" ? (NUMERIC_LEVELS[level[1]] ?? String(level[1])) : level[1]
+    segments.push({ text: name.toUpperCase(), classes: [ "json-level", `json-level--${levelTone(name)}` ] })
+  }
+  if (said) segments.push({ text: (segments.length ? " " : "") + String(said[1]), classes: [ "json-message" ] })
+
+  const keys = Object.keys(object).filter(key => !skip.has(key) && object[key] !== "" && object[key] !== null)
+  keys.sort((a, b) => (FIRST_KEYS.includes(a) ? FIRST_KEYS.indexOf(a) : FIRST_KEYS.length) - (FIRST_KEYS.includes(b) ? FIRST_KEYS.indexOf(b) : FIRST_KEYS.length))
+  for (const key of keys.slice(0, INLINE_FIELDS)) {
+    const tone = (key === "error" || key === "err") ? "json-value--bad" : key === "status" && Number(object[key]) >= 500 ? "json-value--bad" : key === "status" && Number(object[key]) >= 400 ? "json-value--warn" : null
+    segments.push({ text: (segments.length ? "  " : "") + key, classes: [ "json-key" ] })
+    segments.push({ text: "=", classes: [ "json-key" ] })
+    segments.push({ text: shown(object[key]).replace(CONTROLS, ""), classes: tone ? [ "json-value", tone ] : [ "json-value" ] })
+  }
+  const rest = keys.slice(INLINE_FIELDS)
+  if (rest.length) segments.push({ text: `  +${rest.length} more`, classes: [ "json-more" ] })
+  if (!segments.length) return null
+
+  // What isn't drawn still answers the filter.
+  const hidden = rest.map(key => `${key}=${shown(object[key])}`).join(" ")
+  return { segments, hidden, pretty: JSON.stringify(object, null, 2) }
+}
+
 // Docker's RFC3339Nano as a sortable number: milliseconds, plus the digits
 // below a millisecond as a fraction of one. null when it isn't a timestamp.
 const TIMESTAMP = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?(Z|[+-]\d\d:\d\d)$/
@@ -147,6 +207,7 @@ export default class extends Controller {
     this.closed = false
     this.connected = false
     this.lines = []
+    this.structured = new WeakMap()
     this.queue = []
     this.queued = 0
     this.unseen = 0
@@ -311,8 +372,9 @@ export default class extends Controller {
       this.#hold(source, identity)
 
       const key = parseTime(raw.t) ?? this.#now()
-      const segments = parseAnsi(raw.m)
-      records.push(this.#record({ kind: "line", source, key, stream: raw.s, title: raw.t, segments }))
+      const structured = parseStructured(raw.m)
+      const segments = structured?.segments ?? parseAnsi(raw.m)
+      records.push(this.#record({ kind: "line", source, key, stream: raw.s, title: raw.t, segments, pretty: structured?.pretty, hidden: structured?.hidden }))
     }
     return records
   }
@@ -334,7 +396,9 @@ export default class extends Controller {
 
   #record(fields) {
     const plain = fields.segments.map(segment => segment.text).join("")
-    return { ...fields, plain, lower: lowerOf(plain), painted: false, marked: false, element: null, text: null }
+    // Ranges past the drawn text (in hidden fields) match the filter but draw no mark.
+    const lower = lowerOf(fields.hidden ? `${plain}\n${fields.hidden}` : plain)
+    return { ...fields, plain, lower, painted: false, marked: false, element: null, text: null }
   }
 
   // Into its place by timestamp, searching from the end. Returns whether it is shown.
@@ -373,6 +437,32 @@ export default class extends Controller {
     record.text.classList.add("logs__text")
     record.element = row
     row.append(record.text)
+
+    if (record.pretty) {
+      row.classList.add("logs__line--json")
+      this.structured.set(row, record)
+    }
+  }
+
+  // A structured line opens to its whole object, and closes again. Selecting
+  // text inside it doesn't count as a click.
+  expand(event) {
+    if (event.target.closest(".logs__json")) return
+    const row = event.target.closest(".logs__line--json")
+    const record = row && this.structured.get(row)
+    if (!record || window.getSelection()?.toString()) return
+
+    if (record.expanded) {
+      record.expanded.remove()
+      record.expanded = null
+    } else {
+      record.expanded = document.createElement("pre")
+      record.expanded.classList.add("logs__json")
+      record.expanded.textContent = record.pretty
+      row.append(record.expanded)
+      if (this.follow) this.#setFollow(false) // reading one line: don't scroll it away
+    }
+    row.setAttribute("aria-expanded", record.expanded ? "true" : "false")
   }
 
   #matches(record) {

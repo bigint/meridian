@@ -153,6 +153,27 @@ class LogsTest < ApplicationSystemTestCase
     assert_equal [ "before", "1,234 lines skipped (over 512 KB/s)", "after", "Container stopped" ], messages
   end
 
+  test "a JSON line reads as level, message and its useful fields, and opens to the whole object" do
+    open_app_logs
+    entry = { time: "2026-11-26T12:00:01Z", level: "INFO", msg: "Request", host: "yoginth.com", path: "/missing", status: 404,
+              method: "GET", duration: 917417, service: "web", request_id: "a57ad1a8-e4e9", client_addr: "172.18.0.1", query: "" }
+    send_lines @web, line("12:00:01", entry.to_json), line("12:00:02", "plain text stays as it is")
+
+    within ".logs__line--json" do
+      assert_selector ".json-level--info", text: "INFO"
+      assert_selector ".json-message", text: "Request"
+      assert_selector ".json-value--warn", text: "404"
+      assert_text "method=GET"
+      assert_text "+2 more" # request_id and client_addr; the empty query is left out
+      assert_no_text "a57ad1a8"
+    end
+
+    fill_in "Filter lines", with: "a57ad1a8" # a field that isn't drawn still matches
+    assert_selector ".logs__line:not([hidden])", count: 1
+    find(".logs__line--json .json-message").click
+    assert_selector ".logs__json", text: %("request_id": "a57ad1a8-e4e9")
+  end
+
   test "ANSI colours become styles, other escapes are cut and markup is only text" do
     open_app_logs
     send_lines @web, line("12:00:01", "\e[31mred\e[0m plain \e[1;32mbold green\e[0m \e[2J\e[?25l\e]0;title\a<img src=x onerror=alert(1)> \e[38;5;196mx\e[0m")

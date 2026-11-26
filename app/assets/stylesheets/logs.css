@@ -61,6 +61,30 @@
   .logs__line--notice .logs__text { font-family: var(--font-sans); font-size: var(--text-s); font-style: italic; color: var(--color-ink-muted); }
   .logs__line--notice[data-notice="off"] .logs__text, .logs__line--notice[data-notice="refused"] .logs__text { color: var(--color-warn); }
 
+  /* Structured (JSON) lines: level, message, then quieter key=value fields.
+     A click opens the whole object under the line. */
+  .logs__line--json { cursor: pointer; }
+  .json-level {
+    display: inline-block; min-inline-size: 5ch; margin-inline-end: 0.25ch; padding-inline: 0.5ch;
+    border-radius: var(--radius-small); font-weight: 600; text-align: center;
+  }
+  .json-level--bad { background: var(--color-bad-soft); color: var(--color-bad); }
+  .json-level--warn { background: var(--color-warn-soft); color: var(--color-warn); }
+  .json-level--info { background: var(--color-info-soft); color: var(--color-info); }
+  .json-level--quiet { background: var(--color-raised); color: var(--color-ink-muted); }
+  .json-message { font-weight: 500; color: var(--color-ink); }
+  .json-key { color: var(--color-ink-faint); }
+  .json-value { color: var(--color-ink-muted); }
+  .json-value--warn { color: var(--color-warn); }
+  .json-value--bad { color: var(--color-bad); }
+  .json-more { color: var(--color-ink-faint); font-style: italic; }
+  .logs__line--json[aria-expanded="true"] .json-more { visibility: hidden; }
+  .logs__json {
+    grid-column: -2 / -1; margin: var(--space-xs) 0 var(--space-s); padding: var(--space-s) var(--space);
+    border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface);
+    white-space: pre-wrap; overflow-wrap: anywhere; color: var(--color-ink-muted); cursor: text;
+  }
+
   .logs__jump {
     position: absolute; inset-block-end: var(--space-m); inset-inline: 0; inline-size: fit-content; margin-inline: auto;
     border-color: transparent; background: var(--color-accent); color: var(--color-accent-ink); box-shadow: var(--shadow-float);

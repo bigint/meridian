@@ -31,7 +31,7 @@
   <% end %>
 
   <div class="logs__scroller" role="log" aria-label="Container logs" aria-live="off" tabindex="0" data-logs-target="scroller" data-action="scroll->logs#scrolled">
-    <div class="logs__lines" data-logs-target="lines"></div>
+    <div class="logs__lines" data-logs-target="lines" data-action="click->logs#expand"></div>
     <p class="logs__empty" data-logs-target="empty">No lines yet. Whatever the container writes shows up here.</p>
   </div>
 

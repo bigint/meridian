@@ -1,0 +1,12 @@
+<% content_for :title, "Logs · #{@app.name}" %>
+<% content_for :wide, true %>
+<% meta = capture do %>
+  <%= link_to @app.name, @app, class: "link" %> on <%= pluralize(@placements.map(&:server_id).uniq.size, "server") %>
+<% end %>
+<%= page_header "Logs", meta: meta %>
+
+<% if @placements.any? %>
+  <%= render "logs/viewer", placements: @placements %>
+<% else %>
+  <%= empty_state "No containers reported for #{@app.name}", icon_name: :logs do %>Logs appear here once an agent reports its containers.<% end %>
+<% end %>

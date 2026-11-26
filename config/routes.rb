@@ -9,6 +9,12 @@ Rails.application.routes.draw do
       resources :deploys, only: :create
       resources :rollbacks, only: :create
       resource :redeploy, only: :create
+      resource :log, only: :show
+    end
+  end
+  resources :placements, only: [] do
+    scope module: :placements do
+      resource :log, only: :show
     end
   end
   resources :servers, only: %i[ index show update ]

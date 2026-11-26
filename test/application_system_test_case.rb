@@ -1,10 +1,11 @@
 require "test_helper"
 require_relative "test_helpers/chrome_storage_reset"
+require_relative "test_helpers/async_cable_helper"
 
 Capybara.enable_aria_label = true
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  include ActiveJob::TestHelper
+  include ActiveJob::TestHelper, AsyncCableHelper
 
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ]
 

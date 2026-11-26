@@ -1,7 +1,8 @@
 @layer modules {
   /* The host strip on a server's page: four tiles, each with a sparkline
      that fills as frames arrive. live_stats_controller.js sets data-state
-     on .live (connecting, live, paused) and data-level on a tile or meter. */
+     on .live (connecting, live, paused) and data-level on a tile or meter.
+     The log viewer's pill is the same one (.logs, see logs.css). */
   .live__status {
     display: inline-flex; align-items: center; gap: var(--space-s);
     padding: 0.125rem var(--space) 0.125rem 0.625rem;
@@ -14,16 +15,16 @@
 
     &::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; opacity: 0; }
   }
-  .live[data-state="live"] {
+  .live[data-state="live"], .logs[data-state="live"] {
     .live__status { border-color: var(--color-ok-line); background: var(--color-ok-soft); color: var(--color-ok); }
     .live__dot { background: var(--color-ok); }
   }
-  .live[data-state="paused"] {
+  .live[data-state="paused"], .logs[data-state="unavailable"] {
     .live__status { border-color: var(--color-warn-line); background: var(--color-warn-soft); color: var(--color-warn); }
     .live__dot { background: var(--color-warn); }
   }
   @media (prefers-reduced-motion: no-preference) {
-    .live[data-state="live"] .live__dot::after { animation: live-pulse 2s ease-out infinite; }
+    .live[data-state="live"] .live__dot::after, .logs[data-state="live"] .live__dot::after { animation: live-pulse 2s ease-out infinite; }
   }
   @keyframes live-pulse {
     0% { opacity: 0.6; scale: 1; }

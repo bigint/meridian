@@ -1,0 +1,39 @@
+<%# The last 200 lines of each container and the new ones as they come, drawn by logs_controller.js from what
+    LogsChannel relays. Nothing is stored: leave the page and the lines are gone. Local: placements. %>
+<% sources = log_sources(placements) %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+
+<div class="logs" data-controller="logs" data-state="connecting" <%= tag.attributes(data: { multi: (sources.size > 1 || nil), wrap: true,
+      logs_placement_ids_value: placements.map(&:id).to_json, logs_sources_value: sources.to_json }) %>>
+  <div class="logs__bar">
+    <div class="logs__tools">
+      <%= search_field_tag :log_filter, nil, placeholder: "Filter lines", autocomplete: "off", class: "logs__filter", aria: { label: "Filter lines" },
+            data: { logs_target: "filter", action: "input->logs#filter" } %>
+      <div class="segmented" role="group" aria-label="Streams">
+        <% [ [ "Both", "both" ], [ "stdout", "out" ], [ "stderr", "err" ] ].each do |label, stream| %>
+          <button type="button" aria-pressed="<%= stream == "both" %>" data-stream="<%= stream %>" data-logs-target="stream" data-action="logs#pick"><%= label %></button>
+        <% end %>
+      </div>
+      <button type="button" class="btn btn--small" aria-pressed="true" data-logs-target="wrap" data-action="logs#toggleWrap">Wrap</button>
+      <button type="button" class="btn btn--small" aria-pressed="true" data-logs-target="follow" data-action="logs#toggleFollow">Follow</button>
+      <button type="button" class="btn btn--small" data-action="logs#clear">Clear</button>
+    </div>
+    <span class="live__status" role="status"><span class="live__dot" aria-hidden="true"></span><span data-logs-target="status">Connecting…</span></span>
+  </div>
+
+  <% if sources.size > 1 %>
+    <div class="logs__sources" role="group" aria-label="Containers">
+      <% sources.each do |source| %>
+        <button type="button" class="logs__chip" aria-pressed="true" title="<%= source[:title] %>" data-tone="<%= source[:tone] %>" data-source-id="<%= source[:id] %>"
+                data-logs-target="chip" data-action="logs#toggleSource"><%= source[:label] %></button>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="logs__scroller" role="log" aria-label="Container logs" aria-live="off" tabindex="0" data-logs-target="scroller" data-action="scroll->logs#scrolled">
+    <div class="logs__lines" data-logs-target="lines"></div>
+    <p class="logs__empty" data-logs-target="empty">No lines yet. Whatever the container writes shows up here.</p>
+  </div>
+
+  <button type="button" class="btn btn--small logs__jump" hidden data-logs-target="jump" data-action="logs#jump"></button>
+</div>

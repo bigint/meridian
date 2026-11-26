@@ -11,5 +11,6 @@
    board.css      the board's matrix and the inspector panel
    map.css        the world map
    live.css       a server's live host numbers and the per-container meters
+   logs.css       the log viewer
    utilities.css  a few single-purpose classes */
 @layer reset, base, layout, components, modules, utilities;

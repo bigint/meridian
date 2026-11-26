@@ -1,0 +1,12 @@
+<% content_for :title, "Logs · #{@placement.name}" %>
+<% content_for :wide, true %>
+<% meta = capture do %>
+  <span class="mono txt-small"><%= @placement.name %></span> on <%= link_to @placement.server.name, @placement.server, class: "link" %>
+  <% unless @placement.running? %><%= badge @placement.state.to_s.presence || "unknown" %><% end %>
+<% end %>
+<%= page_header "Logs", meta: meta do %>
+  <%= link_to @placement.server, class: "btn btn--small" do %><%= icon :servers %>Server<% end %>
+  <% if @placement.app %><%= link_to app_log_path(@placement.app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>All of <%= @placement.app.name %><% end %><% end %>
+<% end %>
+
+<%= render "logs/viewer", placements: [ @placement ] %>

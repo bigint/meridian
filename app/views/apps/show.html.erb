@@ -7,7 +7,12 @@
 <% cells = group ? group.columns.map { group.cell(@app, it) } : [] %>
 
 <header class="page-header">
-  <div class="page-header__row"><h1 class="page-header__title"><%= @app.name %></h1></div>
+  <div class="page-header__row">
+    <h1 class="page-header__title"><%= @app.name %></h1>
+    <% if current_user.can_deploy? %>
+      <div class="page-header__actions"><%= link_to app_log_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>Logs<% end %></div>
+    <% end %>
+  </div>
   <div class="flex flex-wrap items-center gap-s txt-muted">
     <%= badge @app.kind %>
     <span>in <%= link_to @app.project.name, @app.project, class: "link" %></span>

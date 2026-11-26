@@ -101,6 +101,76 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     assert_broadcasts ServerStatsChannel.broadcasting_for(@server), 3
   end
 
+  test "a log batch is relayed to the browsers reading that container, with its placement as the source" do
+    placement = place(@server, WEB)
+    subscribe machine_id: "m-web-1"
+
+    assert_broadcast_on LogsChannel.broadcasting_for(placement), batch(WEB, secret: "x").except("action", "secret").merge("source" => placement.id) do
+      perform :logs, batch(WEB, secret: "x")
+    end
+  end
+
+  test "a batch for a container that is not on this server is ignored" do
+    other = server_named("web-2.example.com")
+    elsewhere = place(other, WEB)
+    here = place(@server, "c" * 64, name: "blog-web-1a2b3c4d")
+    subscribe machine_id: "m-web-1"
+
+    perform :logs, batch(WEB)
+    perform :logs, batch(WORKER)
+
+    assert_no_broadcasts LogsChannel.broadcasting_for(elsewhere)
+    assert_no_broadcasts LogsChannel.broadcasting_for(here)
+  end
+
+  test "a batch that breaks the contract is ignored" do
+    placement = place(@server, WEB)
+    subscribe machine_id: "m-web-1"
+
+    perform :logs, batch("../etc", lines: [ { "t" => "x", "s" => "out", "m" => "hi" } ])
+    perform :logs, batch(WEB, lines: [])
+    perform :logs, { "container" => WEB, "lines" => "nonsense" }
+
+    assert_no_broadcasts LogsChannel.broadcasting_for(placement)
+  end
+
+  test "an agent that has logs off, refuses a container or sees it stop is relayed too" do
+    placement = place(@server, WEB)
+    subscribe machine_id: "m-web-1"
+    stream = LogsChannel.broadcasting_for(placement)
+
+    assert_broadcast_on(stream, { "container" => WEB, "off" => true, "source" => placement.id }) { perform :logs, { "action" => "logs", "container" => WEB, "off" => true } }
+    assert_broadcast_on(stream, { "container" => WEB, "refused" => "not found", "source" => placement.id }) { perform :logs, { "action" => "logs", "container" => WEB, "refused" => "not found" } }
+    assert_broadcast_on(stream, { "container" => WEB, "ended" => true, "source" => placement.id }) { perform :logs, { "action" => "logs", "container" => WEB, "ended" => true, "lines" => [] } }
+  end
+
+  test "frames past twenty a second are dropped, and the budget comes back" do
+    placement = place(@server, WEB)
+    subscribe machine_id: "m-web-1"
+
+    start = Time.current
+    travel_to start, with_usec: true
+    assert_broadcasts LogsChannel.broadcasting_for(placement), 20 do
+      25.times { perform :logs, batch(WEB) }
+    end
+
+    travel_to start + 1.1, with_usec: true
+    assert_broadcasts LogsChannel.broadcasting_for(placement), 5 do
+      5.times { perform :logs, batch(WEB) }
+    end
+  end
+
+  test "the budget is per subscription" do
+    placement = place(@server, WEB)
+    subscribe machine_id: "m-web-1"
+    25.times { perform :logs, batch(WEB) }
+
+    subscribe machine_id: "m-web-1"
+    assert_broadcasts LogsChannel.broadcasting_for(placement), 1 do
+      perform :logs, batch(WEB)
+    end
+  end
+
   test "a token revoked while connected is closed within the minute" do
     subscribe machine_id: "m-web-1"
     run_periodic_checks

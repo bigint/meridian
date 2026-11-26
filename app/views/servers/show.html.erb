@@ -59,6 +59,7 @@
               <th scope="col" class="table__end">Memory</th>
               <th scope="col" class="table__end">Network<span class="sr-only"> in and out per second</span></th>
               <th scope="col">Started</th>
+              <% if current_user.can_deploy? %><th scope="col"><span class="sr-only">Logs</span></th><% end %>
             </tr>
           </thead>
           <tbody>
@@ -88,10 +89,13 @@
                   <span class="stat__value"><span class="sr-only">Out </span><%= icon :upload, width: 12, height: 12 %><span data-part="tx">—</span></span>
                 </td>
                 <td class="nowrap"><%= time_ago(placement.started_at) %></td>
+                <% if current_user.can_deploy? %>
+                  <td><%= link_to icon(:logs), placement_log_path(placement), class: "btn btn--icon btn--plain btn--small", title: "Logs", aria: { label: "Logs of #{placement.name}" }, data: { turbo_prefetch: false } %></td>
+                <% end %>
               </tr>
             <% end %>
             <% if @placements.none? %>
-              <tr><td colspan="7" class="table__empty">No containers reported.</td></tr>
+              <tr><td colspan="<%= current_user.can_deploy? ? 8 : 7 %>" class="table__empty">No containers reported.</td></tr>
             <% end %>
           </tbody>
         </table>

@@ -116,15 +116,4 @@ class LiveStatsTest < ApplicationSystemTestCase
       Rails.cache.clear
       perform_enqueued_jobs { SnapshotIngestJob.perform_later(agent_tokens(:web_1), @payload) }
     end
-
-    def use_async_cable
-      @cable_config = ActionCable.server.config.cable
-      ActionCable.server.config.cable = { "adapter" => "async" }
-      ActionCable.server.restart
-    end
-
-    def restore_cable
-      ActionCable.server.config.cable = @cable_config
-      ActionCable.server.restart
-    end
 end

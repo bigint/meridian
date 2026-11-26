@@ -5,6 +5,7 @@ class Placement < ApplicationRecord
   belongs_to :app, optional: true
 
   scope :running, -> { where(state: "running") }
+  scope :running_first, -> { order(Arel.sql("state = 'running' DESC"), :id) }
 
   def running?
     state == "running"

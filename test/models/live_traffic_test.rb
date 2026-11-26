@@ -57,6 +57,16 @@ class LiveTrafficTest < ActiveSupport::TestCase
     assert_no_broadcasts TrafficChannel.broadcasting_for(@blog)
   end
 
+  test "a request line that repeats a key still counts" do
+    line = { "t" => "2026-11-26T12:00:01.000Z", "s" => "out",
+      "m" => '{"msg":"Request","path":"/","status":200,"service":"shop-web-production","req_content_type":"","req_content_type":"text/html"}' }
+    LiveTraffic.watch(@shop, [ @proxy ])
+
+    assert_broadcasts TrafficChannel.broadcasting_for(@shop), 1 do
+      LiveTraffic.relay(@server, @proxy, { "container" => PROXY, "lines" => [ line ] })
+    end
+  end
+
   test "a batch with none of a watched app's requests sends that app nothing" do
     LiveTraffic.watch(@shop, [ @proxy ])
 

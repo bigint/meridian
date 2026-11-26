@@ -64,7 +64,9 @@ module LiveTraffic
   def request_service(message)
     return unless message.start_with?("{") && message.include?('"Request"')
 
-    object = JSON.parse(message)
+    # kamal-proxy appends a req_/resp_ field per logged header after its own,
+    # so logging Content-Type repeats req_content_type.
+    object = JSON.parse(message, allow_duplicate_key: true)
     object["service"] if object.is_a?(Hash) && object["msg"] == "Request"
   rescue JSON::ParserError
     nil

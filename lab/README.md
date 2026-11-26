@@ -3,7 +3,7 @@
 A local fleet for trying Meridian against real Kamal deploys, inside Docker
 (kiri, Docker Desktop, OrbStack…). Nothing here is used in production.
 
-- Twenty-one servers named like AWS availability zones (`apse1-az1-node-01` in Singapore, `euc1-az1-node-01` in Frankfurt, `mec1-az1-node-01` in Dubai…): each runs sshd and its own Docker daemon (Docker in Docker), so Kamal deploys to them exactly as it would to a VM.
+- Six servers named like AWS availability zones: two in Bangalore (`aps2-az1-node-01`, `aps2-az1-node-02`), and one each in Singapore (`apse1-az1-node-01`), New York (`use1-az1-node-01`), Frankfurt (`euc1-az1-node-01`) and Sydney (`apse2-az1-node-01`): each runs sshd and its own Docker daemon (Docker in Docker), so Kamal deploys to them exactly as it would to a VM.
 - `registry`: a private image registry, `registry:5000` inside the lab and `localhost:5555` from your machine.
 - `runner`: a GitHub Actions self-hosted runner registered on your test infra repository, on the same network as the servers, so the Meridian workflow can run `kamal deploy` against them.
 - The apps are the six real bigint sites (yoginth-com, asiafibernet-com, nailbykyro-com, asiagigafibernet-com, occasions, pckumar-in). Each version is a public files-only image at `ghcr.io/bigint/<site>:<commit>`; `bin/lab push` wraps it in nginx (`lab/site/`) the way bigint/infra does in production and pushes it as `bigint/<site>:<7-character commit>`. Their Kamal configs live in bigint/meridian-infra-test, with the real hostnames: try one with `curl -H 'Host: yoginth.com' http://<server>/` from inside the lab.

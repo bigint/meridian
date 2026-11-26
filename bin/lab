@@ -6,31 +6,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LAB="$ROOT/lab"
 SECRETS="$LAB/.secrets"
-SERVERS=(apse1-az1-node-01 euc1-az1-node-01 use1-az1-node-01 apne1-az1-node-01 apne2-az1-node-01 usw1-az1-node-01 aps2-az1-node-01 euc1-az2-node-01 euw2-az1-node-01 euw3-az1-node-01 eun1-az1-node-01 eus2-az1-node-01 apse2-az1-node-01 apse4-az1-node-01 apse2-per1-node-01 mec1-az1-node-01 aps2-az1-node-02 aps2-az2-node-01 aps2-az3-node-01 sae1-az1-node-01 afs1-az1-node-01)
+SERVERS=(aps2-az1-node-01 aps2-az1-node-02 apse1-az1-node-01 use1-az1-node-01 euc1-az1-node-01 apse2-az1-node-01)
 # Named like AWS availability zones; the locations are pretend, for the map.
 place() {
   case "$1" in
     apse1-az1-node-01) echo "region=ap-southeast-1,city=Singapore,lat=1.35,lng=103.82" ;;
     euc1-az1-node-01) echo "region=eu-central-1,city=Frankfurt,lat=50.11,lng=8.68" ;;
     use1-az1-node-01) echo "region=us-east-1,city=New York,lat=40.71,lng=-74.01" ;;
-    apne1-az1-node-01) echo "region=ap-northeast-1,city=Tokyo,lat=35.68,lng=139.69" ;;
-    apne2-az1-node-01) echo "region=ap-northeast-2,city=Seoul,lat=37.57,lng=126.98" ;;
-    usw1-az1-node-01) echo "region=us-west-1,city=San Francisco,lat=37.77,lng=-122.42" ;;
     aps2-az1-node-01) echo "region=ap-south-2,city=Bangalore,lat=12.97,lng=77.59" ;;
-    euc1-az2-node-01) echo "region=eu-central-1,city=Amsterdam,lat=52.37,lng=4.9" ;;
-    euw2-az1-node-01) echo "region=eu-west-2,city=London,lat=51.51,lng=-0.13" ;;
-    euw3-az1-node-01) echo "region=eu-west-3,city=Paris,lat=48.86,lng=2.35" ;;
-    eun1-az1-node-01) echo "region=eu-north-1,city=Stockholm,lat=59.33,lng=18.07" ;;
-    eus2-az1-node-01) echo "region=eu-south-2,city=Madrid,lat=40.42,lng=-3.7" ;;
     apse2-az1-node-01) echo "region=ap-southeast-2,city=Sydney,lat=-33.87,lng=151.21" ;;
-    apse4-az1-node-01) echo "region=ap-southeast-4,city=Melbourne,lat=-37.81,lng=144.96" ;;
-    apse2-per1-node-01) echo "region=ap-southeast-2,city=Perth,lat=-31.95,lng=115.86" ;;
-    mec1-az1-node-01) echo "region=me-central-1,city=Dubai,lat=25.2,lng=55.27" ;;
     aps2-az1-node-02) echo "region=ap-south-2,city=Bangalore,lat=12.98,lng=77.6" ;;
-    aps2-az2-node-01) echo "region=ap-south-2,city=Bangalore,lat=12.96,lng=77.58" ;;
-    aps2-az3-node-01) echo "region=ap-south-2,city=Bangalore,lat=12.97,lng=77.61" ;;
-    sae1-az1-node-01) echo "region=sa-east-1,city=São Paulo,lat=-23.55,lng=-46.63" ;;
-    afs1-az1-node-01) echo "region=af-south-1,city=Cape Town,lat=-33.92,lng=18.42" ;;
   esac
 }
 # The real sites: files-only images at ghcr.io/bigint/<site>, one tag per commit.

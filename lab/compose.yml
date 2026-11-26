@@ -24,24 +24,9 @@ services:
   apse1-az1-node-01: { <<: *server, hostname: apse1-az1-node-01 }
   euc1-az1-node-01: { <<: *server, hostname: euc1-az1-node-01 }
   use1-az1-node-01: { <<: *server, hostname: use1-az1-node-01 }
-  apne1-az1-node-01: { <<: *server, hostname: apne1-az1-node-01 }
-  apne2-az1-node-01: { <<: *server, hostname: apne2-az1-node-01 }
-  usw1-az1-node-01: { <<: *server, hostname: usw1-az1-node-01 }
   aps2-az1-node-01: { <<: *server, hostname: aps2-az1-node-01 }
-  euc1-az2-node-01: { <<: *server, hostname: euc1-az2-node-01 }
-  euw2-az1-node-01: { <<: *server, hostname: euw2-az1-node-01 }
-  euw3-az1-node-01: { <<: *server, hostname: euw3-az1-node-01 }
-  eun1-az1-node-01: { <<: *server, hostname: eun1-az1-node-01 }
-  eus2-az1-node-01: { <<: *server, hostname: eus2-az1-node-01 }
   apse2-az1-node-01: { <<: *server, hostname: apse2-az1-node-01 }
-  apse4-az1-node-01: { <<: *server, hostname: apse4-az1-node-01 }
-  apse2-per1-node-01: { <<: *server, hostname: apse2-per1-node-01 }
-  mec1-az1-node-01: { <<: *server, hostname: mec1-az1-node-01 }
   aps2-az1-node-02: { <<: *server, hostname: aps2-az1-node-02 }
-  aps2-az2-node-01: { <<: *server, hostname: aps2-az2-node-01 }
-  aps2-az3-node-01: { <<: *server, hostname: aps2-az3-node-01 }
-  sae1-az1-node-01: { <<: *server, hostname: sae1-az1-node-01 }
-  afs1-az1-node-01: { <<: *server, hostname: afs1-az1-node-01 }
 
   runner:
     build: ./runner

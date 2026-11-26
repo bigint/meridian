@@ -22,6 +22,15 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil cookies[:session_id]
   end
 
+  test "create with a missing or malformed field is a failed sign-in, not an error" do
+    [ {}, { email_address: @user.email_address }, { password: "correct horse battery" }, { email_address: [ "x" ], password: { "a" => "b" } } ].each do |params|
+      post session_path, params: params
+
+      assert_redirected_to new_session_path, params.inspect
+      assert_nil cookies[:session_id]
+    end
+  end
+
   test "destroy" do
     sign_in_as(User.take)
 

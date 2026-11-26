@@ -15,6 +15,8 @@ module IconsHelper
     search: '<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     chevron: '<path d="m6 9 6 6 6-6"/>',
+    collapse: '<path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>',
+    expand: '<path d="M13 17l5-5-5-5M6 17l5-5-5-5"/>',
     keyboard: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>',
     sign_out: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/>',
     logo: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="m4.5 15.5 15-7"/>'

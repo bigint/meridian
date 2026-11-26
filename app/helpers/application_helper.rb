@@ -1,6 +1,9 @@
 module ApplicationHelper
   # How many things need attention, for the sidebar. Cached briefly: it is
   # shown on every page and the board refreshes itself anyway.
+  # Whether this browser collapsed the sidebar to its icon rail.
+  def sidebar_collapsed? = cookies[:sidebar] == "collapsed"
+
   def attention_count
     Rails.cache.fetch("attention-count", expires_in: 15.seconds) { Board.new.attention.size }
   end

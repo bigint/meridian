@@ -1,19 +1,26 @@
-<div class="flex h-full flex-col gap-1 p-3 lg:items-center lg:px-3 lg:py-3.5">
-  <%= link_to helpers.root_path, class: "mb-3 flex items-center gap-2 px-2.5 font-semibold text-ink lg:px-0", title: "Meridian" do %>
-    <%= helpers.icon(:logo, class: "size-6 text-accent") %><span class="lg:sr-only">Meridian</span>
-  <% end %>
+<div class="flex h-full flex-col gap-1 p-3 lg:group-data-[collapsed]/shell:items-center lg:group-data-[collapsed]/shell:py-3.5">
+  <div class="mb-3 flex items-center gap-2">
+    <%= link_to helpers.root_path, class: "flex items-center gap-2 px-2.5 font-semibold text-ink lg:group-data-[collapsed]/shell:px-0", title: "Meridian" do %>
+      <%= helpers.icon(:logo, class: "size-6 shrink-0 text-accent") %><span class="lg:group-data-[collapsed]/shell:sr-only">Meridian</span>
+    <% end %>
+    <%= toggle_button(label: "Collapse sidebar", icon: :collapse, css: "ml-auto hidden lg:grid lg:group-data-[collapsed]/shell:hidden", role: "collapse") %>
+  </div>
 
   <nav aria-label="Main" class="flex flex-col gap-1">
     <% primary.each do |name, path, icon, badge| %><%= nav_link(name, path, icon, badge) %><% end %>
   </nav>
 
   <nav aria-label="Manage" class="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+    <p class="px-2.5 pb-1 text-[11px] font-semibold tracking-wide text-ink-muted lg:group-data-[collapsed]/shell:sr-only">MANAGE</p>
     <% secondary.each do |name, path, icon| %><%= nav_link(name, path, icon) %><% end %>
   </nav>
 
-  <% if admin.any? %>
-    <nav aria-label="Admin" class="mt-auto flex flex-col gap-1 pt-3">
-      <% admin.each do |name, path, icon| %><%= nav_link(name, path, icon) %><% end %>
-    </nav>
-  <% end %>
+  <div class="mt-auto flex flex-col gap-1 pt-3 lg:group-data-[collapsed]/shell:items-center">
+    <% if admin.any? %>
+      <nav aria-label="Admin" class="flex flex-col gap-1">
+        <% admin.each do |name, path, icon| %><%= nav_link(name, path, icon) %><% end %>
+      </nav>
+    <% end %>
+    <%= toggle_button(label: "Expand sidebar", icon: :expand, css: "mt-2 hidden lg:group-data-[collapsed]/shell:grid", role: "expand") %>
+  </div>
 </div>

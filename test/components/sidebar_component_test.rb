@@ -15,4 +15,13 @@ class SidebarComponentTest < ViewComponent::TestCase
     with_request_url("/") { render_inline SidebarComponent.new(user: users(:viewer)) }
     assert_no_link "Settings"
   end
+
+  test "the toggles say whether the sidebar is open" do
+    with_request_url("/") { render_inline SidebarComponent.new(user: users(:viewer)) }
+    assert_selector "button[data-sidebar-toggle=collapse][aria-expanded=true][aria-label='Collapse sidebar']"
+    assert_selector "button[data-sidebar-toggle=expand][aria-expanded=true][aria-label='Expand sidebar']"
+
+    with_request_url("/") { render_inline SidebarComponent.new(user: users(:viewer), collapsed: true) }
+    assert_selector "button[data-sidebar-toggle][aria-expanded=false]", count: 2
+  end
 end

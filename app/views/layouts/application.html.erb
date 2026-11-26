@@ -13,12 +13,14 @@
   </head>
 
   <body class="min-h-svh">
-    <div class="lg:grid lg:min-h-svh lg:grid-cols-[4rem_minmax(0,1fr)]">
-      <%# One navigation: a popover drawer on phones, an icon rail from lg up. %>
+    <%# One navigation: a popover drawer on phones; from lg up a sidebar that
+        collapses to an icon rail. The choice lives in a cookie (sidebar_controller.js). %>
+    <div class="group/shell lg:grid lg:min-h-svh lg:grid-cols-[15rem_minmax(0,1fr)] lg:transition-[grid-template-columns] lg:duration-150 lg:data-[collapsed]:grid-cols-[4rem_minmax(0,1fr)] motion-reduce:transition-none"
+      data-controller="sidebar" <%= "data-collapsed" if sidebar_collapsed? %>>
       <aside id="sidebar" popover aria-label="Navigation"
         class="fixed inset-y-0 left-0 z-40 h-svh w-64 max-w-[85vw] overflow-y-auto border-r border-line bg-surface backdrop:bg-black/40
                lg:sticky lg:top-0 lg:z-auto lg:block lg:w-auto lg:max-w-none">
-        <%= render SidebarComponent.new(user: current_user, attention_count: attention_count) %>
+        <%= render SidebarComponent.new(user: current_user, attention_count: attention_count, collapsed: sidebar_collapsed?) %>
       </aside>
 
       <div class="min-w-0">

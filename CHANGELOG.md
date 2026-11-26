@@ -9,7 +9,7 @@
 - App and server pages use the same layout: content on the left, what you act on in a panel on the right.
 - The Map works the same way: click a place to see its servers, the version each app runs there, and the places it shares apps with. Dots show how many servers share a spot and turn purple while a deploy goes out; only places that need you are named, so Europe no longer crowds. App chips filter the map, and the places table lists problems first.
 - Fixed: clicking a place on the map made Turbo throw and reload the whole page.
-- An icon rail replaces the sidebar, with search and the account menu in a top bar. On phones the rail is a drawer behind a Menu button.
+- The sidebar shows names and collapses to an icon rail with « (» brings it back); each browser remembers the choice. Search and the account menu sit in a top bar. On phones the sidebar is a drawer behind a Menu button.
 - Built with Tailwind 4 (standalone binary, still no Node) and a ViewComponent library, `app/components/ui/`, browsable at `/lookbook` in development.
 - Install snippets and one-time tokens have a copy button. Servers list their place (city and region) in its own column.
 - The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should". A getting-started checklist appears on new installs, and each app has a one-line status ("✓ Running v42 everywhere").

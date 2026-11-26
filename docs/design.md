@@ -17,9 +17,9 @@ Browse every component, in every state, at [`/lookbook`](http://localhost:3000/l
 
 ## Layout
 
-- **Icon rail** (`SidebarComponent`): the main places (Board, Map, Apps, Servers, Activity, Previews), then Projects, Agents and Secrets, and Settings and Jobs for admins at the bottom. Each icon is named on hover and for screen readers; the Board icon carries the number of things that need attention.
+- **Sidebar** (`SidebarComponent`): the main places (Board, Map, Apps, Servers, Activity, Previews), then Projects, Agents and Secrets under Manage, and Settings and Jobs for admins at the bottom. The Board carries the number of things that need attention. The « button beside the logo collapses it to an icon rail (each icon named on hover and for screen readers) and » brings it back. The choice is a cookie, so the server renders the right width on every page with no flicker; the toggle itself only flips `data-collapsed` on the shell, and collapsed styles hang off that (`group-data-[collapsed]/shell:`).
 - **Top bar** (`TopbarComponent`): a search box that finds any app, server or project as you type (Enter opens the first match), and the account menu with sign out.
-- **Phones:** the rail is a native `popover` drawer behind a **Menu** button, with the names beside the icons, so it needs no JavaScript.
+- **Phones:** the sidebar is a native `popover` drawer behind a **Menu** button, always with names, so it needs no JavaScript.
 - **Main column and side panel:** the Board, the Map, an app and a server put their content in a main column and what you act on in a panel on the right: the Map's panel shows the place you click (`PlaceInspectorComponent`): its servers with the version each app runs, the places it shares apps with, and what is wrong there; the Board's panel inspects the app you click (`AppInspectorComponent`, in a Turbo Frame, so the grid stays put and the URL remembers it); an app's panel ships versions and shows the current deploy; a server's panel holds its facts, labels and location. On narrow screens the panel drops below.
 - Other pages are `max-w-6xl`; the Board, Map, apps and servers use full width with `content_for :wide`.
 - **Sign-in and first run** use a centred card (`layouts/auth.html.erb`).

@@ -1,5 +1,5 @@
 ---
-title: "Meridian"
+title: "A control room for Kamal"
 sidebarTitle: "Introduction"
 description: "An open-source control room for Kamal: every app on every server, deploys and rollbacks, new apps and pull request previews, with Git as the record of everything."
 icon: "house"
@@ -28,7 +28,7 @@ mode: "custom"
 
   <div className="mt-24 max-w-3xl">
     <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">What it does</h2>
-    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Meridian reads your Kamal configs from Git, and a small agent on each server reports what runs there. The board shows where the two disagree. Every change you make in Meridian is a commit, and your CI runs Kamal.</p>
+    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Meridian reads your Kamal configs from Git, and a small agent on each server reports what runs there. The board shows where the two disagree. Deploys, rollbacks and new apps are commits or pull requests, and your CI runs Kamal.</p>
   </div>
 
   <div className="mt-10">
@@ -56,7 +56,7 @@ mode: "custom"
 
   <div className="mt-24 max-w-3xl">
     <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">How it works</h2>
-    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Meridian writes only to Git. GitHub Actions runs Kamal, and Kamal reaches your servers over SSH. The agent on each server only ever connects out to Meridian, so Meridian needs no way in.</p>
+    <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Meridian writes only to GitHub. GitHub Actions runs Kamal, and Kamal reaches your servers over SSH. The agent on each server only ever connects out to Meridian, so Meridian needs no way in.</p>
   </div>
 
   <div className="mt-8">
@@ -88,7 +88,7 @@ flowchart LR
   <div className="mt-10">
     <Columns cols={2}>
       <Card title="1. Git is the record" icon="history">
-        Every change Meridian makes is a commit or a pull request to your infra repository, written as plain YAML. Uninstall Meridian and you lose only its activity log.
+        Every change Meridian makes to your configs and versions is a commit or a pull request to your infra repository. Uninstall Meridian and Git still holds every config, version and deploy.
       </Card>
       <Card title="2. One deploy path" icon="route">
         Meridian commits, and CI runs Kamal. Deploy status comes from CI.

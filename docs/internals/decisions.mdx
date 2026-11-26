@@ -26,7 +26,7 @@ Meridian uses the tree API plus blob fetches by SHA, and caches blobs by SHA, so
 
 ## 5. The release reference is a version file
 
-Kamal has no version key in its YAML. Meridian therefore writes a one-line file next to the config, `<config>.version` or `<config>.<destination>.version`, for example `config/deploy.production.version` beside `config/deploy.yml`, and the CI workflow passes `--version "$(cat …)"`. Releases are the commits that touched that file. Without one, a release is the latest commit to the config, with its short SHA as the version. The spec's other modes (image tag, build argument) are deferred, and nothing is built for them yet.
+Kamal has no version key in its YAML. Meridian therefore writes a one-line file next to the config, `<config>.version` or `<config>.<destination>.version`, for example `config/deploy.production.version` beside `config/deploy.yml`, and the CI workflow passes `--version "$(cat …)"`. Releases are the commits that touched that file. Without one, each commit to the config is a release, with its short SHA as the version. The spec's other modes (image tag, build argument) are deferred, and nothing is built for them yet.
 
 ## 6. An app is one config plus one destination
 
@@ -56,7 +56,7 @@ Kamal deploys every host in one CI job, so CI can't report per-server progress. 
 
 ## 12. Deploys and rollbacks are always direct commits
 
-They change one line, so they go straight to the default branch. The project's pull-request setting applies only to structural changes: new apps, the CI workflow and preview setup.
+They change one line, so they go straight to the default branch. The project's pull-request setting applies only to structural changes: new apps, the CI workflow and tunnel connectors.
 
 ## 13. A rollback reverts the newest release only
 
@@ -142,7 +142,7 @@ Streaming Docker stats from every container on 500 servers to Meridian all the t
 
 Logs can hold secrets, which the agent otherwise never sends, so three locks apply. The agent tails nothing without `MERIDIAN_LOGS=1`. It checks every container it is asked for against Kamal's labels itself, not trusting Meridian. Only users who can deploy may open logs, and each viewing is an `Event`.
 
-The page that records the viewing hands its channel a signed grant (`LiveLogs.grant`), bound to the reader, for exactly what it shows. The channels stream nothing else, so every stream is a recorded viewing, and a reconnect is not another one. Tailing uses the stats lease, per container, so nothing streams unwatched. Lines are relayed, never stored. Solid Cable's message retention drops from a day to a minute so they don't linger in its table. An app's logs merge every server it runs on into one timeline, ordered by Docker's timestamps.
+The page that records the viewing hands its channel a signed grant (`LiveLogs.grant`), bound to the reader, for exactly what it shows. The channels stream nothing else, so every stream is a recorded viewing, and a reconnect is not another one. Tailing uses a lease like the stats one, per container, so nothing streams unwatched. Lines are relayed, never stored. Solid Cable's message retention drops from a day to a minute so they don't linger in its table. An app's logs merge every server it runs on into one timeline, ordered by Docker's timestamps.
 
 ## 33. One Cloudflare Tunnel per project, from Git, and Meridian never calls the Cloudflare API
 

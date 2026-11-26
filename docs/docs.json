@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
+  "theme": "aspen",
   "name": "Meridian",
   "description": "An open-source control room for Kamal: every app on every server, deploys and rollbacks, new apps and pull request previews, with Git as the record of everything.",
   "colors": {
@@ -21,14 +21,9 @@
     "default": "system"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "GitHub",
-        "href": "https://github.com/bigint/meridian"
-      }
-    ],
     "primary": {
-      "type": "github",
+      "type": "button",
+      "label": "GitHub",
       "href": "https://github.com/bigint/meridian"
     }
   },

@@ -9,9 +9,9 @@ import { Screenshot } from "/snippets/a-screenshot.mdx";
 
 This page walks through Meridian one screen at a time, in the order of the sidebar. The sidebar holds the screens you watch at the top, and under **Manage** the screens that set Meridian up. Admins also see **Settings** and **Jobs** at the bottom.
 
-Every screen updates itself. When an agent reports a change or a deploy moves on, open pages redraw in place, without losing your scroll position.
+The board, the map, the app and server pages and **Previews** update themselves. When an agent reports a change or a deploy moves on, they redraw in place, without losing your scroll position.
 
-Viewers see every screen. Buttons that a person's role doesn't allow are hidden. See [roles](/concepts/roles).
+Viewers see every screen except **Settings** and **Jobs**. Buttons that a person's role doesn't allow are hidden. See [roles](/concepts/roles).
 
 ## Board
 
@@ -131,7 +131,7 @@ A server's page, at `/servers/<id>`, shows one machine. The header says **Report
 - **Apps** lists each app here with the version it runs, its state and its roles.
 - **Containers** lists every container that Kamal started, with its version, state, health, live CPU, memory and network, and start time. Deployers get a **Logs** button on each row.
 - **Machine** shows the hostname, the agent version, when it was last seen, its location and its projects.
-- **Labels** shows what the agent sent in `MERIDIAN_LABELS`.
+- **Labels** shows what the agent sent in `MERIDIAN_LABELS`, apart from the place labels `city`, `region`, `lat` and `lng`.
 - **Location on the map**, for admins, sets a **Latitude** and **Longitude** with **Save location**.
 
 See [servers and agents](/concepts/servers-and-agents).
@@ -158,7 +158,7 @@ A project's page has:
 
 - **Sync now**, to read Git at once instead of within 30 seconds,
 - **Add CI workflow**, to open a pull request with `.github/workflows/meridian-deploy.yml`,
-- **Edit**, for the repository, branch, installation ID and config paths, and **Remove project** at the bottom of that form,
+- **Edit**, for the repository, branch, installation ID and config paths, and **Remove project** at the top of the edit page,
 - **Repository**, with the branch, the config paths, the last sync and whether changes arrive as pull requests or direct commits,
 - **Parse errors**, each with its file and line,
 - **Configs found**, every app with its config, destination, server count and hostnames.

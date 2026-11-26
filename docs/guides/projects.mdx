@@ -102,7 +102,7 @@ proxy: unknown key: hots
   </Step>
 </Steps>
 
-If one config makes the parser hang or crash, nothing in that sync parses. Meridian keeps every app as it was and shows one error without a file. Find the config the last push changed.
+If one config makes the parser hang or crash, nothing in that sync parses. Meridian keeps every app as it was and shows one error without a file. It tries that commit again after a minute, then two, four and so on, at most hourly, and reads a new push at once. Find the config the last push changed.
 
 ## Add the CI workflow
 

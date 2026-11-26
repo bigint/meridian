@@ -110,7 +110,7 @@ The agent recognises containers the way Kamal 2.12.0 names them:
 | Kind | Recognised by |
 | --- | --- |
 | `app` | `service` and `role` labels, plus `destination` when there is one |
-| `accessory` | A `service` label only, on a container named `<service>-<accessory>` |
+| `accessory` | A `service` label and no `role` label. Kamal names it `<service>-<accessory>`. |
 | `proxy` | The container named `kamal-proxy` |
 
 Every other container is ignored and never inspected.
@@ -121,7 +121,7 @@ Meridian answers at once and ingests the snapshot in a job. The job finds the se
 
 1. The server a per-server token is already bound to.
 2. The server with the same machine ID.
-3. A server that no agent has claimed yet, or one Git lists whose agent has been silent for 10 minutes, whose host name or name equals `hostname`. Failing that, the one such server whose first DNS label matches. IP addresses must match whole. A rebuilt machine has a new machine ID and claims its old server this way.
+3. A server that no agent has claimed yet, or one Git lists whose agent has been silent for 10 minutes or more, whose host name or name equals `hostname`. Failing that, the one unclaimed server whose first DNS label matches. IP addresses must match whole. A rebuilt machine has a new machine ID and claims its old server this way.
 4. A new server, named after `hostname`.
 
 A per-server token binds to the first server it reports for. A fleet token never binds, and each machine ID is its own server.
@@ -135,18 +135,18 @@ A per-server token binds to the first server it reports for. A fleet token never
 | `401 Unauthorized` | The token is missing, unknown or revoked. | Empty |
 | `413 Content Too Large` | `Content-Length` is over 1 MiB. Checked before the token. | Empty |
 | `422 Unprocessable Content` | The snapshot breaks a rule above, or a per-server token is used on a second machine. | `{"errors":[…]}`, with each reason |
-| `429 Too Many Requests` | The token sent more than 120 snapshots in a minute. | Empty, with `Retry-After: 60` |
+| `429 Too Many Requests` | The token sent more than 120 snapshots in a minute, or a fleet token went over its limits. | Empty, with `Retry-After: 60` |
 
-A per-server token used on a second machine gets `422` with `This token belongs to another server. Give each server its own token, or use a fleet token`.
+A per-server token used on a second machine gets `422` with `This token belongs to another server. Give each server its own token, or use a fleet token`. Once that server has been silent for 10 minutes or more, the new machine takes it over instead.
 
 ### Rate limit and backoff
 
-Meridian allows 120 snapshots a minute per token. For a fleet token the limit is per token and machine ID, so every server on it gets its own 120. At the default interval an agent sends four a minute.
+Meridian allows 120 snapshots a minute per token. For a fleet token the limit is per token and machine ID, so every server on it gets its own 120, and the whole token may send 12,000 a minute. At the default interval an agent sends four a minute.
 
 The agent counts any `2xx` as delivered. On any other answer, or no answer:
 
 - The next try waits the interval doubled once per consecutive failure, up to 5 minutes, with ±20% jitter.
-- After a `429` it waits at least `Retry-After`, in seconds or as an HTTP date, capped at 5 minutes and then jittered up to 20% later, so a fleet told the same wait does not return at once.
+- After a `429` it waits at least `Retry-After`, in seconds or as an HTTP date, jittered up to 20% later so a fleet told the same wait does not return at once, and never more than 5 minutes.
 - The first success resets the delay to the interval.
 
 Docker calls time out after 10 seconds, the POST after 15 and a whole cycle after 30. The first snapshot goes out at start.

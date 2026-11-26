@@ -10,7 +10,7 @@ Pages name an app by its service, then its destination: `shop · production`. An
 
 ## How Meridian finds configs
 
-Each [project](/guides/projects) has **Config paths**, a comma-separated list of globs. The default is `config/deploy*.yml`. Meridian matches every file in the repository against them, with `*` stopping at `/` and `**` crossing directories. Only `.yml` and `.yaml` files count.
+Each [project](/guides/projects) has **Config paths**, a comma-separated list of globs. The default is `config/deploy*.yml`. Meridian matches every file in the repository against them, with `*` stopping at `/` and `**/` crossing directories. Only `.yml` and `.yaml` files count.
 
 A matched file named `<base>.<name>.yml` is a destination file when `<base>.yml` or `<base>.yaml` also matches. Kamal loads it on top of the base config when you pass `-d <name>`. Every other matched file is a base config.
 
@@ -78,7 +78,7 @@ labels:
   meridian.source: acme/shop
 ```
 
-`meridian.kind` is one of `static`, `node`, `rails` or `other`. A config without the label, or with another value, is `other`. **New app** writes the label for you.
+`meridian.kind` is one of `static`, `node`, `rails`, `other` or `accessories`, [below](#configs-that-only-run-accessories). A config without the label, or with any other value, is `other`. **New app** writes the label for you.
 
 `meridian.source` is the GitHub repository that holds the app's code and Dockerfile, as `owner/name`. [Previews](/guides/previews) follow pull requests in that repository. Without the label, an app gets no previews.
 
@@ -94,7 +94,7 @@ Every sync compares the files behind each app by blob SHA. Meridian reads the re
 
 A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews. The project's page lists the error with its file and line. Kamal reports a key path such as `servers/web/hosts`, and Meridian finds that key's line in the YAML.
 
-When a config is deleted from Git, its app goes at the next sync, with its deploys and releases. Its open previews end too, and the activity log says what happened to each one. See [previews](/guides/previews).
+When a config is deleted from Git, its app goes at the next sync, with its deploys and releases. Meridian deletes its open previews' overlay files too. CI can't remove their containers without the config, so the activity log names the containers to remove by hand. See [previews](/guides/previews).
 
 ## Where New app writes a config
 

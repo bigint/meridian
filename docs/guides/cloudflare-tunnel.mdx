@@ -36,7 +36,7 @@ Meridian finds a tunnel in Git: every accessory whose image starts with `cloudfl
 
 Open **Tunnels** under **Manage**, and click **Set up a tunnel**. The page shows seven steps, filled in with your project's names. Steps Meridian can see tick themselves off: the token set from its Secrets page, the connectors in Git, and the connectors running.
 
-On the right, pick the **Project** and the **Connector servers**. Every server that runs one of the project's apps is listed, with how many apps it runs. The page regenerates the connector config for the servers you tick, and warns about every app that isn't on all of them. **Ready to route** lists the apps that are.
+On the right, pick the **Project** and the **Connector servers**. Every server that runs one of the project's apps is listed, with how many apps it runs. The page regenerates the connector config for the servers you tick, and warns about every app that runs on some of them but not all. **Ready to route** lists the apps that are.
 
 The steps match the Cloudflare dashboard as of November 2026.
 
@@ -55,7 +55,7 @@ The steps match the Cloudflare dashboard as of November 2026.
     ```
   </Step>
   <Step title="Add the connectors">
-    Commit the config the page shows. It goes where the project's first config glob puts the service `edge`, such as `config/deploy-edge.yml` with the default glob, or `deploy/edge.yml` with `deploy/*.yml`. The template is `templates/kamal/edge.yml`.
+    Commit the config the page shows. It goes where the project's first glob with one `*` puts the service `edge`, such as `config/deploy-edge.yml` with the default glob, or `deploy/edge.yml` with `deploy/*.yml`. The template is `templates/kamal/edge.yml`.
   </Step>
   <Step title="Start them">
     From a machine that can SSH to the servers, with `CLOUDFLARE_TUNNEL_TOKEN` in its environment, run:
@@ -169,7 +169,7 @@ Admins can change which servers run a connector. Click **Edit connectors** on a 
 
 <Steps>
   <Step title="Tick the servers">
-    Under **Connector servers**, tick and untick servers. The current ones carry the `now` badge. The page previews the change at once: `+ add` and `− remove` for each server, and a warning for every app the new set of servers doesn't all run.
+    Under **Connector servers**, tick and untick servers. The current ones carry the `now` badge. The page previews the change at once: `+ add` and `− remove` for each server, and a warning for every app that runs on some of the new servers but not all.
   </Step>
   <Step title="Propose the change">
     Click **Open a pull request**, or **Commit the change** where the project allows direct commits. The title reads like `feat(edge): add web-3.example.com as Cloudflare Tunnel connectors`.

@@ -16,7 +16,7 @@ Meridian has five endpoints for machines. Everything else is an HTML page behind
 
 ## POST /agent/snapshots
 
-What runs on one server. The agent sends one every 15 seconds or so. Meridian validates it, queues it, and answers `202`. Bodies over 1 MiB are refused with `413` before Rails parses them, and each token may send 120 a minute.
+What runs on one server. The agent sends one every 15 seconds or so. Meridian validates it, queues it, and answers `202`. Bodies over 1 MiB are refused with `413` before Rails parses them, and each token may send 120 a minute. A fleet token may send 120 a minute for each machine ID, and 12,000 a minute in all.
 
 See [Agent protocol](/reference/agent-protocol#snapshots) for the payload and every status code.
 

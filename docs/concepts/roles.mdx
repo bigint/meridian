@@ -7,11 +7,11 @@ icon: "shield"
 
 import Roles from "/snippets/roles.mdx";
 
-Everyone who signs in to Meridian has one of three roles. A **viewer** sees everything except live logs and traffic. A **deployer** can also deploy, roll back and read live logs. An **admin** does everything else, from adding projects to managing people. A new person is a viewer unless an admin picks another role.
+Everyone who signs in to Meridian has one of three roles. A **viewer** sees everything except live logs and traffic. A **deployer** can also deploy, roll back, and read live logs and traffic. An **admin** does everything else, from adding projects to managing people. A new person is a viewer unless an admin picks another role.
 
 <Roles />
 
-Seeing a page is never restricted by role. Viewers see every app, server, preview, tunnel, agent, secret name and activity entry. Roles limit what a person can change, plus live logs and traffic, which can hold secrets.
+Reading is not restricted by role, except for Settings and the jobs dashboard at `/jobs`, which only admins open. Viewers see every app, server, preview, tunnel, agent, secret name and activity entry. Roles limit what a person can change, plus live logs and traffic, which can hold secrets.
 
 A button that a person's role doesn't allow is hidden. A request made anyway is refused with **You don't have permission to do that.** Requests that don't ask for a page get `403 Forbidden`.
 

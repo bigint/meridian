@@ -64,7 +64,7 @@ Each entry starts from what you see. Two places help with most of them:
     - **Parser failed** followed by the parser's last lines. ERB crashed the parser.
     - **The parser exited without a result**.
 
-    Every app stays as it was until the parse succeeds again.
+    Every app stays as it was until the parse succeeds again. Meridian tries the same commit again after a minute, then two, four and so on, at most hourly. A new commit or **Sync now** tries at once.
   </Accordion>
   <Accordion title="GitHub truncated the tree">
     The sync fails with **GitHub truncated the tree of `<sha>`: the repository has too many files to read**. GitHub cuts trees of more than about 100,000 files short. Meridian stops rather than read a partial tree, because the missing configs would look deleted. Keep the Kamal configs in a smaller repository.
@@ -107,7 +107,7 @@ Each entry starts from what you see. Two places help with most of them:
     A per-server token binds to the first server that reports with it. Give each server its own token, or create a token with the fleet box ticked for many servers.
   </Accordion>
   <Accordion title="The agent gets 429">
-    Meridian allows 120 snapshots a minute per token, or per server for a fleet token. Check that `MERIDIAN_INTERVAL` isn't below a second or two, and that several agents don't share one per-server token. The agent waits as long as `Retry-After` says, then carries on.
+    Meridian allows 120 snapshots a minute per token, or per server for a fleet token, up to 12,000 a minute for the whole fleet token. Check that `MERIDIAN_INTERVAL` isn't below a second or two, and that several agents don't share one per-server token. The agent waits as long as `Retry-After` says, then carries on.
   </Accordion>
   <Accordion title="Cells turn stale">
     A server is stale after three of its agent's intervals without a snapshot, and never sooner than 45 seconds. The **Agents** page lists silent servers. A stopped agent, a host that lost its route to Meridian, or a revoked token all look the same here, so read the agent's log. If many servers go stale at once while their agents run, look at Meridian: `/jobs` shows whether the `snapshots` queue is backed up. See [Scaling](/operate/scaling).
@@ -162,7 +162,7 @@ Each entry starts from what you see. Two places help with most of them:
     | **has no meridian-deploy.yml workflow** | Add the CI workflow first. |
   </Accordion>
   <Accordion title="The deploy succeeded but cells stay drifted">
-    Drift compares Git's version with what agents report. A cell stays drifted while any container of that app on that server runs another version, or while a role Git assigns there is down. Open the server's page to see each container. Kamal names containers after the version, so the version in the file must be the image tag Kamal deployed.
+    Drift compares Git's version with what agents report. A cell stays drifted while any container of that app on that server runs another version. A role Git assigns there with nothing running shows the cell as missing instead. Open the server's page to see each container. Kamal names containers after the version, so the version in the file must be the image tag Kamal deployed.
   </Accordion>
 </AccordionGroup>
 

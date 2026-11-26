@@ -144,7 +144,7 @@ A preview expires after **Expire after (days)**, 7 by default, counted from when
 
 A job checks every hour and asks CI to remove expired previews. When a removal's run never reports back, Meridian deletes the overlay anyway after a day.
 
-A failed removal goes back to **Failed**, with its overlay kept, so **Destroy** and the hourly check can ask again. After three failed removals, the hourly check stops asking, and Activity records `preview.removal_failed`. Check the CI runs, then click **Destroy** again, or remove the `<service>-pr-<n>` containers by hand.
+A failed removal goes back to **Failed**, with its overlay kept, so **Destroy** and the hourly check can ask again. After three failed removals, the hourly check stops asking, the state reads **Removal failed, needs a hand**, and Activity records `preview.removal_failed`. Check the CI runs, then click **Destroy** again, or remove the `<service>-pr-<n>` containers by hand.
 
 Reopen a pull request whose preview was removed, and it gets a new preview, with a new overlay and a new expiry date.
 

@@ -61,7 +61,7 @@ kamal logs
 
 ## Go back
 
-Kamal keeps the previous image on the host. To return to it:
+Kamal keeps the last five app containers on the host, stopped, and `kamal rollback` starts one of them again. To return to the previous release:
 
 ```bash
 kamal rollback v0.1.0

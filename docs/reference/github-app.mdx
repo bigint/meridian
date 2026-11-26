@@ -66,7 +66,7 @@ GitHub signs each delivery with the webhook secret. Meridian computes `sha256=` 
 | --- | --- | --- |
 | `push` | A push to the project's branch | Syncs the project: reads configs and version files. Pushes to other branches are ignored. |
 | `workflow_run` | Any, for `meridian-deploy.yml` on the project's branch | Moves deploys along (`pending`, `queued`, `in_progress`, `completed`) and marks previews active, failed or removed. Runs of other workflows are ignored. |
-| `pull_request` | `opened`, `reopened`, `synchronize` | Deploys or updates a preview for each app whose `meridian.source` is this repository. Pull requests from forks are skipped and recorded as `preview.skipped`. |
+| `pull_request` | `opened`, `reopened`, `synchronize` | Deploys or updates a preview for apps whose `meridian.source` is this repository, one per Kamal config. Pull requests from forks are skipped, and `opened` or `reopened` records `preview.skipped`. |
 | `pull_request` | `closed` | Removes the pull request's previews. |
 
 Repository names match without regard to case, so a project added as `Acme/Infra` gets `acme/infra`'s webhooks.

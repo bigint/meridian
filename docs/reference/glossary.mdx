@@ -49,7 +49,7 @@ import DriftStates from "/snippets/drift-states.mdx";
 | Project | One infra repository, with its branch, config paths and GitHub App installation. See [Projects](/guides/projects). |
 | Proposal | A pull request Meridian opens on a branch named `meridian/<slug>-<hex>`, for **New app**, **Add CI workflow** or **Edit connectors**. |
 | Redeploy | Running CI again for the version already in the version file, for example after a secret changed. Meridian dispatches the workflow and changes no file. |
-| Region | The `region` label. The board groups servers by it above 30 servers. |
+| Region | The `region` label. The board groups servers by it above 30 servers, or when more than one region is in use. |
 | Release | A commit that changed an app's version file, named by the version it wrote. Without a version file, a commit to the config, named by its short SHA. See [Versions and releases](/concepts/versions-and-releases). |
 | Roll back | Reverting the newest release: the version file goes back to what it held before. Only the newest release can be rolled back. |
 | Role | A person's access: viewer, deployer or admin. Also a Kamal role, such as `web` or `job`. |

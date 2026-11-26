@@ -28,7 +28,7 @@ You need the admin role. The form is at **Apps** → **New app**, or **New app**
     - **First version**: the image tag CI deploys when the pull request is merged, `latest` by default. It follows the [version format](/guides/deploy#version-format).
   </Step>
   <Step title="Open the pull request">
-    Click **Open pull request**. Meridian runs its checks. If one fails, the form comes back with the reason next to the field. If all pass, you land on the proposal page.
+    Click **Open pull request**. Meridian runs its checks. If one fails, the form comes back with every reason listed at the top, and each next to its field when it has one. If all pass, you land on the proposal page.
   </Step>
 </Steps>
 
@@ -49,14 +49,14 @@ Meridian never proposes a config that would clash with another app or that Kamal
 
 | Check | Message |
 | --- | --- |
-| Required fields | **Infra repository**, **Name**, **Source repository** and **Hostname** can't be blank. |
+| Required fields | **Infra repository**, **Name**, **Source repository** and **Hostname** can't be blank. The list at the top calls them `Project`, `Service`, `Source repo` and `Hostname`. |
 | Name, source repository, hostname, destination, port and registry formats | Such as `must look like owner/name`, `must be a domain name` or `must be a registry host, such as ghcr.io`. The port must be from 1 to 65535. |
 | Label selector syntax | `must be labels like role=web, separated by commas`. Every term is `key=value`. |
 | At least one server | `Choose at least one server, or a label selector that matches some`. |
-| Servers that can be written into a config | Every server's hostname must be a host name or an IP address, with no spaces, quotes or `<%`. |
+| Servers that can be written into a config | `Can't write these servers into a config, their hostnames aren't host names: ...`. A hostname must start with a letter or digit and hold only letters, digits, `.`, `_`, `:` and `-`, so no spaces, quotes or `<%`. |
 | The config path is one the project reads | `... isn't matched by the project's config paths (...), so Meridian would never see it. Add a path with a * to the project.` |
 | No other config at that path | `already has a config at config/deploy-shop.yml`. Any destination of an existing config counts too. |
-| No other app with that service | `is already the service of shop, in config/deploy-shop.yml`. Two configs with one service would name the same containers. |
+| No other app with that service and destination | `is already the service of shop, in config/deploy-shop.yml`. Two configs in one project with one service and destination would name the same containers. |
 | No other app on that hostname | `is already served by shop`. kamal-proxy gives a hostname to one service. Every project counts. |
 | No file in the way | `config/deploy-shop.yml already exists in acme/infra`. Meridian never replaces a file, even one it doesn't list as an app, such as a config Kamal can't parse. |
 | Kamal accepts it | `Kamal rejected the generated config: ...`. Meridian parses the result with the same Kamal version that reads your configs. |
@@ -170,7 +170,7 @@ The `meridian.source` label is what gives the app [previews](/guides/previews). 
 
 Meridian opens a pull request on the infra repository, on a branch named `meridian/new-shop-<6 hex digits>`. Its title is `feat(shop): add node app`. Its body lists the config, the hosts, the URL and the first version, then a **Before merging** checklist and the Dockerfile guidance for the kind.
 
-If the project lets admins commit directly, Meridian commits the files to the branch instead. See [Projects](/guides/projects#direct-commits).
+If the project lets admins commit directly, Meridian commits the files straight to the default branch instead. See [Projects](/guides/projects#direct-commits).
 
 <Warning>
 A direct commit puts the version file on the branch at once, so CI deploys the first version straight away. Do the steps in [Before you merge](#before-you-merge) before you click **Open pull request** on such a project.

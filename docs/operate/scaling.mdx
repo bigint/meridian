@@ -27,7 +27,7 @@ bin/rails meridian:demo SERVERS=500 APPS=200
 
 **Jobs share Puma's CPU.** By default, Solid Queue runs inside Puma, so snapshot ingestion and page rendering share one process.
 
-**Rate limits.** Each agent token may send 120 snapshots a minute. A fleet token counts each server on its own.
+**Rate limits.** Each agent token may send 120 snapshots a minute. A fleet token counts each server on its own, up to 12,000 a minute for the whole token: 3,000 servers at the default interval.
 
 ## Larger fleets
 

@@ -80,7 +80,7 @@ Every agent needs a token, which an admin creates on the [Agents](/guides/agent)
 | Per-server | Bound to the first server that reports with it. Another machine using it gets a `422`, unless that server has been silent for 10 minutes. | Only that server stops reporting. |
 | Fleet, shared by many servers | Each snapshot's machine id. | Every server that uses it stops reporting. |
 
-A per-server token is safer, because a leaked token reports for one machine only. A fleet token is easier to roll out to many servers through one Kamal config. Each token may send 120 snapshots a minute. For a fleet token, the limit counts each machine separately.
+A per-server token is safer, because a leaked token reports for one machine only. A fleet token is easier to roll out to many servers through one Kamal config. Each token may send 120 snapshots a minute. For a fleet token, the limit counts each machine separately, with a ceiling of 12,000 a minute for the whole token.
 
 ## Labels
 

@@ -45,7 +45,9 @@ A version file changed by a `git push` outside Meridian records no event. It sho
 | Action | Recorded when | Who |
 | --- | --- | --- |
 | `preview.opened` | A pull request opens, or reopens after its preview was removed, and Meridian commits its overlay | Meridian |
-| `preview.removing` | Meridian asks CI to remove a preview. The summary gives the reason: `closed`, `merged`, `expired`, `app removed from Git`, or `destroyed by <name>`. | The deployer who pressed **Destroy**, or Meridian |
+| `preview.removing` | Meridian asks CI to remove a preview. The summary gives the reason: `closed`, `merged`, `expired`, or `destroyed by <name>`. | The deployer who pressed **Destroy**, or Meridian |
+| `preview.removal_failed` | CI failed to remove a preview three times, so expiry stops asking. The summary says what to remove by hand. | Meridian |
+| `preview.abandoned` | The app's config left Git, so CI can't remove its preview. Meridian deletes the overlay, and the summary names the containers to remove by hand. | Meridian |
 | `preview.skipped` | A pull request from a fork opens or reopens. Fork code never runs on your servers. | Meridian |
 
 New commits pushed to an open pull request redeploy its preview without a new event. The preview's state on the **Previews** page changes instead.

@@ -31,7 +31,7 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
       <Tab title="GitHub App">
         A GitHub App reaches only the repositories you install it on. Use it for anything shared.
 
-        1. Open **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. For an organisation, open the organisation's **Settings**, then **GitHub Apps**.
+        1. Open **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. For an organisation, open the organisation's **Settings**, then **Developer settings**, **GitHub Apps**.
         2. Set **Homepage URL** to your Meridian URL, such as `https://meridian.example.com`.
         3. Set **Webhook URL** to `https://meridian.example.com/webhooks/github`.
         4. Set **Webhook secret** to a long random string, such as the output of `openssl rand -hex 32`. Keep it. It becomes `GITHUB_APP_WEBHOOK_SECRET`.
@@ -245,8 +245,8 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
   <Step title="Put the agent on your servers">
     Until an agent reports, the board knows only what Git says, and every cell shows as unknown. Open **Agents** in Meridian. It shows the two accessories to add to a Kamal config that reaches every host, with your Meridian URL filled in.
 
-    1. Press **Create token** and copy it. Meridian shows it once.
-    2. Put it in that config's `.kamal/secrets` as `MERIDIAN_TOKEN`.
+    1. Give the token a **Label**, such as `web-1`, press **Create token** and copy it. Meridian shows it once.
+    2. Put it in that config's `.kamal/secrets` as `MERIDIAN_TOKEN`. In the accessories, replace `SERVICE` with the config's service, and `REGION` and `PROVIDER` with your own labels.
     3. Create the agent's network once on every host:
 
        ```bash

@@ -186,7 +186,7 @@ Structural changes go through a pull request by default:
 | --- | --- | --- |
 | New app | `feat(<service>): add <kind> app` | `meridian/new-<service>-<hex>` |
 | Add CI workflow | `ci: deploy with Kamal when a version file changes` | `meridian/ci-<hex>` |
-| Edit connectors | `feat(<tunnel>): add … ; remove … as Cloudflare Tunnel connectors` | `meridian/tunnel-<tunnel>-<hex>` |
+| Edit connectors | `feat(<tunnel>): add …; remove … as Cloudflare Tunnel connectors` | `meridian/tunnel-<tunnel>-<hex>` |
 
 `<hex>` is six random hexadecimal characters. Meridian creates the branch from the head of the project's branch, writes each file as its own commit, with the title and the `Meridian-Actor:` trailer as its message, and opens the pull request against the project's branch.
 

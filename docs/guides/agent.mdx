@@ -12,7 +12,7 @@ Without agents, the board knows only what Git says. Every cell stays **Unknown**
 ## What it sends
 
 - **Kamal containers only.** It recognises them by the labels Kamal sets, `service`, `role` and `destination`, and by the name `kamal-proxy`. It takes the version from the container name, as Kamal does. Every other container is ignored and never inspected.
-- **Name, image, labels, state, health and start time** of each one. Never environment variables, commands, entrypoints or mounts, which can hold secrets.
+- **Name, image, `service`, `role` and `destination` labels, version, state, health and start time** of each one. No other label is sent. Never environment variables, commands, entrypoints or mounts, which can hold secrets.
 - **The host's machine ID, hostname, labels, and agent version.**
 - **Live numbers and log lines**, only while someone looks, and logs only if you turn them on.
 
@@ -100,7 +100,7 @@ The payloads, leases and limits are in [Agent protocol](/reference/agent-protoco
 ### What each accessory does
 
 - **`meridian_docker`** is [`tecnativa/docker-socket-proxy`](https://github.com/Tecnativa/docker-socket-proxy) with `CONTAINERS=1` and `POST=0`. It allows `GET` requests under `/containers` and nothing else. The agent talks to Docker only through it, so even an agent someone has taken over can't start, stop or exec into containers. Mounting the socket `:ro` alone doesn't make the API read-only.
-- **`meridian_agent`** is the agent, a static Go binary of about 3.5 MB on a distroless image, running as `nonroot`. It reads the host's machine ID and hostname from the two mounted files, and the host's CPU, memory and load from `/proc` for live stats. Leave the `/proc` mount out, and the server page shows per-container numbers only.
+- **`meridian_agent`** is the agent, a static Go binary of about 7 MB on a distroless image, running as `nonroot`. It reads the host's machine ID and hostname from the two mounted files, and the host's CPU, memory and load from `/proc` for live stats. Leave the `/proc` mount out, and the server page shows per-container numbers only.
 
 <Warning>
 Both accessories run on their own `meridian` network, never on Kamal's `kamal` network where your apps and previews run. The socket proxy answers anyone who can reach port 2375 with every container's environment, files and logs. Never publish its port on the host.

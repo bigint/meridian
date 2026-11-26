@@ -75,7 +75,7 @@ Take the app `shop` with a version file whose newest release is `v42`.
 | `web` | its last report came 2 minutes ago | Stale |
 | `web` | never reported | Unknown |
 
-The same server running `shop` without a version file is **unknown** in every row where something runs. Without a newest release there is nothing to compare.
+The same server running `shop` without a version file is **unknown** in the first three rows. Without a newest release there is nothing to compare. The missing, stray, stale and never-reported rows keep their state.
 
 ## Stale timing
 
@@ -94,7 +94,7 @@ Each snapshot says the agent's interval, `MERIDIAN_INTERVAL`, before jitter. Mer
 | `30s` | 90 seconds |
 | `1m` | 3 minutes |
 
-The agent adds up to 20% of jitter to each interval. Three intervals leave room for the jitter and one lost snapshot, so a single late report doesn't flag a server.
+The agent moves each interval up to 20% either way, as jitter. Three intervals leave room for the jitter and one lost snapshot, so a single late report doesn't flag a server.
 
 A quiet agent sends no snapshots, so nothing would redraw its cells. Once a minute, Meridian refreshes open pages for every quiet server, so a cell turns stale within about a minute of crossing the line. The first snapshot after a silence redraws at once.
 

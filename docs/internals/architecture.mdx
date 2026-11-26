@@ -50,7 +50,7 @@ sequenceDiagram
    - A `push` webhook for the default branch runs it in `GitHubEventJob`.
    - `ReconcileProjectsJob` enqueues `ProjectSyncJob` for every project every 30 seconds.
    - **Sync now** on a project page enqueues a forced `ProjectSyncJob`, which syncs even when the head hasn't moved.
-   - A deploy or a rollback enqueues one after its commit.
+   - A deploy or a rollback that finds the version file changed in Git enqueues one. So does adding a project, or saving a new repository, branch, installation ID or config paths.
 
    `ProjectSyncJob` reads Git, then polls the branch's recent workflow runs, so deploys show up without webhooks. Both jobs share one concurrency group per repository, so one repository has one writer at a time.
 2. The sync reads the default branch's head SHA. If it equals the last synced SHA, the sync stops there. Each GitHub read carries the last answer's ETag, so an unchanged repository answers `304`, which costs no rate limit.
@@ -63,12 +63,12 @@ sequenceDiagram
    - `Assignment`: one per app, server and role.
    - `Release`: one per commit found in step 5.
    - `SecretName`: one per secret name, with the apps that read it.
-7. Parse errors are stored on the project with file, line and message. A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews. Only an app whose config is gone from Git is removed, and Meridian asks CI to remove its previews first. If the parser itself times out or crashes, nothing is parsed, so every app is kept and the error is stored on the project.
+7. Parse errors are stored on the project with file, line and message. A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews. Only an app whose config is gone from Git is removed. CI can't remove its previews without the base config, so Meridian deletes their overlays first and records in Activity which containers are left to remove by hand. If the parser itself times out or crashes, nothing is parsed, so every app is kept and the error is stored on the project.
 
 ## What does run comes from the agents
 
 1. Every 15 seconds, give or take 20%, each agent POSTs a snapshot to `/agent/snapshots`. A snapshot lists the containers with Kamal labels, with their state, health and version, plus the server's labels and its machine ID.
-2. The endpoint checks the bearer token's SHA-256 digest, refuses a body over 1 MiB, validates the snapshot, enqueues it and returns `202`. It allows 120 snapshots a minute per token, or per token and machine for a fleet token.
+2. The endpoint checks the bearer token's SHA-256 digest, refuses a body over 1 MiB, validates the snapshot, enqueues it and returns `202`. It allows 120 snapshots a minute per token, or per token and machine for a fleet token, with 12,000 a minute for the whole fleet token.
 3. `SnapshotIngestJob` finds or claims the server, upserts its `Placement` rows in one transaction, deletes the placements that have gone, and touches `last_seen_at`.
 4. If anything changed, the job asks for a board refresh for the server's region, and for the region it left if its `region` label changed. The refresh is throttled to about one per region per second with two Solid Cache keys. The first change in a second refreshes at once. Later changes in the same second share one refresh when the second ends, so the last change always reaches open pages.
 5. `SilentAgentsJob` runs every minute and refreshes the regions of servers whose agents have gone quiet, so they turn stale on screen without a snapshot.
@@ -126,12 +126,12 @@ Solid Queue runs inside Puma unless `SOLID_QUEUE_IN_PUMA` is `false`. Recurring 
 | Job | When | What it does |
 | --- | --- | --- |
 | `ReconcileProjectsJob` | Every 30 seconds | Enqueues `ProjectSyncJob` for every project. |
-| `ProjectSyncJob` | Reconcile, **Sync now**, after a deploy or rollback | Syncs Git, then polls the deploy workflow's runs. |
+| `ProjectSyncJob` | Reconcile, **Sync now**, a project added or edited, a deploy or rollback that hit a change in Git | Syncs Git, then polls the deploy workflow's runs. |
 | `GitHubEventJob` | Each signed webhook | `push` syncs, `workflow_run` tracks a run, `pull_request` deploys or closes a preview. |
 | `SnapshotIngestJob` | Each accepted snapshot | Records the server and its placements, then refreshes the board. |
 | `BoardRefreshJob` | The end of a throttled second | Sends the trailing board refresh. |
 | `SilentAgentsJob` | Every minute | Refreshes the regions of servers whose agents went quiet. |
-| `PreviewExpiryJob` | Every hour | Closes previews past their lifetime. |
+| `PreviewExpiryJob` | Every hour | Closes previews past their lifetime, and deletes the overlay of a removal CI hasn't reported back on in a day. |
 
 Finished Solid Queue jobs are cleared every hour at minute 12.
 
@@ -182,7 +182,7 @@ Meridian pins **kamal 2.12.0** and has been checked against **kamal-proxy 0.10.3
 ### Destination files
 
 - **Overlay file.** `-c path/foo.yml -d staging` loads `path/foo.staging.yml` ([K configuration.rb#L49-L51](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/configuration.rb#L49-L51)). Each file is rendered with ERB, loaded as YAML and deep-merged over the base ([#L28-L47](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/configuration.rb#L28-L47)). An overlay may override any key, `service` included.
-- **Secrets.** Kamal reads them from `.kamal/secrets-common`, then from `.kamal/secrets.<dest>`, resolved against the **working directory** rather than the config's own directory ([K secrets.rb#L37-L45](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/secrets.rb#L37-L45)). A missing file is not an error. Meridian never fetches these files, so the parser sees none.
+- **Secrets.** Kamal reads them from `.kamal/secrets-common`, then from `.kamal/secrets`, or `.kamal/secrets.<dest>` with a destination, resolved against the **working directory** rather than the config's own directory ([K secrets.rb#L37-L45](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/secrets.rb#L37-L45)). A missing file is not an error. Meridian never fetches these files, so the parser sees none.
 - **Previews.** It follows that a preview overlay for `config/deploy.web.yml` is `config/deploy.web.pr-12.yml`.
 
 ### Parsing without SSH, secrets or git

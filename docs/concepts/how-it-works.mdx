@@ -28,7 +28,7 @@ A [project](/guides/projects) is one infra repository. Meridian syncs it when on
 - The reconcile job runs. It runs every 30 seconds for every project.
 - An admin presses **Sync now** on the project's page.
 
-A sync reads the repository through the GitHub API. It never clones it. It lists the tree at the head of the default branch and keeps the files that match the project's config paths, with their destination files and version files. Blobs are cached by SHA, so an unchanged file is never downloaded twice. Each GitHub request carries the ETag of the last answer, and an unchanged repository costs no rate limit.
+A sync reads the repository through the GitHub API. It never clones it. It lists the tree at the head of the default branch and keeps the files that match the project's config paths, with their destination files and version files. Blobs are cached by SHA, so an unchanged file is never downloaded twice. Meridian asks for the branch head with the ETag of the last answer, so an unchanged repository costs no rate limit.
 
 Meridian then parses the configs with Kamal's own code, `Kamal::Configuration`, the same code `kamal deploy` runs. ERB, aliases, destinations, roles and accessories come out as Kamal sees them. ERB in a config is Ruby from your repository, so the parser runs as `bin/kamal-parse` in a separate process with an empty environment. It can't read Meridian's credentials.
 
@@ -39,7 +39,7 @@ From the parsed configs, the sync records:
 | App | Config and destination. See [Apps and destinations](/concepts/apps-and-destinations). |
 | Server | Host that a config's roles name, until an agent claims it. See [Servers and agents](/concepts/servers-and-agents). |
 | Assignment | App, server and role that Git places together. |
-| Release | Commit that changed the app's version file. See [Versions and releases](/concepts/versions-and-releases). |
+| Release | Commit that changed the app's version file, or its config when it has none. See [Versions and releases](/concepts/versions-and-releases). |
 
 A config that fails to parse shows its error with a file and line on the project's page. Its app stays as the last good parse left it. Only an app whose config is gone from Git is removed.
 
@@ -47,7 +47,7 @@ A config that fails to parse shows its error with a file and line on the project
 
 Every 15 seconds, give or take 20%, each agent sends a snapshot to `/agent/snapshots`. A snapshot lists the containers that carry Kamal labels, with their state, health and version. Meridian answers `202` and records the snapshot in a background job. The server's placements are upserted, the ones that went away are deleted, and the server's last-seen time moves on.
 
-The agent only makes outbound requests. It reads Docker through a socket proxy that allows listing and inspecting containers and nothing else. Meridian never connects to a server, and it holds no SSH key.
+The agent only makes outbound requests. It reads Docker through a socket proxy that allows only `GET` requests under `/containers`: listing and inspecting them, and their stats and logs while someone watches. Meridian never connects to a server, and it holds no SSH key.
 
 The agent also keeps a WebSocket open to `/cable`. Meridian uses it for live CPU and memory figures, container logs and request traffic, and only while someone has that page open. See [Live stats and logs](/guides/live-stats-and-logs).
 
@@ -70,7 +70,7 @@ Every change Meridian makes lands in your infra repository or in GitHub's settin
 | Preview | A destination file `<config>.pr-<n>.yml` and a `workflow_dispatch`. |
 | Secret value | An encrypted GitHub Actions secret on the repository. Meridian keeps the name only. |
 
-A commit that a person asked for carries a `Meridian-Actor:` trailer with their name and email. Preview commits come from webhooks and have none. Every action lands in [Activity](/guides/activity).
+A commit that a person asked for carries a `Meridian-Actor:` trailer with their name and email. Preview commits never carry one, even when a person destroys the preview. Every action lands in [Activity](/guides/activity).
 
 CI does the deploying. The workflow that Meridian adds, `.github/workflows/meridian-deploy.yml`, runs on any push that changes a `*.version` file and calls `kamal deploy` once for each config and destination that changed. Kamal connects to your servers over SSH from the runner, exactly as it would from your laptop. See [CI workflow](/reference/ci-workflow).
 
@@ -109,7 +109,7 @@ Webhooks make Meridian react within a second or two. Without them, the reconcile
 - It never reads `.kamal/secrets` files, which may hold literal values.
 - It never changes a server. The agent's Docker access is read-only.
 
-Uninstall Meridian and your infra repository still holds every config, version and deploy commit. You lose only its activity log.
+Uninstall Meridian and your infra repository still holds every config, version and deploy commit. You lose only what Meridian keeps itself: the activity log, people, agent tokens and settings.
 
 ## Related
 

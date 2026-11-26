@@ -74,7 +74,7 @@ deploy(shop-production): v1.4.2
 Meridian-Actor: Ada Lovelace <ada@example.com>
 ```
 
-The push matches the workflow's `**/*.version` filter, so CI starts a run for each version file the push changed. Runs for one config and destination go one at a time. Runs for different apps never wait on each other. See [CI workflow](/reference/ci-workflow).
+The push matches the workflow's `**/*.version` filter, so CI starts a run with one Kamal job for each version file the push changed. Jobs for one config and destination go one at a time. Jobs for different apps never wait on each other. See [CI workflow](/reference/ci-workflow).
 
 ### Version format
 
@@ -104,10 +104,10 @@ A version is a Docker image tag. It starts with a letter, a digit or `_`, then h
 
 <Steps>
   <Step title="Find the button">
-    On the app page, **Redeploy** is under **Ship a version** and names the newest release, such as **Redeploy v1.4.2**. On the board's side panel it is **Redeploy**. The button appears only when the app has a version file and at least one release.
+    On the app page, **Redeploy** is under **Ship a version**. The board's side panel has **Redeploy** too. The button appears only when the app has a version file and at least one release.
   </Step>
   <Step title="Confirm">
-    Confirm `Run the deploy workflow again for v1.4.2?`. Meridian says `Asked CI to deploy v1.4.2 again.`
+    Confirm `Run the deploy workflow again for the version in config/deploy.version? Use this after rotating a secret.`. Meridian says `Asked CI to deploy v1.4.2 again.`
   </Step>
 </Steps>
 
@@ -122,7 +122,7 @@ Meridian reads the version file when you click, not from its last sync. A versio
     On the app page, the newest entry under **Releases** carries the `newest` badge and a **Roll back** button. The board's side panel has **Roll back** too, for the same release.
   </Step>
   <Step title="Confirm">
-    Confirm `Revert 3f2a9c1 so the version file goes back to its previous value?`. Meridian says `Committed a revert to v1.4.1. CI will deploy it.`
+    Confirm `Revert 3f2a9c1 so the version file goes back to its previous value? CI deploys the result.`. Meridian says `Committed a revert to v1.4.1. CI will deploy it.`
   </Step>
 </Steps>
 

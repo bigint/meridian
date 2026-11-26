@@ -100,6 +100,15 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "section table tbody th a[href^='/apps/']", Board::PER_PAGE + 5
   end
 
+  test "the apps page reads every app's newest release in one query" do
+    20.times { |i| @project.apps.create!(service: "app-#{i}", config_path: "deploy/app-#{i}.yml").releases.create!(version: "v#{i}", commit_sha: i.to_s * 40, committed_at: 1.hour.ago) }
+
+    queries = []
+    ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] if payload[:sql].include?('"releases".*') }, "sql.active_record") { get apps_path }
+    assert_select "table tbody code", text: "v19"
+    assert_equal 1, queries.size, queries.join("\n")
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

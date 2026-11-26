@@ -4,6 +4,7 @@ class AppsController < ApplicationController
   def index
     @apps = App.includes(:project).ordered
     @apps = @apps.where("service LIKE ? ESCAPE '\\'", "%#{App.sanitize_sql_like(params[:q].to_s)}%") if params[:q].present?
+    @latest_releases = Release.latest_per_app.where(app_id: @apps.map(&:id)).index_by(&:app_id)
   end
 
   def new

@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- The Apps page reads every app's newest release in one query, instead of one query per app (200 at the target size).
 - Search always shows the best match. It took the first eight names of each kind alphabetically before ranking, so with eight servers such as `a1-db-1` before it, searching `db-1` never showed the server called `db-1`.
 - Search finds names with `_` or `%` in them: the top-bar search, the Apps and Servers searches, the board's app filter and the Activity page's action filter. SQLite's LIKE has no escape character unless told, so `my_app` matched nothing. The Apps and Servers searches also no longer fail on a `q` that isn't text.
 - A server's page lists every app on it. It showed the board's first page, so a server running more than 25 apps silently left the rest out of its Apps table and count.

@@ -27,7 +27,7 @@
           <td><%= app.hostnames.join(", ") %></td>
           <td class="mono txt-small"><%= safe_join([ app.config_path, (" #{app.destination_flag}" if app.destination_flag) ].compact) %></td>
           <td class="nowrap">
-            <% if (release = app.latest_release) %><code class="txt-ink"><%= release.short_version %></code> <span class="txt-small"><%= time_ago(release.committed_at) %></span><% end %>
+            <% if (release = @latest_releases[app.id]) %><code class="txt-ink"><%= release.short_version %></code> <span class="txt-small"><%= time_ago(release.committed_at) %></span><% end %>
           </td>
         </tr>
       <% end %>

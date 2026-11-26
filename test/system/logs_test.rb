@@ -144,7 +144,9 @@ class LogsTest < ApplicationSystemTestCase
   test "skipped lines and a stopped container are said in the stream" do
     open_app_logs
     send_lines @web, line("12:00:01", "before")
+    assert_text "before"
     broadcast @web, "dropped" => 1234, "lines" => [ line("12:00:03", "after") ], "ended" => true
+    assert_text "after" # the async test adapter doesn't keep broadcasts in order; Solid Cable does
     broadcast @web, "ended" => true
 
     assert_selector ".logs__line", count: 4

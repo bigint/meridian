@@ -72,6 +72,18 @@ class AccessTest < ActionDispatch::IntegrationTest
     assert_equal "project.created", Event.recent.first.action
   end
 
+  test "changing a project's config paths syncs it again, though the head hasn't moved" do
+    project = projects(:infra)
+    sign_in_as users(:admin)
+
+    assert_enqueued_with job: ProjectSyncJob, args: [ project, { force: true } ] do
+      patch project_path(project), params: { project: { config_globs: "deploy/blog.yml" } }
+    end
+    assert_no_enqueued_jobs only: ProjectSyncJob do
+      patch project_path(project), params: { project: { name: "Infra repo" } }
+    end
+  end
+
   test "a new password signs the person out everywhere else" do
     stolen = users(:viewer).sessions.create!
     sign_in_as users(:admin)

@@ -31,7 +31,10 @@ class ProjectsController < ApplicationController
   def update
     if @project.update(project_params)
       Event.record("project.updated", subject: @project, summary: "Updated #{@project.repo_full_name}")
-      redirect_to @project, notice: "Project saved."
+      # The head hasn't moved, so the scheduled sync would skip new settings.
+      resync = @project.saved_changes.keys.intersect?(%w[ repo_full_name default_branch installation_id config_globs ])
+      ProjectSyncJob.perform_later(@project, force: true) if resync
+      redirect_to @project, notice: resync ? "Project saved. Syncing now." : "Project saved."
     else
       render :edit, status: :unprocessable_entity
     end

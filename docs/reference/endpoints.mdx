@@ -1,5 +1,98 @@
 ---
 title: "Endpoints"
+description: "The few endpoints machines call, the pages people use, and why Meridian has no general API."
+icon: "route"
 ---
 
-This page is being written.
+Meridian has five endpoints for machines. Everything else is an HTML page behind the session cookie.
+
+| Endpoint | Caller | Auth |
+| --- | --- | --- |
+| `POST /agent/snapshots` | The agent | `Authorization: Bearer <agent token>` |
+| `POST /webhooks/github` | GitHub | `X-Hub-Signature-256` |
+| `GET /cable` | The agent and browsers | Agent token, or the session cookie |
+| `GET /up` | kamal-proxy and monitors | None |
+| `/jobs` | Admins in a browser | The session cookie, admin role |
+
+## POST /agent/snapshots
+
+What runs on one server. The agent sends one every 15 seconds or so. Meridian validates it, queues it, and answers `202`. Bodies over 1 MiB are refused with `413` before Rails parses them, and each token may send 120 a minute.
+
+See [Agent protocol](/reference/agent-protocol#snapshots) for the payload and every status code.
+
+## POST /webhooks/github
+
+GitHub's webhook deliveries. Meridian verifies the HMAC-SHA256 signature against `GITHUB_APP_WEBHOOK_SECRET`, queues `push`, `workflow_run` and `pull_request` events, and answers `202`. A bad signature, or no secret configured, gets `401`. A body that is not JSON gets `400`.
+
+See [GitHub App](/reference/github-app#webhook).
+
+## GET /cable
+
+Action Cable's WebSocket. Two kinds of client connect to it:
+
+| Client | Auth | Channels |
+| --- | --- | --- |
+| The agent | `Authorization: Bearer <agent token>`. A connection with this header never falls back to a cookie. | `AgentChannel` |
+| A browser | The signed `session_id` cookie | Turbo Streams for live pages, `ServerStatsChannel`, `LogsChannel`, `TrafficChannel` |
+
+Live pages (the board, the map, an app, previews) refresh through Turbo Streams. Stats, logs and traffic stream through their own channels. Logs and traffic need the deployer role and a grant that the page created when it recorded the viewing in Activity. A role change or a sign-out hangs up that person's open cables.
+
+See [Agent protocol](/reference/agent-protocol#the-live-line).
+
+## GET /up
+
+Rails' health check. It answers `200` when the app has booted and `500` when it raised on boot. It needs no sign-in, is exempt from forced HTTPS and from the `MERIDIAN_URL` host check, and is left out of the logs. kamal-proxy calls it by IP before it sends traffic to a new container.
+
+```bash
+curl -fsS https://meridian.example.com/up
+```
+
+## /jobs
+
+Mission Control Jobs, the dashboard for Solid Queue: queues, running, failed and scheduled jobs, and recurring tasks. Admins only. Others are sent back with **You don't have permission to do that.** The sidebar links to it as **Jobs**.
+
+## Pages
+
+Every other route is a page for people. A request without a session is sent to `/session/new`. A request that needs a higher role is sent back with an alert, or gets `403` when it does not ask for HTML.
+
+| Path | What it is | Role |
+| --- | --- | --- |
+| `/` | The board | Viewer |
+| `/jump?q=` | Search: apps, servers and projects, the best 8 | Viewer |
+| `/map` | The map | Viewer |
+| `/apps`, `/apps/:id` | Apps and an app's page | Viewer |
+| `/apps/new` | New app | Admin |
+| `POST /apps/:id/deploys` | Deploy a version. 10 a minute. | Deployer |
+| `POST /apps/:id/rollbacks` | Roll back the newest release. 10 a minute. | Deployer |
+| `POST /apps/:id/redeploy` | Run CI again for the version in Git. 5 a minute. | Deployer |
+| `/apps/:id/log` | An app's logs, merged across its servers | Deployer |
+| `/apps/:id/traffic` | An app's requests, from kamal-proxy | Deployer |
+| `/placements/:id/log` | One container's logs | Deployer |
+| `/servers`, `/servers/:id` | Servers and a server's page | Viewer |
+| `PATCH /servers/:id` | Set a server's location | Admin |
+| `/events` | Activity | Viewer |
+| `/secrets` | Secret names per project | Viewer |
+| `POST /secrets`, `PATCH /secrets/:id` | Add a name, set a value. 20 a minute. | Admin |
+| `/previews` | Previews | Viewer |
+| `DELETE /previews/:id` | Destroy a preview | Deployer |
+| `/tunnels`, `/tunnels/new` | Tunnels and tunnel setup | Viewer |
+| `/tunnels/connectors/edit` | Edit connectors | Admin |
+| `/agents` | Agent tokens and silent servers | Viewer |
+| `POST /agents`, `DELETE /agents/:id` | Create and revoke tokens | Admin |
+| `/projects`, `/projects/:id` | Projects and a project's page | Viewer |
+| `/projects/new`, `/projects/:id/edit` | Add and edit a project | Admin |
+| `POST /projects/:id/sync` | Sync now | Admin |
+| `POST /projects/:id/workflow` | Add CI workflow | Admin |
+| `/settings`, `/settings/users` | Settings and People | Admin |
+| `/session/new` | Sign in. 10 tries in 3 minutes. | None |
+| `/first_run` | Create the first admin, with the setup code. Gone once a user exists. | None |
+
+See [Roles](/concepts/roles) for what each role may do.
+
+## No general API
+
+Meridian has no REST or GraphQL API, and no API tokens for people. This is a choice:
+
+- Git is the interface for changes. To deploy from a script, commit the version file. Meridian sees the commit and CI deploys it, exactly as if someone pressed **Deploy**.
+- Agent tokens work only on `/agent/snapshots` and `/cable`. They can't read or change anything else.
+- Pages check the session cookie and a CSRF token, so another site can't drive them.

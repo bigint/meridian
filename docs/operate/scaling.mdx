@@ -1,5 +1,74 @@
 ---
 title: "Scaling"
+description: "How far one Meridian container goes, what limits it, and the settings to change for larger fleets."
+icon: "gauge"
 ---
 
-This page is being written.
+Meridian is built for 500 servers and 200 apps on one small machine, in one container, with SQLite. Most installs never change a default.
+
+## What one container does
+
+| Load | At 500 servers | How Meridian handles it |
+| --- | --- | --- |
+| Snapshots | About 2,000 a minute, four per server | The request validates, queues a job and answers `202` in milliseconds. The job writes only what changed. Finished jobs are deleted, not kept. |
+| Board refreshes | One per changed region | A region refreshes at most once a second, however many snapshots change it, and the last change always gets through. A snapshot that changes nothing refreshes nothing. |
+| GitHub polling | Two requests per project every 30 seconds | Requests carry ETags. A repository where nothing changed answers `304`, which costs no rate limit. |
+| Live stats | Only for pages that are open | Nothing streams until someone opens a server's page, and it stops within 30 seconds of the last viewer leaving. |
+
+The board paginates at 25 rows, and groups servers by region above 30 servers. Try it at size with the demo fleet:
+
+```bash
+bin/rails meridian:demo SERVERS=500 APPS=200
+```
+
+## What limits it
+
+**SQLite has one writer.** Every write waits its turn: snapshot jobs, syncs, sign-ins. Meridian keeps each write short. A sync reads everything it needs from GitHub before it opens its transaction, so a long first sync never holds the lock across API calls.
+
+**Jobs share Puma's CPU.** By default, Solid Queue runs inside Puma, so snapshot ingestion and page rendering share one process.
+
+**Rate limits.** Each agent token may send 120 snapshots a minute. A fleet token counts each server on its own.
+
+## Larger fleets
+
+Change these in order, and stop when the board keeps up.
+
+<Steps>
+  <Step title="Slow the agents down">
+    Set `MERIDIAN_INTERVAL` to `30s` or more on each agent. That halves the snapshot load. A server turns stale after three of its agent's intervals, so a 30-second interval means 90 seconds of silence before a server shows stale.
+  </Step>
+  <Step title="Run jobs in their own process">
+    Set `SOLID_QUEUE_IN_PUMA` to `false` and add a `job` role that runs `bin/jobs`. Keep it on the same host as `web`, because both use the SQLite files in the `meridian_storage` volume.
+
+    ```yaml config/deploy.yml
+    servers:
+      web:
+        - meridian.internal.example.com
+      job:
+        hosts:
+          - meridian.internal.example.com
+        cmd: bin/jobs
+
+    env:
+      clear:
+        MERIDIAN_URL: https://meridian.example.com
+        SOLID_QUEUE_IN_PUMA: false
+    ```
+
+    Then run `kamal deploy`.
+  </Step>
+  <Step title="Add job workers">
+    Raise `JOB_CONCURRENCY` on the `job` role to run more worker processes. Each runs 3 threads. SQLite still has one writer, so more workers help only while jobs wait on reads or GitHub.
+  </Step>
+  <Step title="Give the host more CPU">
+    Meridian runs on one host by design. A bigger machine is the next step.
+  </Step>
+</Steps>
+
+`RAILS_MAX_THREADS` sets Puma's threads and the database pool. The default of 3 suits most installs. See [Environment variables](/reference/environment#server-tuning).
+
+## Watch it
+
+- `/jobs` shows queue depth, failed jobs and recurring tasks. A growing `snapshots` queue means ingestion is falling behind.
+- The **Agents** page lists silent servers. Many at once, on agents that are running, point at Meridian, not the servers.
+- `kamal logs` shows each request and its time.

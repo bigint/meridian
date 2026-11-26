@@ -1,5 +1,278 @@
 ---
-title: "Ci workflow"
+title: "CI workflow"
+description: "The GitHub Actions workflow that runs Kamal for Meridian: triggers, inputs, the run-name contract, the plan and kamal jobs, secrets and self-hosted runners."
+icon: "play"
 ---
 
-This page is being written.
+Meridian never runs Kamal. It commits a version file or dispatches a workflow, and `.github/workflows/meridian-deploy.yml` in your infra repository runs `kamal deploy` or `kamal app remove`. Every deploy, rollback, redeploy and preview goes through this one file.
+
+## Add or update it
+
+On the project's page, an admin presses **Add CI workflow**. Meridian opens a pull request with the file, or commits it when the project has **Direct commits** on. The branch in `on.push.branches` is the project's branch, and the Kamal version is the one Meridian parses configs with, `2.12.0` in this release.
+
+Before you merge it, add two repository secrets under **Settings → Secrets and variables → Actions**:
+
+- `KAMAL_SSH_PRIVATE_KEY`, the key Kamal uses to SSH to your servers.
+- `KAMAL_REGISTRY_PASSWORD`, the password your configs' `registry.password` names.
+
+Add the secrets your configs reference too, from Meridian's **Secrets** page. See [Secrets](/guides/secrets).
+
+When a Meridian release changes the template, press **Add CI workflow** again to get the new file. The [changelog](/changelog) says when.
+
+## The whole file
+
+The file Meridian adds, for a project on `main`:
+
+```yaml .github/workflows/meridian-deploy.yml
+# Deploys with Kamal when a version file changes. Added by Meridian; edit freely.
+#
+# Meridian never deploys itself: it commits `<config>.version` (or
+# `<config>.<destination>.version`), and this workflow runs `kamal deploy`.
+# Previews use the same workflow through workflow_dispatch.
+name: Meridian deploy
+# Meridian matches preview runs by this name: "<command> <config> <destination>".
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('{0} {1} {2}', inputs.command, inputs.config, inputs.destination) || github.event.head_commit.message }}
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ "**/*.version" ]
+  workflow_dispatch:
+    inputs:
+      config:
+        description: Kamal config path, e.g. config/deploy.yml
+        required: true
+      destination:
+        description: Kamal destination (optional)
+        required: false
+      version:
+        description: Version to deploy (ignored by remove)
+        required: false
+      command:
+        description: deploy or remove
+        required: true
+        default: deploy
+
+jobs:
+  plan:
+    # Set the repository variable MERIDIAN_RUNS_ON to use your own runner
+    # (e.g. "self-hosted") when the servers aren't reachable from GitHub.
+    runs-on: ${{ vars.MERIDIAN_RUNS_ON || 'ubuntu-latest' }}
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      # The whole history, so a push of several commits can be diffed from
+      # the commit before the push.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            jq -nc --arg c "${{ inputs.config }}" --arg d "${{ inputs.destination }}" --arg v "${{ inputs.version }}" --arg k "${{ inputs.command }}" \
+              '[{config:$c, destination:$d, version:$v, command:$k}]' > matrix.json
+          else
+            # Every version file the push changed, from the commit before it
+            # (the parent when that commit is unknown, e.g. a new branch).
+            before="${{ github.event.before }}"
+            if ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+              before="$(git rev-parse -q --verify HEAD~1 || git hash-object -t tree /dev/null)"
+            fi
+            : > rows
+            git diff --name-only "$before" HEAD -- '*.version' | while IFS= read -r file; do
+              [ -f "$file" ] || continue
+              # <config>.<destination>.version when <config>.yml exists,
+              # otherwise <config>.version; configs may end in .yml or .yaml.
+              stem="${file%.version}" name="${stem##*/}" config="" destination=""
+              for ext in yml yaml; do
+                if [ "$name" != "${name%.*}" ] && [ -f "${stem%.*}.$ext" ]; then
+                  config="${stem%.*}.$ext" destination="${stem##*.}"; break
+                fi
+              done
+              for ext in yml yaml; do
+                if [ -z "$config" ] && [ -f "$stem.$ext" ]; then config="$stem.$ext"; fi
+              done
+              if [ -z "$config" ]; then echo "::warning::No Kamal config for $file"; continue; fi
+              jq -nc --arg c "$config" --arg d "$destination" --arg v "$(tr -d '[:space:]' < "$file")" \
+                '{config:$c, destination:$d, version:$v, command:"deploy"}' >> rows
+            done
+            jq -sc '.' rows > matrix.json
+          fi
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+
+  kamal:
+    needs: plan
+    if: needs.plan.outputs.matrix != '[]'
+    runs-on: ${{ vars.MERIDIAN_RUNS_ON || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.matrix) }}
+    name: ${{ matrix.command }} ${{ matrix.config }} ${{ matrix.destination }}
+    # One Kamal run per app at a time, whether a push or a dispatch started it.
+    # Runs for different apps never wait on or cancel each other; a newer
+    # pending run for the same app replaces an older pending one.
+    concurrency:
+      group: meridian-${{ matrix.config }}-${{ matrix.destination }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        if: runner.environment == 'github-hosted'
+        with:
+          ruby-version: "3.4"
+      - run: kamal version 2>/dev/null | grep -qx "2.12.0" || gem install kamal -v 2.12.0 --no-document
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
+      # Every repository secret becomes an environment variable, so
+      # .kamal/secrets can read it as $NAME. Meridian's Secrets page sets them.
+      - name: Export secrets
+        shell: bash
+        env:
+          SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          echo "$SECRETS" | jq -r 'to_entries[] | select(.key != "github_token") | "\(.key)<<MERIDIAN_EOF\n\(.value)\nMERIDIAN_EOF"' >> "$GITHUB_ENV"
+      - name: Kamal
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(-c "${{ matrix.config }}")
+          [ -n "${{ matrix.destination }}" ] && args+=(-d "${{ matrix.destination }}")
+          if [ "${{ matrix.command }}" = "remove" ]; then
+            # Only the app: a preview shares the base config's accessories,
+            # registry login and kamal-proxy, which `kamal remove` takes down.
+            kamal app remove "${args[@]}"
+          else
+            kamal deploy "${args[@]}" --version "${{ matrix.version }}" --skip-push
+          fi
+```
+
+The comment at the top says "edit freely", and you may. Keep the parts in [What Meridian relies on](#what-meridian-relies-on).
+
+## Triggers
+
+<ResponseField name="push" type="trigger">
+  A push to the project's branch that changes a `*.version` file anywhere in the repository. Deploy and Roll back in Meridian are such pushes. So is any commit you push by hand.
+</ResponseField>
+
+<ResponseField name="workflow_dispatch" type="trigger">
+  A run Meridian starts through GitHub's API, for a redeploy, a preview deploy or a preview removal. You can start one by hand from the **Actions** tab too.
+</ResponseField>
+
+### Inputs
+
+<ResponseField name="config" type="string" required>
+  The Kamal config path, for example `deploy/web.yml`.
+</ResponseField>
+
+<ResponseField name="destination" type="string">
+  The Kamal destination, for example `production` or `pr-42`. Empty for an app without one.
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  The image tag to deploy. For a redeploy it is the version in the version file. For a preview it is the pull request's head commit SHA. `remove` ignores it.
+</ResponseField>
+
+<ResponseField name="command" type="string" default="deploy" required>
+  `deploy` runs `kamal deploy`. `remove` runs `kamal app remove`.
+</ResponseField>
+
+## Run name
+
+The `run-name` line is a contract with Meridian.
+
+| Started by | Run name | Example |
+| --- | --- | --- |
+| `workflow_dispatch` | `<command> <config> <destination>` | `deploy deploy/web.yml pr-42` |
+| `push` | The head commit's message | `deploy(web-production): 3f2a9c1e` |
+
+Meridian reads a dispatched run's name to tell what it is for:
+
+- A destination `pr-<n>` makes it a preview run. A finished `deploy` marks the preview active or failed, and a finished `remove` marks it removed. A run GitHub cancelled or skipped changes nothing.
+- Any other `deploy` run is a redeploy of the app with that config and destination.
+
+A push run is matched by its head commit instead: the deploy whose version-file commit it ran.
+
+## The plan job
+
+`plan` turns the trigger into a list of Kamal runs, the matrix.
+
+- **On a dispatch**, the matrix is one row, built from the four inputs.
+- **On a push**, it is one row per version file the push changed, diffed from the commit before the push. When that commit is unknown, as on a new branch, the diff starts from the parent. Deleted version files are skipped.
+
+For each version file, `plan` finds the config:
+
+1. `<config>.<destination>.version` belongs to `<config>.yml` or `<config>.yaml` with destination `<destination>`, when that config exists.
+2. Otherwise, `<stem>.version` belongs to `<stem>.yml` or `<stem>.yaml`, with no destination.
+3. With no config found, the run logs a warning, `No Kamal config for <file>`, and skips the file.
+
+The version is the file's content without whitespace. An empty matrix skips the `kamal` job.
+
+## The kamal job
+
+One job per matrix row, named `<command> <config> <destination>`. `fail-fast: false` keeps the other apps going when one fails.
+
+| Step | What it does |
+| --- | --- |
+| `actions/checkout@v6` | Checks out the commit the run is for. |
+| `ruby/setup-ruby@v1` | Installs Ruby 3.4, on GitHub-hosted runners only. |
+| Install Kamal | Installs the pinned Kamal version unless that exact version is already there. |
+| `webfactory/ssh-agent@v0.9.0` | Loads `KAMAL_SSH_PRIVATE_KEY` into an SSH agent. |
+| Export secrets | Exports every repository secret as an environment variable. |
+| Kamal | Runs `kamal deploy -c <config> [-d <destination>] --version <version> --skip-push`, or `kamal app remove -c <config> [-d <destination>]`. |
+
+`--skip-push` means CI never builds an image. The source repository's own CI pushes the image, and Kamal pulls it on each server.
+
+### Concurrency
+
+```yaml
+concurrency:
+  group: meridian-${{ matrix.config }}-${{ matrix.destination }}
+  cancel-in-progress: false
+```
+
+Kamal runs one at a time per app, whether a push or a dispatch started it. A running deploy is never cancelled. Runs for different apps never wait on each other. While one run for an app is going, GitHub keeps only the newest pending run for that app, and cancels the older pending one.
+
+### Secrets
+
+```bash
+echo "$SECRETS" | jq -r 'to_entries[] | select(.key != "github_token") | "\(.key)<<MERIDIAN_EOF\n\(.value)\nMERIDIAN_EOF"' >> "$GITHUB_ENV"
+```
+
+Every repository secret except `github_token` becomes an environment variable of the same name for the Kamal step. A multi-line value, such as a key, survives through the `MERIDIAN_EOF` delimiter. `.kamal/secrets` then reads each one as `$NAME`:
+
+```bash .kamal/secrets
+KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+RAILS_MASTER_KEY=$RAILS_MASTER_KEY
+```
+
+Values Meridian's Secrets page sets are repository secrets, so they reach Kamal this way.
+
+### Remove
+
+A preview is removed with `kamal app remove`, not `kamal remove`. A preview shares the base config's accessories, registry login and kamal-proxy, and `kamal remove` would take those down with it.
+
+## Self-hosted runners
+
+GitHub's hosted runners reach your servers over the public internet. When your servers are on a private network, run the workflow on a runner that can reach them. Set the repository variable `MERIDIAN_RUNS_ON` under **Settings → Secrets and variables → Actions → Variables**:
+
+```text
+MERIDIAN_RUNS_ON = self-hosted
+```
+
+Both jobs use it, and fall back to `ubuntu-latest` without it. The runner needs `bash`, `git`, `jq`, `ssh-agent` and Ruby with `gem`. `ruby/setup-ruby` is skipped on self-hosted runners, so the Ruby on the runner's `PATH` installs Kamal.
+
+## What Meridian relies on
+
+Change anything else in the file, but keep these:
+
+- The file name, `meridian-deploy.yml`. Meridian dispatches it by name, and only its runs move deploys along.
+- The `run-name` expression. Preview and redeploy tracking read it.
+- The four inputs, with these names. Meridian sends `config`, `destination`, `version` and `command`.
+- The `push` trigger on `**/*.version` and the project's branch. Deploy and Roll back are commits there.
+- `command: remove` running `kamal app remove`.
+
+When the file is missing from the project's branch, a redeploy or preview fails with `<repo> has no meridian-deploy.yml workflow on <branch>: add the CI workflow first`.

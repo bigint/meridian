@@ -1,5 +1,96 @@
 ---
 title: "Activity events"
+description: "Every action Meridian records on the Activity page, what triggers it, and what it keeps."
+icon: "history"
 ---
 
-This page is being written.
+Every change Meridian makes, and every look at logs or traffic, is an event on the **Activity** page (`/events`). Events are never edited or deleted. The page shows 50 at a time, newest first, grouped by day.
+
+Each event keeps:
+
+- **Action**, a dotted name such as `app.deploy`.
+- **Who**, the person who acted. Events from webhooks and scheduled jobs have no person and show as **Meridian**. When someone is removed, their events keep their name, marked `(removed)`.
+- **Summary**, the sentence the page shows, such as `Deployed web · production to 3f2a9c1e`.
+- **Details**, such as the commit, the version, the pull request URL or the files changed. The page links the commit and the pull request.
+
+## Filter
+
+- **Action starts with** matches the start of the action name. `app.` shows every deploy, rollback and redeploy. `preview.` shows every preview change.
+- **Who** shows one person's events.
+
+Both are URL parameters, so a filtered view can be bookmarked: `/events?action_name=app.&actor=3`.
+
+## Apps
+
+| Action | Recorded when | Details |
+| --- | --- | --- |
+| `app.deploy` | A deployer presses **Deploy** and Meridian commits the version file | `commit`, `version` |
+| `app.rollback` | A deployer presses **Roll back** and Meridian commits the previous version | `commit`, `version` |
+| `app.redeploy` | A deployer presses **Redeploy** and Meridian dispatches the CI workflow | `version` |
+
+A version file changed by a `git push` outside Meridian records no event. It shows on the app's page as a release, and as a deploy once CI runs.
+
+## Projects
+
+| Action | Recorded when | Details |
+| --- | --- | --- |
+| `project.created` | An admin adds a project | |
+| `project.updated` | An admin saves a project's settings | |
+| `project.removed` | An admin removes a project | |
+| `project.pull_request` | Meridian opens a pull request for **New app**, **Add CI workflow** or **Edit connectors** | `pull_request`, `files` |
+| `project.committed` | The same changes, committed directly because the project has **Direct commits** on | `commit`, `files` |
+
+## Previews
+
+| Action | Recorded when | Who |
+| --- | --- | --- |
+| `preview.opened` | A pull request opens, or reopens after its preview was removed, and Meridian commits its overlay | Meridian |
+| `preview.removing` | Meridian asks CI to remove a preview. The summary gives the reason: `closed`, `merged`, `expired`, `app removed from Git`, or `destroyed by <name>`. | The deployer who pressed **Destroy**, or Meridian |
+| `preview.skipped` | A pull request from a fork opens or reopens. Fork code never runs on your servers. | Meridian |
+
+New commits pushed to an open pull request redeploy its preview without a new event. The preview's state on the **Previews** page changes instead.
+
+## Secrets
+
+| Action | Recorded when |
+| --- | --- |
+| `secret.set` | An admin sets or rotates a secret's value. The value is never recorded. |
+
+Adding a secret name without a value records no event.
+
+## Logs and traffic
+
+| Action | Recorded when |
+| --- | --- |
+| `logs.viewed` | A deployer opens an app's logs or one container's logs. The summary names the app or container, and how many containers and servers. |
+| `traffic.viewed` | A deployer opens an app's **Traffic** page. The summary says on how many servers kamal-proxy is read. |
+
+The page records the event before it streams anything. Logs and traffic channels stream only what a page recorded, so no one can read logs without leaving an event.
+
+## Agents and servers
+
+| Action | Recorded when |
+| --- | --- |
+| `agent_token.created` | An admin creates an agent token. The summary gives its label. |
+| `agent_token.revoked` | An admin revokes an agent token. |
+| `server.located` | An admin sets a server's latitude and longitude. |
+
+## People and settings
+
+| Action | Recorded when |
+| --- | --- |
+| `user.created` | An admin adds a person. The summary gives their email address and role. |
+| `user.updated` | An admin changes a person's name, email address, role or password. |
+| `user.removed` | An admin removes a person. |
+| `settings.updated` | An admin saves **Settings**. |
+
+## Not recorded
+
+Some things happen without an event:
+
+- Signing in and out.
+- Syncs, whether from a webhook, the 30-second poll or **Sync now**. The project page shows when it last synced and any parse errors.
+- Deploy progress. The app's page shows each deploy's CI status, from `pending` to `completed`.
+- Snapshots and live stats.
+
+Git has a record of its own. Every commit Meridian makes for a person carries a `Meridian-Actor:` trailer. See [Infra repository](/reference/infra-repository#commits).

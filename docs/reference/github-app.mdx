@@ -1,5 +1,125 @@
 ---
-title: "Github app"
+title: "GitHub App"
+description: "The GitHub App Meridian signs in as: its permissions, events, webhook, installation ID, GitHub Enterprise, and the token alternative."
+icon: "git-branch"
 ---
 
-This page is being written.
+import GitHubAppPermissions from "/snippets/github-app-permissions.mdx";
+
+Meridian reads and writes your repositories as a GitHub App. The App limits Meridian to the repositories you install it on and to the permissions below. For the first-time walk-through, see [Install](/install).
+
+## App settings
+
+| Setting | Value |
+| --- | --- |
+| Homepage URL | Your Meridian, for example `https://meridian.example.com` |
+| Webhook | Active |
+| Webhook URL | `https://<your Meridian>/webhooks/github` |
+| Webhook secret | A long random string, for example from `openssl rand -hex 32`. It becomes `GITHUB_APP_WEBHOOK_SECRET`. |
+| Where can this App be installed | Only on this account |
+
+After you create the App, note its **App ID** and generate a **private key**. They become `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`. See [Environment variables](/reference/environment#github).
+
+## Permissions and events
+
+<GitHubAppPermissions />
+
+Every permission is a repository permission. Meridian asks for no organisation or account permissions.
+
+## Where to install it
+
+Install the App on these repositories, and no others:
+
+- **The infra repository**, which holds your Kamal configs. Meridian reads configs, commits version files and preview overlays, opens pull requests, dispatches the deploy workflow and sets Actions secrets there.
+- **Each source repository whose pull requests get previews**, the one an app's `meridian.source` label names. Meridian only receives `pull_request` events from it.
+
+## Installation ID
+
+Each project in Meridian names the installation it reads through. After you install the App, GitHub lands you on a URL that ends in the installation ID:
+
+```text
+https://github.com/settings/installations/12345678
+https://github.com/organizations/acme/settings/installations/12345678
+```
+
+Enter that number as **GitHub App installation ID** when you add the project. See [Projects](/guides/projects).
+
+Meridian signs a JSON Web Token with the private key, exchanges it for an installation token, and keeps that token in memory. It fetches a new one five minutes before the old one expires. GitHub's installation tokens last one hour. Nothing is written to disk.
+
+## Webhook
+
+GitHub sends every event to `POST /webhooks/github`. Meridian checks the signature, queues a job and answers at once.
+
+### Signature
+
+GitHub signs each delivery with the webhook secret. Meridian computes `sha256=` followed by the hex HMAC-SHA256 of the raw body, keyed with `GITHUB_APP_WEBHOOK_SECRET`, and compares it with the `X-Hub-Signature-256` header in constant time.
+
+| Response | When |
+| --- | --- |
+| `202 Accepted` | The signature matches. Events other than the three below are accepted and ignored. |
+| `400 Bad Request` | The body is not JSON. |
+| `401 Unauthorized` | The signature doesn't match, or `GITHUB_APP_WEBHOOK_SECRET` is unset. |
+
+### Events Meridian acts on
+
+| Event | Action | What Meridian does |
+| --- | --- | --- |
+| `push` | A push to the project's branch | Syncs the project: reads configs and version files. Pushes to other branches are ignored. |
+| `workflow_run` | Any, for `meridian-deploy.yml` on the project's branch | Moves deploys along (`pending`, `queued`, `in_progress`, `completed`) and marks previews active, failed or removed. Runs of other workflows are ignored. |
+| `pull_request` | `opened`, `reopened`, `synchronize` | Deploys or updates a preview for each app whose `meridian.source` is this repository. Pull requests from forks are skipped and recorded as `preview.skipped`. |
+| `pull_request` | `closed` | Removes the pull request's previews. |
+
+Repository names match without regard to case, so a project added as `Acme/Infra` gets `acme/infra`'s webhooks.
+
+### Without webhooks
+
+Webhooks make Meridian react at once. They are not needed for correctness. Every 30 seconds Meridian reads each project's branch head and its recent workflow runs. Requests carry ETags, so a repository where nothing changed costs no GitHub rate limit. Pull request previews need the `pull_request` webhook, because polling does not read pull requests.
+
+## GitHub Enterprise Server
+
+Set `GITHUB_API_URL` to your server's API endpoint:
+
+```bash
+GITHUB_API_URL=https://github.example.com/api/v3/
+```
+
+Create the App on your Enterprise server with the same settings. Links that Meridian shows, to repositories, commits and files, still point at `github.com`.
+
+## Using a token instead
+
+For a homelab or local development, a personal access token can stand in for the App. Set `GITHUB_TOKEN` and leave `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` unset. Settings then shows **GitHub: Token**. Every call is made as the token's owner, and projects need no installation ID.
+
+<Tabs>
+  <Tab title="Fine-grained token">
+    Give it access to the infra repository and the source repositories, with these repository permissions:
+
+    | Permission | Access |
+    | --- | --- |
+    | Contents | Read and write |
+    | Pull requests | Read and write |
+    | Actions | Read and write |
+    | Secrets | Read and write |
+    | Workflows | Read and write |
+    | Metadata | Read |
+  </Tab>
+  <Tab title="Classic token">
+    Select the `repo` and `workflow` scopes.
+  </Tab>
+</Tabs>
+
+A token receives no App webhooks. To get them, add a webhook to each repository under **Settings → Webhooks**:
+
+- **Payload URL:** `https://<your Meridian>/webhooks/github`
+- **Content type:** `application/json`. Meridian refuses form-encoded deliveries with `400`.
+- **Secret:** the value of `GITHUB_APP_WEBHOOK_SECRET`.
+- **Events:** **Pushes**, **Pull requests** and **Workflow runs**.
+
+<Warning>
+  A token reaches every repository its owner can reach. An App reaches only the repositories you install it on. Use the App in production.
+</Warning>
+
+## What Meridian never does on GitHub
+
+- It never reads secret values. Actions secrets are write-only through GitHub's API, and Meridian seals each value with the repository's public key before sending it.
+- It never pushes to a branch other than the project's branch and its own `meridian/<slug>-<hex>` proposal branches.
+- It never force-pushes. It writes one file at a time through the contents API, and a change to an existing file passes the blob SHA Meridian read. A change someone else made in the meantime makes the write fail instead of being overwritten.

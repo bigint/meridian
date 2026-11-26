@@ -1,58 +1,99 @@
-# Backups with Litestream
+---
+title: "Backups"
+description: "What Meridian stores, which of it to back up, and how to stream it to S3 with Litestream and restore it."
+icon: "database"
+---
 
-Meridian keeps everything in SQLite under `/rails/storage`, in the `meridian_storage` volume. Git already holds your configs and history. A backup protects the audit trail, users and agent tokens.
+Meridian keeps everything in SQLite files under `/rails/storage`, in the `meridian_storage` Docker volume. Git already holds your configs, versions and their history, so a backup protects what only Meridian knows: people, agent tokens and the activity trail.
 
-[Litestream](https://litestream.io) streams SQLite changes continuously to any S3-compatible bucket (AWS S3, Backblaze B2, Cloudflare R2, MinIO…).
+## What to back up
 
-## As a Kamal accessory
+| File | Holds | Back up |
+| --- | --- | --- |
+| `production.sqlite3` | People, sessions, projects, apps, releases, deploys, previews, servers, agent tokens, secret names, settings and Activity | Yes |
+| `production_queue.sqlite3` | Solid Queue: queued, scheduled and failed jobs | Optional. Recurring jobs are set up again on boot. |
+| `production_cache.sqlite3` | Solid Cache: GitHub blobs and ETags, live leases | No. Meridian refills it. |
+| `production_cable.sqlite3` | Solid Cable: messages from the last minute | No |
 
-Add to Meridian's `config/deploy.yml`:
+Without a backup, losing the volume costs the users, agent tokens and Activity. Projects re-sync from Git once re-added, and agents report again once they have new tokens.
 
-```yaml
-accessories:
-  litestream:
-    image: litestream/litestream:0.3.13
-    host: meridian.internal.example.com
-    cmd: replicate
-    files:
-      - config/litestream.yml:/etc/litestream.yml
-    volumes:
-      - "meridian_storage:/rails/storage"
-    env:
-      secret:
-        - LITESTREAM_ACCESS_KEY_ID
-        - LITESTREAM_SECRET_ACCESS_KEY
-```
+## Stream changes with Litestream
 
-And `config/litestream.yml`:
+[Litestream](https://litestream.io) streams SQLite changes continuously to any S3-compatible bucket, such as AWS S3, Backblaze B2, Cloudflare R2 or MinIO. Run it as a Kamal accessory beside Meridian, on the same volume.
 
-```yaml
-dbs:
-  - path: /rails/storage/production.sqlite3
-    replicas:
-      - url: s3://your-bucket/meridian/production
-        endpoint: https://s3.example.com   # omit for AWS
-  - path: /rails/storage/production_queue.sqlite3
-    replicas:
-      - url: s3://your-bucket/meridian/queue
-        endpoint: https://s3.example.com
-```
+<Steps>
+  <Step title="Add the accessory">
+    Add to Meridian's `config/deploy.yml`:
 
-The cache and cable databases are disposable and need no backup.
+    ```yaml config/deploy.yml
+    accessories:
+      litestream:
+        image: litestream/litestream:0.3.13
+        host: meridian.internal.example.com
+        cmd: replicate
+        files:
+          - config/litestream.yml:/etc/litestream.yml
+        volumes:
+          - "meridian_storage:/rails/storage"
+        env:
+          secret:
+            - LITESTREAM_ACCESS_KEY_ID
+            - LITESTREAM_SECRET_ACCESS_KEY
+    ```
 
-Then:
+    Use the same host as Meridian's `web` role, so both see the same volume.
+  </Step>
+  <Step title="Say where to replicate">
+    Create `config/litestream.yml`:
 
-```bash
-kamal accessory boot litestream
-```
+    ```yaml config/litestream.yml
+    dbs:
+      - path: /rails/storage/production.sqlite3
+        replicas:
+          - url: s3://your-bucket/meridian/production
+            endpoint: https://s3.example.com   # omit for AWS
+      - path: /rails/storage/production_queue.sqlite3
+        replicas:
+          - url: s3://your-bucket/meridian/queue
+            endpoint: https://s3.example.com
+    ```
+  </Step>
+  <Step title="Add the bucket's keys">
+    Add `LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY` to `.kamal/secrets`, read from your environment or a password manager, as the other secrets are.
+  </Step>
+  <Step title="Boot it">
+    ```bash
+    kamal accessory boot litestream
+    kamal accessory logs litestream
+    ```
 
-## Restore
+    The log shows each database it replicates.
+  </Step>
+</Steps>
 
-Stop the app, move the old database aside (Litestream won't overwrite a file), restore, and boot:
+## Restore from Litestream
+
+Litestream won't overwrite an existing file, so move the old database aside first. Stop Meridian, so nothing writes while you restore:
 
 ```bash
 kamal app stop
-kamal app exec --reuse "mv storage/production.sqlite3 storage/production.sqlite3.old"
-kamal accessory exec litestream "litestream restore -o /rails/storage/production.sqlite3 s3://your-bucket/meridian/production"
+kamal accessory exec --reuse litestream "sh -c 'mkdir -p /rails/storage/old && mv /rails/storage/production.sqlite3* /rails/storage/old/'"
+kamal accessory exec --reuse litestream "litestream restore -o /rails/storage/production.sqlite3 s3://your-bucket/meridian/production"
 kamal app boot
 ```
+
+On boot the entrypoint runs `bin/rails db:prepare`, which applies any migration the restored file lacks. Restore `production_queue.sqlite3` the same way if you need its failed jobs.
+
+## Take a one-off copy
+
+The image has the `sqlite3` command, whose `.backup` takes a consistent copy while Meridian runs:
+
+```bash
+kamal app exec --reuse "sqlite3 storage/production.sqlite3 '.backup storage/backup.sqlite3'"
+```
+
+The copy lands in the volume, at `/var/lib/docker/volumes/meridian_storage/_data/backup.sqlite3` on the host. Copy it off the host with `scp`, and delete it from the volume afterwards.
+
+<Warning>
+  Don't copy a live `.sqlite3` file with `cp`. SQLite runs in WAL mode, and recent writes are in the `-wal` file beside it. Use `.backup` or Litestream.
+</Warning>

@@ -1,5 +1,99 @@
 ---
 title: "Upgrading"
+description: "Move Meridian and its agents to a new release with Kamal: what runs on boot, what happens to the database, and how to go back."
+icon: "circle-arrow-up"
 ---
 
-This page is being written.
+Each release publishes two images, tagged with the release and with `latest`:
+
+- `ghcr.io/bigint/meridian:<tag>`, the app.
+- `ghcr.io/bigint/meridian-agent:<tag>`, the agent.
+
+Pin a tag, such as `v0.1.0`, rather than `latest`, so you choose when to upgrade.
+
+## Before you upgrade
+
+1. Read the release's entry in the [changelog](/changelog). An **Upgrading** section there lists any step a release needs, such as pressing **Add CI workflow** again or changing the agent accessory.
+2. Back up the database, or check that Litestream is current. See [Backups](/operate/backups).
+
+## Upgrade Meridian
+
+From your copy of Meridian's `config/deploy.yml`, deploy the new tag:
+
+<Tabs>
+  <Tab title="Published image">
+    ```bash
+    kamal deploy --skip-push --version v0.2.0
+    ```
+
+    `--skip-push` tells Kamal not to build. Each server pulls `ghcr.io/bigint/meridian:v0.2.0`.
+  </Tab>
+  <Tab title="Your own build">
+    Check out the release and let Kamal build and push to your registry, the `image:` in `config/deploy.yml`:
+
+    ```bash
+    git checkout v0.2.0
+    kamal deploy
+    ```
+  </Tab>
+</Tabs>
+
+Kamal starts the new container beside the old one. kamal-proxy sends traffic to it once `/up` answers, then stops the old one, so people and agents see no downtime.
+
+### What runs on boot
+
+The image's entrypoint, `bin/docker-entrypoint`, runs `bin/rails db:prepare` before the server starts. It creates any database that is missing and runs pending migrations on all four: the primary database, the cache, the queue and the cable database. Then Thruster starts on port 80, in front of Puma.
+
+The migrations run while the old container still serves. A `job` role that runs `bin/jobs` does not run `db:prepare`, so deploy `web` first, or deploy both together with `kamal deploy`.
+
+### The database
+
+The SQLite files live in the `meridian_storage` volume, mounted at `/rails/storage`. The volume outlives every container, so a deploy keeps all data. Don't remove the volume, and don't move Meridian to another host without copying it.
+
+### Check it
+
+```bash
+curl -fsS https://meridian.example.com/up
+kamal logs
+```
+
+**Settings → Connections** shows the Kamal version the new release parses configs with.
+
+## Go back
+
+Kamal keeps the previous image on the host. To return to it:
+
+```bash
+kamal rollback v0.1.0
+```
+
+`kamal rollback` doesn't undo migrations. If the newer release migrated the database in a way the older one can't read, restore the backup you took before the upgrade.
+
+## Upgrade agents
+
+The agent runs as a Kamal accessory in an infra repository's config. Change its image tag there:
+
+```yaml config/deploy.yml
+  meridian_agent:
+    image: ghcr.io/bigint/meridian-agent:v0.2.0
+```
+
+Then reboot it on every host:
+
+```bash
+kamal accessory reboot meridian_agent
+```
+
+The reboot removes the old agent and starts the new one. A server sends no snapshot for a few seconds, which is well under the 45 seconds before it turns stale. Agents and Meridian need not run the same release: Meridian accepts snapshots from older agents, and the agent ignores lease messages it doesn't know. The server's page shows the version each agent reports.
+
+The agent's config lives wherever you put the accessories, such as the config the **Agents** page's snippet went into. If a release changes the accessory itself, the changelog says what to change, for example:
+
+```bash
+kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
+kamal accessory reboot meridian_docker
+kamal accessory reboot meridian_agent
+```
+
+## Update the CI workflow
+
+The CI workflow is a file in each infra repository, so a Meridian upgrade doesn't change it. When a release changes the template, press **Add CI workflow** on each project's page again, and merge the pull request. See [CI workflow](/reference/ci-workflow).

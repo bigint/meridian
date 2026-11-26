@@ -1,5 +1,202 @@
 ---
-title: "Environment"
+title: "Environment variables"
+sidebarTitle: "Environment"
+description: "Every environment variable Meridian and its agent read, with defaults, and what each one changes."
+icon: "key"
 ---
 
-This page is being written.
+Meridian keeps everything site-specific in the environment, so it stays out of the database and out of Git. Settings in the app are on [Settings](/operate/settings). The **Connections** card on that page shows what Meridian read from the environment: GitHub, webhooks and the Kamal version.
+
+In Meridian's own `config/deploy.yml`, plain values go under `env.clear` and secrets under `env.secret`, read from `.kamal/secrets`:
+
+```yaml config/deploy.yml
+env:
+  clear:
+    MERIDIAN_URL: https://meridian.example.com
+    SOLID_QUEUE_IN_PUMA: true
+  secret:
+    - SECRET_KEY_BASE
+    - GITHUB_APP_ID
+    - GITHUB_APP_PRIVATE_KEY
+    - GITHUB_APP_WEBHOOK_SECRET
+```
+
+## Meridian
+
+<ResponseField name="SECRET_KEY_BASE" type="string" required>
+  Signs session cookies and the grants that open live logs and traffic. Rails reads it in production. Generate one with `openssl rand -hex 64`.
+
+  The first-run setup code is derived from it (`bin/rails meridian:setup_code` prints it). Changing it signs everyone out and changes the setup code.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_URL" type="string" required>
+  The address people and agents use, for example `https://meridian.example.com`. Read in production only.
+
+  - An `https://` URL turns on forced HTTPS, HSTS and secure cookies, and trusts the TLS-terminating proxy in front (kamal-proxy). A plain `http://` URL turns all of that off, which is useful to try Meridian on a LAN.
+  - Its host is the only `Host` Meridian answers to. Requests for any other host are refused, except `/up`, which kamal-proxy calls by IP.
+  - Unset, Meridian forces HTTPS and answers to any host.
+
+  The agent reads a variable of the same name. See [Agent](#agent).
+</ResponseField>
+
+<ResponseField name="RAILS_LOG_LEVEL" type="string" default="info">
+  The production log level: `debug`, `info`, `warn`, `error` or `fatal`. Meridian logs to standard output, which `kamal app logs` reads. `debug` can log personal data.
+</ResponseField>
+
+## GitHub
+
+Meridian talks to GitHub either as a GitHub App or with a personal access token. When `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` are both set, Meridian uses the App, even if `GITHUB_TOKEN` is set too. See [GitHub App](/reference/github-app).
+
+<ResponseField name="GITHUB_APP_ID" type="string">
+  The GitHub App's ID, from the App's settings page. Required for App mode.
+</ResponseField>
+
+<ResponseField name="GITHUB_APP_PRIVATE_KEY" type="string">
+  The App's private key, the whole PEM file. Literal `\n` sequences are turned into newlines, so the key can sit on one line. Required for App mode.
+</ResponseField>
+
+<ResponseField name="GITHUB_APP_WEBHOOK_SECRET" type="string">
+  Verifies the `X-Hub-Signature-256` header on `POST /webhooks/github`. Unset, every webhook is refused with `401`, and Meridian relies on polling GitHub every 30 seconds instead. Settings shows **Webhooks: Off**. In token mode, give your repository webhooks this secret.
+</ResponseField>
+
+<ResponseField name="GITHUB_TOKEN" type="string">
+  A personal access token, used in place of a GitHub App. Every call is made as the token's owner. Projects need no installation ID in this mode. See [Using a token instead](/reference/github-app#using-a-token-instead) for the scopes.
+</ResponseField>
+
+<ResponseField name="GITHUB_API_URL" type="string" default="https://api.github.com/">
+  The GitHub API endpoint. Set it for GitHub Enterprise Server, for example `https://github.example.com/api/v3/`.
+</ResponseField>
+
+### Credentials fallback
+
+Each GitHub variable falls back to Rails credentials when it is unset or empty:
+
+| Variable | Credentials key |
+| --- | --- |
+| `GITHUB_APP_ID` | `github.app_id` |
+| `GITHUB_APP_PRIVATE_KEY` | `github.private_key` |
+| `GITHUB_APP_WEBHOOK_SECRET` | `github.webhook_secret` |
+| `GITHUB_TOKEN` | `github.token` |
+
+The published image ships no `config/credentials.yml.enc`, so the fallback matters only if you build your own image with one. Rails then needs `RAILS_MASTER_KEY` to decrypt it. `GITHUB_API_URL` has no fallback.
+
+## Server tuning
+
+<ResponseField name="SOLID_QUEUE_IN_PUMA" type="boolean" default="true">
+  Runs the Solid Queue supervisor inside Puma, so one container serves pages and runs jobs. Any value other than `false` keeps it on. Set it to `false` and run `bin/jobs` in a separate `job` role to move jobs out of the web process. See [Scaling](/operate/scaling).
+</ResponseField>
+
+<ResponseField name="JOB_CONCURRENCY" type="integer" default="1">
+  The number of Solid Queue worker processes. Each runs 3 threads over every queue.
+</ResponseField>
+
+<ResponseField name="RAILS_MAX_THREADS" type="integer" default="3">
+  Puma's threads per process. It also sizes each SQLite connection pool, where it defaults to 5 when unset. Keep the pool at least as large as the thread count.
+</ResponseField>
+
+<ResponseField name="WEB_CONCURRENCY" type="integer">
+  Puma reads it itself to start more worker processes. Meridian's `config/puma.rb` does not set workers, so leave it unset and run one process.
+</ResponseField>
+
+<ResponseField name="PORT" type="integer" default="3000">
+  The port Puma listens on. In the image, Thruster listens on port 80 and forwards to Puma on 3000, so change it only if you also change Thruster.
+</ResponseField>
+
+<ResponseField name="PIDFILE" type="string">
+  Where Puma writes its PID file. Unset in production, so Puma writes none.
+</ResponseField>
+
+## Agent
+
+The agent reads these in `agent/config.go`. A bad value stops it at start with exit code 2 and a log line that names the variable. See [Install the agent](/guides/agent).
+
+<ResponseField name="MERIDIAN_URL" type="string" required>
+  Meridian's base URL, `http://` or `https://`, for example `https://meridian.example.com`. A trailing `/` is dropped. Snapshots go to `$MERIDIAN_URL/agent/snapshots` and the live line opens `$MERIDIAN_URL/cable`. Not needed with `-print`.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_TOKEN" type="string" required>
+  The agent token, created on the **Agents** page. Sent as `Authorization: Bearer` on snapshots and on the live line. Not needed with `-print`.
+</ResponseField>
+
+<ResponseField name="DOCKER_HOST" type="string" default="unix:///var/run/docker.sock">
+  Where the Docker API is: `unix://…` or `tcp://host:port`. Point it at the read-only socket proxy, for example `tcp://<service>-meridian_docker:2375`.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_INTERVAL" type="duration" default="15s">
+  How often to send a snapshot. A Go duration (`30s`, `1m`) or bare seconds (`30`), at least `1s`. Each wait is jittered by ±20%. A server turns stale after three intervals, and never sooner than 45 seconds.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_LABELS" type="string">
+  Labels for the server, as `key=value` pairs separated by commas: `region=sgp,provider=ovh`. The board groups and filters by them. `lat` and `lng` (or `latitude`, `lon`, `longitude`) place the server on the map. Up to 32 labels are kept.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_MACHINE_ID" type="string">
+  A stable ID for the host. Unset, the agent reads `/host/etc/machine-id`, then `/etc/machine-id`. Required one way or another: with none, the agent does not start.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_HOSTNAME" type="string">
+  The host name to report. Unset, the agent reads `/host/etc/hostname`, then uses the container's own host name. It must be a plain host name, because New app writes it into Kamal configs.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_LIVE" type="boolean" default="true">
+  Holds the live line to `/cable` for live stats, logs and traffic. `0` or `false` turns it off: no WebSocket, no stats streams, no `/proc` reads and no logs.
+</ResponseField>
+
+<ResponseField name="MERIDIAN_LOGS" type="boolean" default="false">
+  `1` or `true` lets Meridian tail the logs of Kamal containers while a deployer reads them. Needs the live line, so `MERIDIAN_LIVE=0` turns it off too. The accessory template sets it to `1`.
+</ResponseField>
+
+<ResponseField name="-print" type="flag">
+  A command-line flag, not a variable. `meridian-agent -print` collects one snapshot, prints it as JSON to standard output and exits. It needs no URL or token.
+</ResponseField>
+
+<Note>
+  `MERIDIAN_PROXY_STATE` is ignored. Nothing in the agent reads it any more, so remove it from your accessory config.
+</Note>
+
+## CI
+
+The deploy workflow, `.github/workflows/meridian-deploy.yml`, reads one repository variable and two required repository secrets. See [CI workflow](/reference/ci-workflow).
+
+<ResponseField name="MERIDIAN_RUNS_ON" type="repository variable" default="ubuntu-latest">
+  The runner both jobs use. Set it to `self-hosted`, or to a runner label of yours, when GitHub's hosted runners can't reach your servers. Set it under **Settings → Secrets and variables → Actions → Variables** in the infra repository.
+</ResponseField>
+
+<ResponseField name="KAMAL_SSH_PRIVATE_KEY" type="repository secret" required>
+  The private key Kamal uses to SSH to your servers. Loaded into an `ssh-agent`.
+</ResponseField>
+
+<ResponseField name="KAMAL_REGISTRY_PASSWORD" type="repository secret" required>
+  The registry password Kamal logs in with, as `registry.password` names it in your configs.
+</ResponseField>
+
+Every other repository secret is exported to the Kamal step as an environment variable of the same name, so `.kamal/secrets` can read it as `$NAME`.
+
+<ResponseField name="CI" type="string">
+  Set by CI systems. When present, the Rails test environment loads the whole app before tests run, which catches load errors that lazy loading would hide.
+</ResponseField>
+
+## Tasks and development
+
+<ResponseField name="SERVERS" type="integer" default="500">
+  The number of servers `bin/rails meridian:demo` seeds.
+</ResponseField>
+
+<ResponseField name="APPS" type="integer" default="200">
+  The number of apps `bin/rails meridian:demo` seeds.
+</ResponseField>
+
+<ResponseField name="BUNDLE_GEMFILE" type="string">
+  Set by `config/boot.rb` to Meridian's `Gemfile` when unset. The config parser always gets Meridian's `Gemfile`.
+</ResponseField>
+
+`bin/kamal-parse` runs with an empty environment. Meridian passes it only `BUNDLE_PATH`, `BUNDLE_WITHOUT`, `BUNDLE_DEPLOYMENT`, `BUNDLE_FROZEN`, `GEM_HOME` and `GEM_PATH`, plus its own `BUNDLE_GEMFILE`, `PATH`, `HOME` and `LANG`. ERB in a Kamal config therefore can't read any variable on this page. See [Security](/operate/security).
+
+## Ignored
+
+These names appear in old docs or old configs. Nothing reads them now.
+
+| Variable | Why |
+| --- | --- |
+| `MERIDIAN_PROXY_STATE` | The agent no longer reads kamal-proxy's state file. |
+| `OIDC_*` | OpenID Connect sign-in was removed. Sign in with email and password. |

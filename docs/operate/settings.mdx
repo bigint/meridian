@@ -1,44 +1,109 @@
-# Configuration
+---
+title: "Settings"
+description: "The install-wide settings on the Settings page, and the settings each project has."
+icon: "cog"
+---
 
-Everything site-specific is set through environment variables, so it stays out of the database and out of Git.
+Meridian has two places for settings that live in its database: the **Settings** page, for the whole install, and each project's settings. Everything else, such as keys, URLs and tuning, is an environment variable. See [Environment variables](/reference/environment).
 
-| Variable | Required | Meaning |
-| --- | --- | --- |
-| `SECRET_KEY_BASE` | yes | Signs sessions and cookies. Generate with `openssl rand -hex 64`. |
-| `MERIDIAN_URL` | yes | Public URL, e.g. `https://meridian.example.com`. A plain `http://` URL turns off forced HTTPS. |
-| `GITHUB_APP_ID` | yes | The GitHub App's ID. |
-| `GITHUB_APP_PRIVATE_KEY` | yes | The App's private key (PEM). Literal `\n` sequences are accepted. |
-| `GITHUB_APP_WEBHOOK_SECRET` | yes | Verifies webhook signatures. |
-| `GITHUB_TOKEN` | no | Instead of a GitHub App: a personal access token with `repo` and `workflow` scopes. Simpler for a homelab or local development; an App limits access more tightly. |
-| `GITHUB_API_URL` | no | For GitHub Enterprise Server, e.g. `https://github.example.com/api/v3/`. |
-| `SOLID_QUEUE_IN_PUMA` | no | `true` by default. Set to `false` and run `bin/jobs` in a separate `job` role for large installs. |
-| `RAILS_LOG_LEVEL` | no | `info` by default. |
+## The Settings page
 
-## In the app
+**Settings** (`/settings`) is for admins. It has two tabs: **General**, described here, and **People**, where admins add and remove people. See [People](/guides/people).
 
-**Settings → General** holds:
+Saving **General** records `settings.updated` in Activity.
 
-- the preview domain,
-- the preview lifetime (7 days by default),
-- the label selector for preview servers,
-- where Meridian runs (a place name, latitude and longitude). The map draws agent reports flowing in to it and deploys flowing out from it.
+### Workspace
 
-Per project, you can set:
+<ResponseField name="Name" type="text" default="Meridian" required>
+  The install's name.
+</ResponseField>
 
-- **Config paths:** comma-separated globs. A file named `x.<dest>.yml` is the `<dest>` destination of `x.yml` (or `x.yaml`) when both match; Kamal only reads destination files ending in `.yml`.
-- **Direct commits:** when on, admins' structural changes (new apps, the CI workflow) are committed instead of proposed. Deploys, rollbacks and preview overlays are always commits.
+### Previews
 
-## Conventions Meridian adds to your infra repository
+<ResponseField name="Domain" type="text">
+  The domain previews are named under, such as `preview.example.com`. It needs a wildcard DNS record. Previews are off until it is set: a pull request then gets no preview, and the logs say `Set a preview domain in Settings first`.
+</ResponseField>
 
-- **`<config>.version` / `<config>.<dest>.version`:** one line, the image tag CI deploys. Deploy and roll back change only this file.
-- **`labels: { meridian.kind: node, meridian.source: owner/repo }`:** optional labels in a config that tell Meridian the app's kind and its source repository, which previews watch. Without them an app is of kind `other` and has no previews.
-- **`<config>.pr-<n>.yml`:** a preview overlay. Meridian adds and removes these itself.
-- **`.github/workflows/meridian-deploy.yml`:** the workflow that runs Kamal.
+<ResponseField name="Hostnames" type="select" default="nested">
+  How a preview's hostname is built from the pull request number, the app's service and the domain:
 
-## Scaling
+  | Choice | Example | DNS |
+  | --- | --- | --- |
+  | `pr-<n>.<app>.<domain>` (nested) | `pr-42.web.preview.example.com` | A wildcard record per app, `*.web.preview.example.com` |
+  | `pr-<n>-<app>.<domain>` (flat) | `pr-42-web.preview.example.com` | One wildcard record, `*.preview.example.com`, for every app |
 
-The defaults are sized for hundreds of servers on one small machine:
+  Flat names sit one level below the domain, so Cloudflare's free certificate covers them. Changing this affects only new previews.
+</ResponseField>
 
-- Snapshots are accepted in milliseconds and ingested by jobs.
-- The board is paginated, groups by region above 30 servers, and refreshes each group at most once a second.
-- For thousands of servers, run jobs separately (`SOLID_QUEUE_IN_PUMA=false` plus a `job` role), and raise `MERIDIAN_INTERVAL` on agents to 30s or more. A server turns stale after three of its agent's intervals, and never sooner than 45 seconds.
+<ResponseField name="Preview servers" type="text">
+  Labels a server needs to host previews, such as `role=preview`, separated by commas. Of the servers that match, Meridian picks the one with the fewest containers. Blank means each app's own servers. A term that isn't `key=value` is refused.
+</ResponseField>
+
+<ResponseField name="Expire after (days)" type="number" default="7">
+  How long a preview lives. The hourly expiry job removes a preview this many days after it was first deployed, even if its pull request is still open. At least 1.
+</ResponseField>
+
+See [Previews](/guides/previews).
+
+### Where Meridian runs
+
+The centre of the map's flows: agent reports arrive here, and deploys go out from here.
+
+<ResponseField name="Place" type="text">
+  A name for the place, such as `Singapore`.
+</ResponseField>
+
+<ResponseField name="Latitude" type="number">
+  From -90 to 90.
+</ResponseField>
+
+<ResponseField name="Longitude" type="number">
+  From -180 to 180.
+</ResponseField>
+
+### Connections
+
+The **Connections** card shows what Meridian read from the environment. It is never stored, and you change it with environment variables.
+
+| Connection | Shows |
+| --- | --- |
+| GitHub | **App** and its ID, **Token** when only `GITHUB_TOKEN` is set, or **Not connected** |
+| Webhooks | **On** when `GITHUB_APP_WEBHOOK_SECRET` is set. **Off** means Meridian polls GitHub every 30 seconds instead. |
+| Kamal | The Kamal version Meridian parses configs with, `2.12.0` in this release |
+
+## Project settings
+
+Each project is one infra repository. Admins add one under **Projects → Add project** and change it with **Edit** on the project's page. See [Projects](/guides/projects).
+
+<ResponseField name="Name" type="text" required>
+  The project's name in Meridian.
+</ResponseField>
+
+<ResponseField name="Repository" type="text" required>
+  The GitHub repository that holds your Kamal configs, as `owner/name`. Each repository can be one project only. Case doesn't matter.
+</ResponseField>
+
+<ResponseField name="Branch" type="text" default="main" required>
+  The branch Meridian reads and commits to. Pushes to other branches are ignored.
+</ResponseField>
+
+<ResponseField name="GitHub App installation ID" type="number">
+  The installation Meridian reads the repository through. It is the number at the end of the URL GitHub shows after you install the App. Leave it blank when Meridian uses a token. See [GitHub App](/reference/github-app#installation-id).
+</ResponseField>
+
+<ResponseField name="Config paths" type="text" default="config/deploy*.yml" required>
+  Globs, separated by commas, that say which files are Kamal configs. A file named `x.<destination>.yml` is the `<destination>` destination of `x.yml`, or `x.yaml`, when both match. Only `.yml` destination files count, as in Kamal. **New app** writes new configs at the first glob with exactly one `*`. See [Infra repository](/reference/infra-repository#config-paths).
+</ResponseField>
+
+<ResponseField name="Direct commits" type="checkbox" default="off">
+  **Let admins commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys, rollbacks and preview overlays are always commits.
+</ResponseField>
+
+Saving a new repository, branch, installation ID or config paths syncs the project at once. Other changes wait for the next push or the 30-second poll.
+
+### On the project page
+
+- **Sync now** reads the repository again, even if the branch head hasn't moved.
+- **Add CI workflow** proposes `.github/workflows/meridian-deploy.yml`. See [CI workflow](/reference/ci-workflow).
+- **Parse errors** lists each config Kamal rejected, with the file and line and a link to it on GitHub. A config that fails to parse keeps its app, with its deploys, releases and previews, until it parses again.
+- **Remove project**, on the edit page, deletes the project and its apps, releases, deploys and previews from Meridian. Nothing in Git changes, and nothing is removed from servers. Destroy running previews on the **Previews** page first, or their containers keep running.

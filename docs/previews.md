@@ -25,5 +25,6 @@ A pull request in an app's **source** repository can run as a Kamal destination,
 
 ## Limits
 
+- Only pull requests from branches of the source repository itself get a preview. A fork's code is anyone's code, and a preview runs it on your servers with the app's secrets, so a pull request from a fork is skipped, and the activity log says so when it opens.
 - Each preview runs every role on one server. Accessories (databases and so on) are shared with the base config; give previews their own through a destination file if you need isolation.
 - Secrets come from the same repository secrets as the app.

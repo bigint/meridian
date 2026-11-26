@@ -28,10 +28,26 @@ class GitHubEventJobTest < ActiveJob::TestCase
     assert preview.reload.active?
   end
 
+  test "a pull request from a fork gets no preview, and the activity log says why" do
+    GitHubEventJob.perform_now("pull_request", pull_request("opened", head_repo: "mallory/api-src"))
+    GitHubEventJob.perform_now("pull_request", pull_request("synchronize", head_repo: "mallory/api-src"))
+    GitHubEventJob.perform_now("pull_request", pull_request("opened", number: 8, head_repo: nil))
+
+    assert_empty @writes
+    assert_empty @dispatches
+    assert_equal [ "No preview for example/api-src#7: it comes from the fork mallory/api-src", "No preview for example/api-src#8: it comes from a deleted fork" ],
+      Event.where(action: "preview.skipped").order(:id).map(&:summary)
+  end
+
+  test "a pull request from a branch of the repository itself gets a preview" do
+    GitHubEventJob.perform_now("pull_request", pull_request("opened", head_repo: "Example/API-src"))
+    assert_equal "deploy", @dispatches.sole.dig("inputs", "command")
+  end
+
   private
     def pull_request(action, number: 7, state: "open", head_repo: "example/api-src")
       { "action" => action, "number" => number, "repository" => { "full_name" => "example/api-src" },
         "pull_request" => { "state" => state, "html_url" => "https://github.com/example/api-src/pull/#{number}",
-          "head" => { "sha" => "e" * 40, "repo" => { "full_name" => head_repo } }, "base" => { "repo" => { "full_name" => "example/api-src" } } } }
+          "head" => { "sha" => "e" * 40, "repo" => head_repo && { "full_name" => head_repo } }, "base" => { "repo" => { "full_name" => "example/api-src" } } } }
     end
 end

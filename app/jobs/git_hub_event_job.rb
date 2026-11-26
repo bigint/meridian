@@ -28,18 +28,34 @@ class GitHubEventJob < ApplicationJob
     # Previews follow pull requests in an app's source repository.
     def pull_request(repo, payload)
       pull = payload["pull_request"] or return
-      App.where("LOWER(source_repo) = ?", repo.to_s.downcase).find_each do |app|
-        case payload["action"]
-        when "opened", "reopened", "synchronize"
-          # A late delivery for a pull request that has closed since.
-          next if pull["state"] == "closed"
+      apps = App.where("LOWER(source_repo) = ?", repo.to_s.downcase).to_a
 
-          Preview.deploy(app, number: payload["number"], head_sha: pull.dig("head", "sha"), url: pull["html_url"])
-        when "closed"
-          app.previews.find_by(pr_number: payload["number"])&.close(reason: pull["merged"] ? "merged" : "closed")
-        end
-      rescue ArgumentError, GitHost::Error => error
-        Rails.logger.warn("Preview for #{app.name} ##{payload["number"]} skipped: #{error.message}")
+      case payload["action"]
+      when "opened", "reopened", "synchronize"
+        # A late delivery for a pull request that has closed since.
+        return if apps.empty? || pull["state"] == "closed" || from_fork?(repo, pull, payload)
+
+        apps.each { |app| previewing(app, payload) { Preview.deploy(app, number: payload["number"], head_sha: pull.dig("head", "sha"), url: pull["html_url"]) } }
+      when "closed"
+        apps.each { |app| previewing(app, payload) { app.previews.find_by(pr_number: payload["number"])&.close(reason: pull["merged"] ? "merged" : "closed") } }
       end
+    end
+
+    def previewing(app, payload)
+      yield
+    rescue ArgumentError, GitHost::Error => error
+      Rails.logger.warn("Preview for #{app.name} ##{payload["number"]} skipped: #{error.message}")
+    end
+
+    # A fork's code is anyone's code: it never runs on the servers, with the
+    # app's secrets. Said once in the activity log, when the pull request opens.
+    def from_fork?(repo, pull, payload)
+      head = pull.dig("head", "repo", "full_name")
+      return false if head.to_s.casecmp?(repo.to_s)
+
+      summary = "No preview for #{repo}##{payload["number"]}: it comes from #{head ? "the fork #{head}" : "a deleted fork"}"
+      Rails.logger.info(summary)
+      Event.record("preview.skipped", summary: summary, pull_request: pull["html_url"]) unless payload["action"] == "synchronize"
+      true
     end
 end

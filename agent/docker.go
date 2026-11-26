@@ -107,6 +107,7 @@ type inspectedContainer struct {
 	Config struct {
 		Image  string            `json:"Image"`
 		Labels map[string]string `json:"Labels"`
+		Tty    bool              `json:"Tty"` // the log stream is raw, not multiplexed
 	} `json:"Config"`
 	State struct {
 		Status    string `json:"Status"`

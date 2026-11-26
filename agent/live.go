@@ -4,16 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 )
 
-// startLive runs the live line and the stats sampler beside the snapshot
-// loop, which it never touches. The returned channel closes once both have
-// stopped after ctx ends. With MERIDIAN_LIVE off nothing starts.
+// startLive runs the live line, the stats sampler and the log tailer beside
+// the snapshot loop, which it never touches. The returned channel closes once
+// all have stopped after ctx ends. With MERIDIAN_LIVE off nothing starts, and
+// since container logs ride the line they are off too.
 func (a *agent) startLive(ctx context.Context) <-chan struct{} {
 	done := make(chan struct{})
 	if !a.cfg.live {
+		if a.cfg.logs {
+			a.log.Warn("MERIDIAN_LOGS is on but MERIDIAN_LIVE is off: container logs ride the live line, so they are off too")
+		}
 		close(done)
 		return done
 	}
@@ -26,8 +31,10 @@ func (a *agent) startLive(ctx context.Context) <-chan struct{} {
 			return
 		}
 		s := newSampler(a.docker, newHostMetrics(), l.send, a.log, time.Now)
+		tl := newTailer(a.docker, l.send, a.log, time.Now, a.cfg.logs, ownContainerID(os.ReadFile, os.Hostname))
 		var wg sync.WaitGroup
 		wg.Go(func() { l.run(ctx) })
+		wg.Go(func() { tl.run(ctx, l.tails) })
 		s.run(ctx, l.watches)
 		wg.Wait()
 	}()

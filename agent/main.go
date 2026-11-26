@@ -2,7 +2,8 @@
 // It lists the host's Kamal containers through the Docker API and POSTs a
 // snapshot of them to Meridian on a jittered interval. While someone has the
 // server's page open in Meridian it also streams live CPU, memory and network
-// stats over an outbound WebSocket.
+// stats over an outbound WebSocket, and with MERIDIAN_LOGS on, the logs of the
+// Kamal containers someone is reading.
 package main
 
 import (
@@ -68,7 +69,7 @@ func main() {
 
 	logger.Info("meridian agent starting",
 		"version", version, "url", cfg.url, "interval", cfg.interval.String(),
-		"machine_id", cfg.machineID, "hostname", cfg.hostname, "live", cfg.live)
+		"machine_id", cfg.machineID, "hostname", cfg.hostname, "live", cfg.live, "logs", cfg.logs)
 	liveDone := a.startLive(ctx)
 	a.run(ctx)
 	select { // let the live line say goodbye, but never hold up shutdown

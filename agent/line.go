@@ -64,7 +64,8 @@ var defaultLineTimings = lineTimings{
 
 // line is the agent's one outbound WebSocket into Meridian's ActionCable.
 // run owns the session lifecycle, send puts a frame on the wire while the
-// line is subscribed, and watch leases the server sends arrive on watches.
+// line is subscribed, and the leases the server sends arrive on watches
+// (stats) and tails (container logs).
 type line struct {
 	endpoint   string
 	origin     string
@@ -77,6 +78,7 @@ type line struct {
 	timings    lineTimings
 	wait       func(ctx context.Context, d time.Duration) error // between sessions; tests replace it
 	watches    chan int                                         // seconds from watch messages
+	tails      chan tailRequest                                 // tail messages
 
 	mu    sync.Mutex
 	state lineState
@@ -111,6 +113,7 @@ func newLine(cfg config, log *slog.Logger, rnd func() float64) (*line, error) {
 		timings:    defaultLineTimings,
 		wait:       sleepCtx,
 		watches:    make(chan int, 8),
+		tails:      make(chan tailRequest, 32),
 		state:      lineBackoff,
 	}, nil
 }
@@ -249,24 +252,42 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 	}
 }
 
-// deliver hands a {"type":"watch","seconds":n} message to the sampler.
-// Everything else on the channel is ignored, for forward compatibility.
+// deliver hands a {"type":"watch","seconds":n} message to the sampler and a
+// {"type":"tail","container":id,"seconds":n,"backlog":n} message to the
+// tailer. Neither waits: when its owner is busy the message is dropped, and
+// the next renewal does the job. Everything else on the channel is ignored,
+// for forward compatibility.
 func (l *line) deliver(m cableMessage) {
-	var w struct {
-		Type    string `json:"type"`
-		Seconds int    `json:"seconds"`
+	var msg struct {
+		Type      string `json:"type"`
+		Seconds   int    `json:"seconds"`
+		Container string `json:"container"`
+		Backlog   int    `json:"backlog"`
 	}
-	if m.Identifier != l.identifier || json.Unmarshal(m.Message, &w) != nil || w.Type != "watch" {
+	if m.Identifier != l.identifier || json.Unmarshal(m.Message, &msg) != nil {
 		return
 	}
-	select {
-	case l.watches <- w.Seconds:
-	default:
-		l.log.Debug("watch dropped: the sampler is busy")
+	switch msg.Type {
+	case "watch":
+		select {
+		case l.watches <- msg.Seconds:
+		default:
+			l.log.Debug("watch dropped: the sampler is busy")
+		}
+	case "tail":
+		if !validContainerID(msg.Container) {
+			return
+		}
+		req := tailRequest{container: msg.Container, seconds: msg.Seconds, backlog: min(max(msg.Backlog, 0), maxBacklog)}
+		select {
+		case l.tails <- req:
+		default:
+			l.log.Debug("tail dropped: the tailer is busy")
+		}
 	}
 }
 
-// send puts one stats frame (the JSON for the command's data field) on the
+// send puts one frame (the JSON for the command's data field) on the
 // wire. Frames are never queued: unless the line is subscribed right now,
 // the frame is dropped and send reports false.
 func (l *line) send(frame []byte) bool {

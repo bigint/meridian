@@ -4,14 +4,18 @@ A small, read-only observer for Kamal hosts. It runs on each server as a Kamal
 accessory, lists the host's Kamal containers through the Docker API, and POSTs
 a snapshot of them to Meridian every 15 seconds or so. While someone has the
 server's page open in Meridian it also streams live CPU, memory, network and
-disk numbers once a second ([Live stats](#live-stats)). It never starts, stops
-or changes anything, and it is built from the Go standard library alone.
+disk numbers once a second ([Live stats](#live-stats)). With `MERIDIAN_LOGS=1`
+it tails the logs of Kamal containers that someone is reading
+([Container logs](#container-logs)). It never starts, stops or changes
+anything, and it is built from the Go standard library alone.
 
 ## What it reads
 
 - **Docker**: only `GET /containers/json?all=1` and `GET /containers/{id}/json`
   for snapshots, plus `GET /containers/{id}/stats?stream=true` while someone is
-  watching ([Live stats](#live-stats)).
+  watching ([Live stats](#live-stats)) and, with `MERIDIAN_LOGS=1`,
+  `GET /containers/{id}/logs` while someone is reading a container's logs
+  ([Container logs](#container-logs)).
 - **kamal-proxy state** (optional): the `kamal-proxy.state` file in the
   `kamal-proxy-config` volume, mounted read-only.
 - **Host identity**: `/host/etc/machine-id` and `/host/etc/hostname` if mounted.
@@ -108,8 +112,9 @@ logs it and waits 5 minutes. Inbound messages are capped at 1 MiB.
 **Watch leases.** Meridian sends `{"type":"watch","seconds":30}` inside the
 ActionCable envelope while a browser watches this server, and renews it about
 every 10 seconds. The agent keeps `live_until = max(live_until, now +
-min(seconds, 120))`, so the two hosts' clocks never meet. Other message types
-are ignored. Nothing streams outside a lease.
+min(seconds, 120))`, so the two hosts' clocks never meet. Messages of a type the
+agent does not know are ignored, and `tail` ([Container logs](#container-logs))
+has its own lease. Nothing streams outside a lease.
 
 **While a lease is live** the agent opens one
 `GET /containers/{id}/stats?stream=true` per running Kamal container (the same
@@ -174,11 +179,99 @@ queued. The frame:
   the keys above, and relays them to the browsers watching. Nothing is stored.
 
 Set `MERIDIAN_LIVE=0` (or `false`) to turn the line off entirely: no
-connection, no streams, no `/proc` reads. `meridian-agent -print` never starts
+connection, no streams, no `/proc` reads, and no container logs, which ride the
+same line. `meridian-agent -print` never starts
 it. If `/host/proc` is not mounted the frames simply have no `host`. If
 Meridian has no `/cable` yet, the agent keeps retrying in the background with
 the backoff above and one log line per attempt. A panic in the live path is
 logged and contained. It never reaches the snapshot loop.
+
+## Container logs
+
+A deployer can open a container's logs in Meridian, or an app's logs merged
+across the servers it runs on, and see the last 200 lines and then new ones as
+they are written. Logs are **off** unless you set `MERIDIAN_LOGS=1`. They ride
+the live line, so `MERIDIAN_LIVE=0` turns them off too (the agent logs one
+warning at start if you set both). Nothing is tailed while nobody reads. The
+agent passes lines on and keeps none: it writes them to no file and to no log
+of its own, and Meridian does not store them either.
+
+**Only Kamal's containers.** Before every new tail the agent inspects the
+container itself and follows it only if the rule from
+[What it reads](#what-it-reads) accepts it: an app, an accessory or
+kamal-proxy. It never follows its own container, and it does not matter what
+Meridian asks for. At most 20 containers are followed at once.
+
+**Tail leases.** Inside ActionCable's envelope, like a watch lease:
+
+```json
+{"type":"tail","container":"<64-hex id>","seconds":30,"backlog":200}
+```
+
+- Someone is reading this container's logs: follow it for the next `seconds`.
+  Per container, `until = max(until, now + min(seconds, 120))`. Meridian renews
+  about every 10 seconds with `"backlog":0`. When the lease lapses the agent
+  cancels the Docker stream.
+- `backlog` (at most 1000) asks for that many recent lines once. If the
+  container is not followed yet, the agent starts following with
+  `tail=<backlog>` and marks the batches that carry those history lines
+  `"backlog":true`. If it is already followed, the agent makes one separate,
+  non-following request for the last `backlog` lines and sends them as
+  `"backlog":true` batches, and the follow itself carries on untouched. A line
+  is history when Docker stamped it no later than the moment the agent opened
+  the follow.
+- With logs off, every tail is answered with
+  `{"action":"logs","container":"<id>","off":true}` and nothing else happens.
+- A container the agent will not follow (not Kamal's, not found, its own, or
+  the 20 limit) is answered with
+  `{"action":"logs","container":"<id>","refused":"<short reason>"}`.
+- A container that is not running and has no backlog asked for is not
+  followed: it already reported `ended`. A later lease follows it once it runs
+  again.
+
+**Batches.** The agent sends them as ActionCable commands, like stats frames,
+and only while the line is subscribed. They are never queued.
+
+```json
+{
+  "action": "logs",
+  "container": "<64-hex id>",
+  "backlog": false,
+  "lines": [
+    {"t": "2026-11-26T12:16:25.123456789Z", "s": "out", "m": "GET / 200 1.2ms"},
+    {"t": "2026-11-26T12:16:25.200000000Z", "s": "err", "m": "warn: slow query"}
+  ],
+  "dropped": 0,
+  "ended": false
+}
+```
+
+- The agent reads `GET /containers/{id}/logs?follow=1&stdout=1&stderr=1&timestamps=1&tail=<n>`
+  (`tail=0` for only new lines; the separate backlog request uses `follow=0`).
+  Without a TTY (`Config.Tty` false in the inspect) the stream is multiplexed:
+  8-byte frame headers, byte 0 the stream (1 stdout, 2 stderr), bytes 4 to 7
+  the big-endian payload length. A line can span frames, and stdout and stderr
+  lines can come in between, so each stream keeps its own partial line. With a
+  TTY the stream is raw and every line is `"out"`.
+- `t` is Docker's RFC3339Nano timestamp, as sent. `s` is `"out"` or `"err"`.
+  `m` is the line without its newline and without a trailing `\r`, as valid
+  UTF-8 (each invalid byte becomes U+FFFD), cut to 8192 bytes between
+  characters with a trailing `…` when longer. ANSI escape codes pass through
+  untouched. A line without a timestamp keeps all of itself in `m` with an
+  empty `t`.
+- At most one batch per container every 250 ms, with at most 500 lines and
+  256 KiB of `m`. History lines and live lines never share a batch. Empty
+  batches are not sent unless they carry `dropped` or `ended`.
+- A container may send 512 KiB of `m` per second. Lines beyond that are dropped
+  and counted in the next batch's `dropped`.
+- `ended: true` comes once, when Docker closes the follow stream, usually
+  because the container stopped (in the last batch, with any lines still
+  waiting). The agent stops following. The next tail starts it again, when the
+  container runs.
+- Memory is bounded: a partial line and one batch per container, and a reader
+  that runs at most 64 lines ahead of the batcher. A slow WebSocket slows
+  Docker's stream down and never grows a queue. A bug in a follower is logged
+  and costs that one stream.
 
 ## Configuration
 
@@ -192,7 +285,8 @@ logged and contained. It never reaches the snapshot loop.
 | `MERIDIAN_MACHINE_ID`  | `/host/etc/machine-id`, then `/etc/machine-id` | stable host id. Required one way or another |
 | `MERIDIAN_HOSTNAME`    | `/host/etc/hostname`, then the container hostname | reported hostname |
 | `MERIDIAN_PROXY_STATE` | unset                          | path to the mounted `kamal-proxy.state` |
-| `MERIDIAN_LIVE`        | on                             | `0` or `false` turns the live stats line off entirely |
+| `MERIDIAN_LIVE`        | on                             | `0` or `false` turns the live stats line off entirely, container logs with it |
+| `MERIDIAN_LOGS`        | off                            | `1` or `true` lets Meridian tail the logs of Kamal containers ([Container logs](#container-logs)). Needs the live line |
 
 The first snapshot is sent at startup. After a failure the delay doubles on
 each consecutive failure, up to 5 minutes, and it returns to the normal
@@ -246,8 +340,9 @@ Kamal accessories join the `kamal` network, so the agent reaches the proxy by
 its container name (`<service>-docker-proxy`). Do not give the proxy a `port:`.
 Port 2375 must never be published on the host.
 
-`CONTAINERS: 1` already covers the live stats endpoint,
-`GET /containers/{id}/stats`, so the proxy needs nothing more. The
+`CONTAINERS: 1` already covers the live stats and logs endpoints,
+`GET /containers/{id}/stats` and `GET /containers/{id}/logs`, so the proxy
+needs nothing more. The
 `/proc:/host/proc:ro` mount is optional: without it frames carry container
 numbers but no `host` object. The agent reads only `stat`, `meminfo` and
 `loadavg` from it.

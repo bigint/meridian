@@ -22,6 +22,7 @@ type config struct {
 	hostname   string
 	proxyState string
 	live       bool // hold the live stats line (MERIDIAN_LIVE)
+	logs       bool // tail container logs over the live line (MERIDIAN_LOGS)
 }
 
 // Host files are preferred over the container's own: inside the agent
@@ -70,6 +71,14 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 			return cfg, fmt.Errorf("MERIDIAN_LIVE: %q is not a boolean (use 0/false to turn the live line off)", raw)
 		}
 		cfg.live = live
+	}
+
+	if raw := strings.TrimSpace(getenv("MERIDIAN_LOGS")); raw != "" {
+		logs, err := strconv.ParseBool(raw)
+		if err != nil {
+			return cfg, fmt.Errorf("MERIDIAN_LOGS: %q is not a boolean (use 1/true to tail container logs)", raw)
+		}
+		cfg.logs = logs
 	}
 
 	labels, err := parseLabels(getenv("MERIDIAN_LABELS"))

@@ -67,6 +67,18 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select ".copyable code", text: "kamal accessory boot db -c deploy/umami.yml"
   end
 
+  test "an accessories-only config's page offers no deploy" do
+    sign_in_as users(:deployer)
+    app = @project.apps.find_by!(service: "blog")
+    app.update!(kind: App::ACCESSORIES)
+
+    get app_path(app)
+
+    assert_select "form[action=?]", app_deploys_path(app), count: 0
+    assert_select "form[action=?]", app_redeploy_path(app), count: 0
+    assert_select "code", text: "kamal accessory boot all -c deploy/blog.yml"
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

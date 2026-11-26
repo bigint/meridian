@@ -89,7 +89,7 @@
               </div>
               <div class="row__trail">
                 <%= time_ago(release.committed_at) %>
-                <% if index.zero? && @releases.size > 1 && current_user.can_deploy? && @app.versioned? %>
+                <% if index.zero? && @releases.size > 1 && current_user.can_deploy? && @app.versioned? && @app.deployable? %>
                   <%= button_to "Roll back", app_rollbacks_path(@app, release_id: release.id), class: "btn btn--small btn--danger",
                         form: { data: { turbo_confirm: "Revert #{release.short_sha} so the version file goes back to its previous value? CI deploys the result." } } %>
                 <% end %>
@@ -115,6 +115,12 @@
   </div>
 
   <aside class="split__aside" aria-label="Deploy">
-    <div class="panel"><%= render "apps/deploys", app: @app %></div>
+    <div class="panel">
+      <% if @app.deployable? %>
+        <%= render "apps/deploys", app: @app %>
+      <% else %>
+        <p class="txt-muted">This config only runs accessories, so it is never deployed. Start them with <code>kamal accessory boot all -c <%= @app.config_path %></code>.</p>
+      <% end %>
+    </div>
   </aside>
 </div>

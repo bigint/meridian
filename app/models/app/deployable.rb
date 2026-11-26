@@ -18,6 +18,7 @@ module App::Deployable
   # Writes `version` to the version file. Passing the blob SHA we read makes a
   # concurrent change by someone else fail instead of being overwritten.
   def deploy(version, actor:)
+    ensure_deployable!
     version = version.to_s.strip
     raise ArgumentError, "Version can't be blank" if version.blank?
     raise ArgumentError, "Version must be an image tag: letters, digits, _ . and -, not starting with . or -" unless version.match?(VERSION_FORMAT)
@@ -37,6 +38,7 @@ module App::Deployable
   # the release isn't the newest any more and reverting it would discard the
   # newer change, so that's a conflict.
   def roll_back(release, actor:)
+    ensure_deployable!
     raise ArgumentError, "Only the newest release can be rolled back" unless release == latest_release
     raise GitHost::Conflict, "#{version_file_path} changed after #{release.short_sha}" unless newest_release_sha == release.commit_sha
 
@@ -59,6 +61,7 @@ module App::Deployable
   # landed is never replaced by the one before it. Without a version file
   # there is no image tag to give Kamal. Returns the version.
   def redeploy(actor:)
+    ensure_deployable!
     version = read_version_file&.content.to_s.strip.presence
     raise ArgumentError, "#{name} has no version file yet: deploy a version first" unless version
 
@@ -71,7 +74,17 @@ module App::Deployable
     deploys.first
   end
 
+  # An accessories-only config (a tunnel's connectors) runs no app, so
+  # `kamal deploy` must never run on it.
+  def deployable?
+    kind != App::ACCESSORIES
+  end
+
   private
+    def ensure_deployable!
+      raise ArgumentError, "#{name} only runs accessories: start them with kamal accessory boot, not a deploy" unless deployable?
+    end
+
     def read_version_file
       project.git.file(version_file_path)
     rescue GitHost::NotFound

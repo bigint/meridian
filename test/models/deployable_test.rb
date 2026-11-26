@@ -35,6 +35,17 @@ class DeployableTest < ActiveSupport::TestCase
     assert_empty @app.deploys
   end
 
+  test "an accessories-only config is never deployed, rolled back or redeployed" do
+    @app.update!(kind: App::ACCESSORIES)
+    writes = stub_github_writes(@project)
+
+    assert_raises(ArgumentError) { @app.deploy("v43", actor: @actor) }
+    assert_raises(ArgumentError) { @app.roll_back(@app.latest_release, actor: @actor) }
+    assert_raises(ArgumentError) { @app.redeploy(actor: @actor) }
+    assert_empty writes
+    assert_not_requested :post, %r{/dispatches}
+  end
+
   test "a concurrent change in Git surfaces as a conflict" do
     stub_request(:put, %r{/contents/deploy/web.production.version}).to_return(status: 409, body: { message: "deploy/web.production.version does not match #{blob_sha("v42\n")}" }.to_json, headers: { "Content-Type" => "application/json" })
 

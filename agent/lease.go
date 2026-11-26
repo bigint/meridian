@@ -16,7 +16,7 @@ type lease struct {
 // watch applies {"type":"watch","seconds":n}:
 // live_until = max(live_until, now + min(n, 120 s)).
 func (l *lease) watch(seconds int) {
-	d := time.Duration(min(seconds, int(maxLease/time.Second))) * time.Second // clamp first: no overflow
+	d := time.Duration(min(max(seconds, 0), int(maxLease/time.Second))) * time.Second // clamp both ends first: no overflow
 	if until := l.now().Add(d); until.After(l.until) {
 		l.until = until
 	}

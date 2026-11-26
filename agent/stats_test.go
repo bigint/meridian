@@ -359,6 +359,16 @@ func TestLeaseCapsAtTwoMinutesAndIgnoresNonsense(t *testing.T) {
 	}
 }
 
+func TestLeaseIgnoresNegativesTooLargeToMultiply(t *testing.T) {
+	// -9223372037 s is below math.MinInt64 ns: unclamped, it wraps to +292 years.
+	clock := newFakeClock()
+	l := &lease{now: clock.Now}
+	l.watch(-9223372037)
+	if l.live() {
+		t.Fatalf("a negative watch made the lease live until %v", l.until)
+	}
+}
+
 // ---- config ----
 
 func TestLoadConfigLiveSwitch(t *testing.T) {

@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Previews deploy. The overlay renamed the service `<app>-pr-<n>`, but a preview runs the app's image, which is labelled with the app's service, and Kamal won't boot an image whose label doesn't match, so every preview failed in CI with "missing the 'service' label". A preview now keeps the app's service and is told apart by its `pr-<n>` destination. An open pull request gets the new overlay on its next push.
 - A server's page refreshes live even when nothing of it is on the board yet, such as a database host that runs only accessories. It listened only to the regions of its board cells, so with none it waited on a stream nothing sent to.
 - Open boards, maps and server pages always get the last change. The once-a-second refresh dropped every change after the first in each second, so a server that reported its new version just after a refresh went out stayed drifted on screen until something else changed. A server whose region label changes is now refreshed in the region it left too.
 - The map groups servers into one place only within 60 km, one metro area. The threshold was six map units, about 240 km, so Amsterdam and Brussels became one place named after one of them.

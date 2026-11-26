@@ -94,7 +94,7 @@ class Preview < ApplicationRecord
     return unless removal_given_up?
 
     Event.record("preview.removal_failed", subject: self,
-      summary: "CI failed to remove the #{app.service} preview for ##{pr_number} #{remove_attempts} times; expiry has stopped trying. Check the runs, then Destroy it again or remove #{app.service}-pr-#{pr_number} by hand")
+      summary: "CI failed to remove the #{app.service} preview for ##{pr_number} #{remove_attempts} times; expiry has stopped trying. Check the runs, then Destroy it again or remove the #{app.service} #{destination} containers by hand")
   end
 
   def removal_given_up?
@@ -122,10 +122,10 @@ class Preview < ApplicationRecord
     end
     hosts = existing ? overlay_hosts(existing.content) : []
     project.git.delete_file(overlay_path, sha: existing.sha, message: "chore(#{app.service}): remove preview pr-#{pr_number}, its config is gone") if existing
-    left = "#{app.service}-pr-#{pr_number} containers#{" on #{hosts.to_sentence}" if hosts.any?}"
+    left = "#{app.service} #{destination} containers#{" on #{hosts.to_sentence}" if hosts.any?}"
     Event.record("preview.abandoned", subject: self, summary: "#{app.config_path} left Git, so CI can't remove the #{app.service} preview for ##{pr_number}. Meridian deleted #{overlay_path}; remove the #{left} by hand")
   rescue GitHost::Error => error
-    Event.record("preview.abandoned", subject: self, summary: "#{app.config_path} left Git, so CI can't remove the #{app.service} preview for ##{pr_number}, and GitHub refused to delete #{overlay_path} (#{error.message.truncate(100)}). Remove the file and the #{app.service}-pr-#{pr_number} containers by hand")
+    Event.record("preview.abandoned", subject: self, summary: "#{app.config_path} left Git, so CI can't remove the #{app.service} preview for ##{pr_number}, and GitHub refused to delete #{overlay_path} (#{error.message.truncate(100)}). Remove the file and the #{app.service} #{destination} containers by hand")
   end
 
   def commit_overlay
@@ -180,7 +180,8 @@ class Preview < ApplicationRecord
     end
 
     # The app's destination file, if it has one, minus where and under which
-    # name it runs; then the preview's own service, server and hostname.
+    # name it runs; then the preview's own server and hostname. The service
+    # stays the app's: Kamal only boots an image whose service label matches it.
     # Each role keeps its settings (cmd, env, options) from the base config
     # and the destination file, and runs on the preview server.
     def overlay
@@ -199,7 +200,7 @@ class Preview < ApplicationRecord
       end
 
       settings = inherited.except("service", "servers", "proxy").merge(
-        "service" => "#{app.service}-pr-#{pr_number}",
+        "service" => app.service,
         "servers" => servers,
         "proxy" => proxy.merge(proxy_key => host)
       )

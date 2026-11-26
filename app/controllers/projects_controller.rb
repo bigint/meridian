@@ -49,7 +49,7 @@ class ProjectsController < ApplicationController
 
   private
     def left_previews(previews)
-      containers = previews.map { "#{it.app.service}-pr-#{it.pr_number}" }.to_sentence
+      containers = previews.map { "#{it.app.service} #{it.destination}" }.to_sentence
       "#{"Preview".pluralize(previews.size)} #{previews.map(&:label).to_sentence} #{previews.one? ? "was" : "were"} still running: remove the #{containers} containers and #{previews.map(&:overlay_path).to_sentence} by hand"
     end
 

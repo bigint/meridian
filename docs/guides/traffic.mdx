@@ -39,7 +39,7 @@ kamal-proxy logs every app's requests in one stream. Meridian keeps only lines w
 
 - `<service>-<role>` for each role, such as `shop-web`.
 - `<service>-<role>-<destination>` for an app with a destination, such as `shop-web-production`.
-- The same for each of the app's previews, such as `shop-pr-12-web-pr-12`.
+- The same for each of the app's previews, with the preview's `pr-<n>` destination, such as `shop-web-pr-12`.
 
 Every other app's requests and kamal-proxy's own lines stop at Meridian and never reach the page.
 

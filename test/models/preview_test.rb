@@ -18,7 +18,7 @@ class PreviewTest < ActiveSupport::TestCase
 
     assert_equal [ "pr-7", "pr-7.api.preview.example.com", "deploy/api.pr-7.yml", "deploying" ], [ preview.destination, preview.hostname, preview.overlay_path, preview.state ]
     overlay = YAML.safe_load(@writes.sole["content"])
-    assert_equal "api-pr-7", overlay["service"]
+    assert_equal "api", overlay["service"], "the app's own service: Kamal checks it against the image's service label"
     assert_equal({ "host" => "pr-7.api.preview.example.com" }, overlay["proxy"])
     assert_equal 1, overlay.dig("servers", "web").size
     assert_equal({ "config" => "deploy/api.yml", "destination" => "pr-7", "version" => "h" * 40, "command" => "deploy" }, @dispatches.sole["inputs"])
@@ -39,7 +39,7 @@ class PreviewTest < ActiveSupport::TestCase
     Preview.deploy(web, number: 9, head_sha: "h" * 40, url: nil)
 
     overlay = YAML.safe_load(@writes.sole["content"])
-    assert_equal "web-pr-9", overlay["service"]
+    assert_equal "web", overlay["service"]
     assert_equal({ "hosts" => [ "pr-9.web.preview.example.com" ], "app_port" => 3000 }, overlay["proxy"])
     assert_equal %w[ job web ], overlay["servers"].keys.sort
     hosts = overlay["servers"].values.map { it.is_a?(Hash) ? it["hosts"] : it }
@@ -176,7 +176,7 @@ class PreviewTest < ActiveSupport::TestCase
     assert preview.reload.failed?
     assert preview.removal_given_up?
     assert_equal 3, @dispatches.count { it.dig("inputs", "command") == "remove" }
-    assert_match "remove api-pr-7 by hand", Event.where(action: "preview.removal_failed").sole.details["summary"]
+    assert_match "remove the api pr-7 containers by hand", Event.where(action: "preview.removal_failed").sole.details["summary"]
 
     preview.close
     assert preview.reload.removing?, "Destroy still asks again"

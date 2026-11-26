@@ -279,13 +279,13 @@ class ProjectSyncTest < ActiveSupport::TestCase
     dispatches = stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 204)
     deleted = stub_request(:delete, %r{/contents/deploy/blog.pr-3.yml}).to_return_json(body: { commit: { sha: "e" * 40 } })
 
-    files = infra_files.except("deploy/blog.yml").merge("deploy/blog.pr-3.yml" => "service: blog-pr-3\nservers:\n  web: [ web-1.example.com ]\n")
+    files = infra_files.except("deploy/blog.yml").merge("deploy/blog.pr-3.yml" => "service: blog\nservers:\n  web: [ web-1.example.com ]\n")
     stub_github_files(@project, files, head: "d" * 40)
     @project.sync
 
     assert_requested deleted
     assert_not_requested dispatches # Kamal can't remove a destination whose base config is gone
-    assert_match "remove the blog-pr-3 containers on web-1.example.com by hand", Event.where(action: "preview.abandoned").sole.details["summary"]
+    assert_match "remove the blog pr-3 containers on web-1.example.com by hand", Event.where(action: "preview.abandoned").sole.details["summary"]
     assert_nil @project.apps.find_by(service: "blog")
     assert_not_includes @project.reload.config_errors.map { it["file"] }, "deploy/blog.pr-3.yml"
   end

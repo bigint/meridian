@@ -19,7 +19,7 @@ class ProjectRemovalTest < ActionDispatch::IntegrationTest
       "Remove this project from Meridian? Nothing in Git changes. Preview acme/web#12 keeps running: Destroy it on Previews first."
 
     delete project_path(@project)
-    assert_equal "Removed example/infra. Preview acme/web#12 was still running: remove the web-pr-12 containers and deploy/web.pr-12.yml by hand",
+    assert_equal "Removed example/infra. Preview acme/web#12 was still running: remove the web pr-12 containers and deploy/web.pr-12.yml by hand",
       Event.recent.first.summary
   end
 
@@ -31,7 +31,7 @@ class ProjectRemovalTest < ActionDispatch::IntegrationTest
     assert_select "form[data-turbo-confirm$=?]", "Previews acme/web#12 and acme/web#13 keep running: Destroy them on Previews first."
 
     delete project_path(@project)
-    assert_match "Previews acme/web#12 and acme/web#13 were still running: remove the web-pr-12 and web-pr-13 containers and deploy/web.pr-12.yml and deploy/web.pr-13.yml by hand",
+    assert_match "Previews acme/web#12 and acme/web#13 were still running: remove the web pr-12 and web pr-13 containers and deploy/web.pr-12.yml and deploy/web.pr-13.yml by hand",
       Event.recent.first.summary
   end
 

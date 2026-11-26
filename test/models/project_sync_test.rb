@@ -33,6 +33,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
     db = @project.apps.find_by!(service: "api").accessories.sole
     assert_equal "postgres:17", db["image"]
     assert_equal "db-1.example.com", db["hosts"].sole
+    assert_equal [], db["secrets"]
   end
 
   test "parse errors carry file and line" do

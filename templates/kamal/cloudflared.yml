@@ -1,10 +1,11 @@
 accessories:
   cloudflared:
-    # Connects out to Cloudflare, so the servers need no open ports. In the
-    # tunnel's public hostname, send traffic to http://kamal-proxy:80.
+    # Cloudflare Tunnel connector. It dials out, so no ports open.
+    # The tunnel's routes send traffic to http://kamal-proxy:80.
     image: cloudflare/cloudflared:2026.11.2
     roles: [ web ]
     cmd: tunnel --no-autoupdate run
     env:
       secret:
-        - TUNNEL_TOKEN
+        # cloudflared reads TUNNEL_TOKEN from %{secret}.
+        - TUNNEL_TOKEN:%{secret}

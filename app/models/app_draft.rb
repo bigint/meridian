@@ -108,11 +108,13 @@ class AppDraft
     end
 
     def tunnel_steps
-      boot = "kamal accessory boot cloudflared -c #{config_path}#{" -d #{destination}" if destination.present?}"
+      setup = Tunnel::Setup.new(App.new(service: service, config_path: config_path, destination: destination))
       [
-        "Create a Cloudflare Tunnel with a public hostname #{hostname} pointing at http://kamal-proxy:80.",
-        "Add the tunnel's token as the TUNNEL_TOKEN secret (Meridian's Secrets page lists it once this is merged).",
-        "After the first deploy, run `#{boot}`. `kamal deploy` doesn't boot accessories."
+        "In Cloudflare, open Networking → Tunnels, click Create Tunnel and name it #{service}.",
+        "On the tunnel's Overview, under Install cloudflared connector, choose Docker and copy the command. Keep only the token, the long value after --token. Don't run the command.",
+        "Set the #{setup.secret_name} secret to that token on Meridian's Secrets page, and add `#{setup.secrets_line}` to .kamal/secrets.",
+        "On the tunnel's Routes tab, click Add route → Published application. Hostname #{hostname}, Service URL http://kamal-proxy:80. Cloudflare creates the DNS record.",
+        "After the first deploy, run `#{setup.boot_command}` once, with #{setup.secret_name} in the environment. `kamal deploy` doesn't start accessories."
       ]
     end
 
@@ -123,7 +125,7 @@ class AppDraft
         service: service, description: DESCRIPTIONS.fetch(kind), image: image, kind: kind, source_repo: source_repo,
         servers: with_servers ? servers_yaml + "\n" : "", proxy_host: with_servers ? "  host: #{hostname}\n" : "", app_port: port,
         env: kind == "rails" ? "\nenv:\n  secret:\n    - RAILS_MASTER_KEY\n" : "", registry: registry, registry_username: registry_username)
-      tunnel ? "#{base}\n#{Templates.render("kamal/cloudflared.yml")}" : base
+      tunnel ? "#{base}\n#{Tunnel.snippet(Tunnel.secret_name(service))}" : base
     end
 
     def servers_yaml

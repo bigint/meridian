@@ -18,6 +18,24 @@ class TunnelTest < ActiveSupport::TestCase
     assert_equal [ [ app, "cloudflared" ] ], Tunnel.all.map { [ it.app, it.name ] }
   end
 
+  test "each app has its own token secret, named after its service" do
+    assert_equal "SALEOR_API_TUNNEL_TOKEN", Tunnel.secret_name("saleor-api")
+    assert_includes Tunnel.snippet("SHOP_TUNNEL_TOKEN"), "- TUNNEL_TOKEN:SHOP_TUNNEL_TOKEN"
+  end
+
+  test "a tunnel knows its token secret and whether Meridian set it" do
+    make_app("shop", accessories: [ accessory("cloudflared").merge("secrets" => [ "SHOP_TUNNEL_TOKEN" ]) ])
+    make_app("blog", accessories: [ accessory("cloudflared").merge("secrets" => [ "BLOG_TUNNEL_TOKEN" ]) ])
+    @project.secret_names.create!(name: "SHOP_TUNNEL_TOKEN", last_set_at: 1.hour.ago)
+
+    tunnels = Tunnel.all.index_by { it.app.service }
+
+    assert_equal "SHOP_TUNNEL_TOKEN", tunnels["shop"].secret_name
+    assert tunnels["shop"].token_set?
+    assert_equal "BLOG_TUNNEL_TOKEN", tunnels["blog"].secret_name
+    assert_not tunnels["blog"].token_set?
+  end
+
   test "apps without a tunnel are ignored" do
     make_app("blog", accessories: [ accessory("db", image: "postgres:17") ])
 

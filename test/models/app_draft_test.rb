@@ -32,7 +32,7 @@ class AppDraftTest < ActiveSupport::TestCase
     assert draft.valid?, draft.errors.full_messages.to_sentence
     cloudflared = YAML.safe_load(draft.files["deploy/shop.yml"]).dig("accessories", "cloudflared")
     assert_match %r{\Acloudflare/cloudflared:}, cloudflared["image"]
-    assert_equal [ "TUNNEL_TOKEN" ], cloudflared.dig("env", "secret")
+    assert_equal [ "TUNNEL_TOKEN:SHOP_TUNNEL_TOKEN" ], cloudflared.dig("env", "secret")
     assert_nil YAML.safe_load(build.files["deploy/shop.yml"])["accessories"]
   end
 
@@ -46,7 +46,8 @@ class AppDraftTest < ActiveSupport::TestCase
 
   test "a tunnel replaces the DNS steps with the tunnel steps" do
     steps = build(tunnel: true).manual_steps.join("\n")
-    assert_includes steps, "TUNNEL_TOKEN"
+    assert_includes steps, "SHOP_TUNNEL_TOKEN=$SHOP_TUNNEL_TOKEN"
+    assert_includes steps, "Networking → Tunnels"
     assert_includes steps, "kamal accessory boot cloudflared -c deploy/shop.yml"
     assert_not_includes steps, "Point DNS"
     assert_includes build.manual_steps.join("\n"), "Point DNS"

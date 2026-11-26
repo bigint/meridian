@@ -17,38 +17,67 @@ class Tunnel
     end
   end
 
-  attr_reader :app, :accessory, :connectors
+  # What it takes to put one app behind a tunnel, in that app's own names.
+  Setup = Data.define(:app) do
+    def secret_name = Tunnel.secret_name(app.service)
+    def secrets_line = "#{secret_name}=$#{secret_name}"
+    def snippet = Tunnel.snippet(secret_name)
+    def boot_command = Tunnel.boot_command(app, LEGACY_NAME)
+  end
 
-  def initialize(app, accessory, connectors)
-    @app, @accessory, @connectors = app, accessory, connectors
+  attr_reader :app, :accessory, :connectors, :secret
+
+  # secret is the SecretName row for the token, if Meridian knows the name.
+  def initialize(app, accessory, connectors, secret = nil)
+    @app, @accessory, @connectors, @secret = app, accessory, connectors, secret
+  end
+
+  # One tunnel and one token per app: Cloudflare spreads a tunnel's requests
+  # over all its connectors, so a tunnel shared by apps on different servers
+  # would send requests to servers that don't run the app.
+  def self.secret_name(service) = "#{service.to_s.upcase.gsub(/[^A-Z0-9]+/, "_")}_TUNNEL_TOKEN"
+
+  def self.snippet(secret_name) = Templates.render("kamal/cloudflared.yml", secret: secret_name)
+
+  def self.boot_command(app, accessory_name)
+    "kamal accessory boot #{accessory_name} -c #{app.config_path}#{" -d #{app.destination}" if app.destination.present?}"
   end
 
   def name = accessory["name"]
+
+  def secret_name = Tunnel.token_secret(app, accessory)
+
+  def token_set? = secret&.last_set_at.present?
 
   def state = connectors.map(&:state).max_by { STATES.index(it) } || :unknown
 
   def missing? = connectors.any? { it.state == :missing }
 
-  def boot_command
-    "kamal accessory boot #{name} -c #{app.config_path}#{" -d #{app.destination}" if app.destination.present?}"
-  end
+  def boot_command = Tunnel.boot_command(app, name)
 
-  # Problems first, then by app. Four queries however many tunnels there are.
+  # Problems first, then by app. Five queries however many tunnels there are.
   def self.all
     pairs = App.ordered.flat_map { |app| app.accessories.select { cloudflared?(it) }.map { |accessory| [ app, accessory ] } }
     servers = servers_by_host(pairs.flat_map { |_, accessory| accessory["hosts"] }.uniq)
     placements = Placement.where(kind: "accessory", service: pairs.map { |_, accessory| accessory["service"] }.uniq)
       .running_first.group_by { [ it.server_id, it.service ] }
+    secrets = SecretName.where(name: pairs.filter_map { token_secret(*it) }.uniq).index_by { [ it.project_id, it.name ] }
 
     tunnels = pairs.map do |app, accessory|
       connectors = accessory["hosts"].map do |host|
         server = servers[host]
         Connector.new(host, server, server && placements[[ server.id, accessory["service"] ]]&.first)
       end
-      new(app, accessory, connectors)
+      new(app, accessory, connectors, secrets[[ app.project_id, token_secret(app, accessory) ]])
     end
 
     tunnels.sort_by.with_index { |tunnel, index| [ -STATES.index(tunnel.state), index ] }
+  end
+
+  # The repository secret a connector reads its token from. Configs synced
+  # before the parser reported accessory secrets fall back to the app's.
+  def self.token_secret(app, accessory)
+    (accessory["secrets"] || app.secret_names).find { it.end_with?("TUNNEL_TOKEN") }
   end
 
   # Configs synced before the parser reported images are found by name.

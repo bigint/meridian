@@ -53,8 +53,82 @@
     &:focus { border-color: var(--color-accent); outline: 3px solid var(--color-accent-soft); outline-offset: 0; }
     &:disabled { opacity: 0.6; }
   }
-  select { padding-inline-end: 2rem; }
   select[multiple] { block-size: auto; min-block-size: 10rem; padding-block: 0.25rem; }
+
+  /* Dropdowns draw their own chevron (Lucide's, like the icons). Where the
+     browser supports appearance: base-select, the list they open is ours too,
+     drawn like .menu; elsewhere it stays the system's. */
+  select:not([multiple], [size]) {
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+    appearance: none;
+    padding-inline-end: 2rem;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 1.125em;
+    cursor: pointer;
+
+    &:hover:not(:focus, :disabled) { border-color: var(--color-line-strong); }
+    &:disabled { cursor: default; }
+  }
+
+  @supports (appearance: base-select) {
+    /* A base-select is as wide as the chosen option, not the widest one, so
+       it gets a floor. While open, focus sits on an option, not the select,
+       so :open draws the focus ring (over :hover too). */
+    select:not([multiple], [size]) {
+      appearance: base-select;
+      min-inline-size: 8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding-inline-end: 0.625rem;
+      background-image: none;
+
+      &::picker-icon {
+        content: "";
+        inline-size: 1.125em;
+        block-size: 1.125em;
+        background: var(--color-ink-muted);
+        mask: var(--chevron) center / contain no-repeat;
+        transition: rotate 150ms;
+      }
+      &:open::picker-icon { rotate: 180deg; }
+      &:open, &:open:hover { border-color: var(--color-accent); outline: 3px solid var(--color-accent-soft); outline-offset: 0; }
+
+      &::picker(select) {
+        appearance: base-select;
+        margin-block: var(--space-xs);
+        padding: var(--space-xs);
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-large);
+        background: var(--color-canvas);
+        box-shadow: var(--shadow-float);
+        transition: opacity 100ms;
+      }
+
+      /* Inline padding lines each option's text up with the select's. */
+      option {
+        padding: 0.375rem;
+        border-radius: var(--radius);
+        cursor: pointer;
+
+        &:hover, &:focus-visible { background: var(--color-raised); outline: 0; }
+        &::checkmark {
+          order: 1;
+          margin-inline-start: auto;
+          content: "";
+          inline-size: 1.125em;
+          block-size: 1.125em;
+          background: var(--color-accent);
+          mask: var(--check) center / contain no-repeat;
+        }
+      }
+    }
+
+    @starting-style { select:not([multiple], [size])::picker(select) { opacity: 0; } }
+  }
   textarea { block-size: auto; min-block-size: 8rem; max-inline-size: 42rem; padding-block: 0.5rem; font-family: var(--font-mono); font-size: var(--text-s); }
   input[type=checkbox], input[type=radio] { inline-size: 1rem; block-size: 1rem; accent-color: var(--color-accent); }
   label { cursor: default; }

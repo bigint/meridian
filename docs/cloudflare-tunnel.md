@@ -33,6 +33,14 @@ To serve a hostname the app doesn't answer to, set **HTTP Host Header** under **
 - **The token** secret, and whether Meridian has set it.
 - **Apps it can serve**: those that run on every connector's server. An app on only some of them gets a warning naming the servers it's missing from. Meridian can't see Cloudflare's routes, so this is advice, not an error: don't route that app through the tunnel until it runs everywhere. Apps on no connector's server are listed quietly.
 
+## Editing connectors
+
+**Edit connectors** on a tunnel (admins) changes which servers run a connector. Tick and untick servers; the page previews the change, warns about any app the new set of servers doesn't all run, and proposes it to the infra repository as a pull request, or a direct commit where the project allows it.
+
+Meridian edits the connector config's own text instead of regenerating it, so everything else in it (other accessories such as a health check or a log agent, anchors, comments) stays as it was. An added server gets a copy of an existing connector entry with its host and hostname swapped in, named the way the file already names them (`kamal-fra-01` next to `cloudflared-blr-01` for `kamal-blr-01` becomes `cloudflared-fra-01`); a dropped server loses its entry and the comments just above it. The primary role's server list follows, except that a server stays listed while another accessory still runs there. Kamal checks the result, which must start connectors on exactly the ticked servers and leave every other accessory alone, before anything is proposed.
+
+A deploy doesn't start or stop accessories, so two steps stay by hand, and the page gives the commands: before merging, `kamal accessory remove` each dropped connector (once merged, Kamal no longer knows it), and after merging, `kamal accessory boot` each new one. Routes and the token stay in Cloudflare.
+
 ## Previews behind a tunnel
 
 Previews are named `pr-<n>.<app>.<preview domain>` by default, two levels below the domain, which Cloudflare's free certificate doesn't cover.

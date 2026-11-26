@@ -9,6 +9,8 @@ The first release: the milestones M0 to M6, and everything built on them since.
 - One Cloudflare Tunnel serves every app, the way production runs: an accessories-only `deploy/edge.yml` starts a `cloudflared` connector on each server, all reading `CLOUDFLARE_TUNNEL_TOKEN`, and the tunnel routes each hostname to `kamal-proxy`. Meridian never calls Cloudflare's API. See [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) and decision 33.
 - The Tunnels page shows each tunnel's connectors (running, stopped, not started or unknown, with the command that starts a missing one), its token, and which apps it can serve: an app is safe to route only if it runs on every connector's server, and the page names the servers it's missing from.
 - **Set up a tunnel** walks through it with the project's own names, generates the edge config for the servers you pick, and ticks off what Meridian can see is done.
+- **Edit connectors** (admins) changes which servers run a tunnel's connectors as a pull request or commit to the edge config. It edits the file in place, keeping every other accessory and comment, checks the result with Kamal, and gives the `kamal accessory remove` and `boot` commands to run around the merge.
+- An app's page lists its accessories (databases, caches, tunnel connectors) with their image, server, state and the command that starts one that isn't running.
 - A config labelled `meridian.kind: accessories` runs no app, so the board leaves it out.
 - Settings → General can name previews `pr-<n>-<app>.<domain>`. One wildcard record covers every app, and it works with Cloudflare's free certificate. Existing previews keep their hostname.
 

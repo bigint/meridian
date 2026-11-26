@@ -50,7 +50,8 @@ class Preview < ApplicationRecord
       # Only a preview still waiting on its removal is finished by one: a
       # remove run replayed by polling, or one that ends after the pull
       # request reopened, must not take down the preview deployed since.
-      if command == "remove" && success && preview.removing? then preview.finish_removal
+      # A failed removal goes back to failed, where Destroy and expiry try again.
+      if command == "remove" && preview.removing? then success ? preview.finish_removal : preview.update!(state: "failed")
       # Runs for one preview run one at a time, so the last to finish is the
       # newest, whether the state before it was deploying, active or failed.
       elsif command == "deploy" && !preview.removing? && !preview.removed? then preview.update!(state: success ? "active" : "failed")

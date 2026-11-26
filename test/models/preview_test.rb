@@ -93,6 +93,19 @@ class PreviewTest < ActiveSupport::TestCase
     assert preview.reload.active?
   end
 
+  test "a failed removal can be tried again, and keeps its overlay" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    preview.close
+    track("remove deploy/api.yml pr-7", conclusion: "failure")
+    assert preview.reload.failed?
+
+    assert_not_requested @deletes
+
+    preview.close
+    assert preview.reload.removing?
+    assert_equal 2, @dispatches.count { it.dig("inputs", "command") == "remove" }
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

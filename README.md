@@ -19,7 +19,7 @@ docker run -d -p 3000:80 -v meridian:/rails/storage -e SECRET_KEY_BASE=$(openssl
 
 Then open <http://localhost:3000>.
 
-To use it for real, create a GitHub App, deploy Meridian with Kamal (it ships its own `config/deploy.yml`), add your infra repository, and put the agent on your servers. [docs/install.md](docs/install.md) walks through all of it in about 15 minutes.
+To use it for real, create a GitHub App, deploy Meridian with Kamal (it ships its own `config/deploy.yml`), add your infra repository, and put the agent on your servers. [Install](docs/install.mdx) walks through all of it in about 15 minutes.
 
 ## Principles
 
@@ -48,16 +48,14 @@ Operator ──▶ Meridian ──commits, PRs──▶ GitHub ──Actions─�
 
 ## Documentation
 
-- [Install](docs/install.md)
-- [Configuration](docs/configuration.md)
-- [The agent](docs/agent.md)
-- [Previews](docs/previews.md)
-- [Cloudflare Tunnel](docs/cloudflare-tunnel.md)
-- [Security](docs/security.md)
-- [Architecture and Kamal research](docs/architecture.md)
-- [Decisions](docs/decisions.md)
-- [Design](docs/design.md)
-- [Backups with Litestream](docs/litestream.md)
+The documentation is a [Mintlify](https://mintlify.com) site in [`docs/`](docs), to be served at meridian.yoginth.com. Preview it with `bin/docs` (needs Node 20.17 or later). Good places to start:
+
+- [Quickstart](docs/quickstart.mdx) and [Install](docs/install.mdx)
+- [How it works](docs/concepts/how-it-works.mdx) and [drift states](docs/concepts/drift.mdx)
+- Guides: [deploy and roll back](docs/guides/deploy.mdx), [new apps](docs/guides/new-app.mdx), [previews](docs/guides/previews.mdx), [the agent](docs/guides/agent.mdx), [Cloudflare Tunnel](docs/guides/cloudflare-tunnel.mdx)
+- Reference: [environment variables](docs/reference/environment.mdx), [the infra repository](docs/reference/infra-repository.mdx), [the CI workflow](docs/reference/ci-workflow.mdx)
+- Operate: [security](docs/operate/security.mdx), [backups with Litestream](docs/operate/backups.mdx)
+- Internals: [architecture](docs/internals/architecture.mdx), [decisions](docs/internals/decisions.mdx), [design](docs/internals/design.mdx)
 
 ## Development
 

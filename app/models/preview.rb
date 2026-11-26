@@ -1,6 +1,6 @@
 # A pull request in an app's source repository, running as a Kamal
 # destination `pr-<n>`. The overlay file sits next to the base config, where
-# Kamal looks for destination files (see docs/architecture.md). CI deploys and
+# Kamal looks for destination files (see docs/internals/architecture.mdx). CI deploys and
 # removes it; Meridian only commits the overlay and asks CI to run.
 class Preview < ApplicationRecord
   STATES = %w[ deploying active failed removing removed ].freeze

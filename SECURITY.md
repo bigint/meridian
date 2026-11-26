@@ -8,4 +8,4 @@ Include the version, a description and the steps to reproduce. We aim to acknowl
 
 Fixes land on `main` and in the next release. Only the latest release is supported.
 
-How Meridian is meant to be deployed and what it protects is described in [docs/security.md](docs/security.md).
+How Meridian is meant to be deployed and what it protects is described in [docs/operate/security.mdx](docs/operate/security.mdx).

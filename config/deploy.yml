@@ -1,6 +1,6 @@
 # Meridian deploys itself with Kamal. Copy this file, fill in the five
 # numbered placeholders, put the secrets in .kamal/secrets, then
-# `kamal setup`. See docs/install.md.
+# `kamal setup`. See docs/install.mdx.
 service: meridian
 image: ghcr.io/bigint/meridian             # 5. your registry, if you build the image yourself
 
@@ -39,7 +39,7 @@ aliases:
   console: app exec --interactive --reuse "bin/rails console"
   logs: app logs -f
 
-# SQLite databases live here. Back them up with Litestream: docs/litestream.md.
+# SQLite databases live here. Back them up with Litestream: docs/operate/backups.mdx.
 volumes:
   - "meridian_storage:/rails/storage"
 

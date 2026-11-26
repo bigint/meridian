@@ -116,6 +116,18 @@ class PreviewTest < ActiveSupport::TestCase
     assert preview.reload.removing?
   end
 
+  test "a project GitHub refuses doesn't stop other previews expiring" do
+    other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
+    stub_installation_token(other)
+    stub_request(:post, %r{/repos/example/other/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 403, body: "{}", headers: { "Content-Type" => "application/json" })
+    stuck = other.apps.create!(service: "x", config_path: "deploy/x.yml", source_repo: "example/x-src")
+      .previews.create!(pr_number: 1, destination: "pr-1", hostname: "pr-1.x.preview.example.com", overlay_path: "deploy/x.pr-1.yml", expires_at: 1.day.ago)
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+
+    travel(8.days) { PreviewExpiryJob.perform_now }
+    assert_equal [ "deploying", "removing" ], [ stuck.reload.state, preview.reload.state ]
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

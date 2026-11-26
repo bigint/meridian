@@ -13,7 +13,7 @@ class Tunnel::ConnectorChange
 
   attr_reader :tunnel, :hosts
 
-  validate :one_config, :one_host_per_connector, :some_hosts, :something_changes
+  validate :hosts_well_formed, :one_config, :one_host_per_connector, :some_hosts, :something_changes
   validate :kamal_accepts_it, if: -> { errors.none? }
 
   def initialize(tunnel, hosts:, source: nil)
@@ -148,6 +148,13 @@ class Tunnel::ConnectorChange
       lines.insert(items.last + 1, *added.reject { listed.key?(it) }.map { "#{indent}- #{it}\n" })
       drop.sort.reverse_each { lines.delete_at(it) }
       lines
+    end
+
+    # Hosts arrive in the URL, and Kamal evaluates ERB when it checks the
+    # result, so anything that isn't plainly a host name is refused first.
+    def hosts_well_formed
+      bad = hosts.reject { it.is_a?(String) && it.match?(Server::HOST_FORMAT) }
+      errors.add(:base, "Not a server name: #{bad.map(&:to_s).to_sentence}") if bad.any?
     end
 
     def one_config

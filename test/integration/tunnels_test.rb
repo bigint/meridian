@@ -109,6 +109,24 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     assert_select ".code-block code", text: "kamal accessory boot cloudflared-euc1-az1-node-01 -c deploy/edge.yml"
   end
 
+  test "a crafted host in the edit link is refused, and its ERB never runs" do
+    source = file_fixture("edge/generated.yml").read
+    @project.apps.create!(service: "edge", kind: App::ACCESSORIES, config_path: "deploy/edge.yml",
+      accessories: KamalConfig.parse({ "deploy/edge.yml" => source }, [ { "path" => "deploy/edge.yml", "destination" => nil } ]).sole["accessories"])
+    stub_github_files(@project, { "deploy/edge.yml" => source })
+    sign_in_as users(:admin)
+
+    Dir.mktmpdir do |dir|
+      marker = File.join(dir, "ran")
+      get edit_tunnels_connectors_path(project: @project.id, secret: "CLOUDFLARE_TUNNEL_TOKEN", hosts: [ "aps2-az1-node-01", "x<%= File::write(#{marker.inspect}, 1) %>" ])
+
+      assert_response :success
+      assert_select ".alert", text: /Not a server name/
+      assert_select "button", text: /Commit the change|Open a pull request/, count: 0
+      assert_not File.exist?(marker), "ERB from the query string ran"
+    end
+  end
+
   test "only admins edit connectors" do
     make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("a") ])
 

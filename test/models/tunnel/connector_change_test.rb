@@ -49,6 +49,17 @@ class Tunnel::ConnectorChangeTest < ActiveSupport::TestCase
     assert_includes change_for(source, hosts: []).tap(&:validate).errors.full_messages, "Pick at least one server"
   end
 
+  test "refuses a host that isn't plainly a host name before Kamal reads anything" do
+    Dir.mktmpdir do |dir|
+      marker = File.join(dir, "ran")
+      change = change_for(file_fixture("edge/generated.yml").read, hosts: [ "aps2-az1-node-01", "x<%= File::write(#{marker.inspect}, 1) %>", "y\n  evil: 1" ])
+
+      assert_not change.valid?
+      assert_match "Not a server name", change.errors.full_messages.to_sentence
+      assert_not File.exist?(marker), "ERB in a host ran"
+    end
+  end
+
   test "warns about apps the new servers don't run" do
     a = Server.create!(name: "aps2-az1-node-01", hostname: "aps2-az1-node-01", last_seen_at: 1.second.ago)
     shop = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ])

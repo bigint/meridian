@@ -1,6 +1,10 @@
 class Server < ApplicationRecord
   DEFAULT_INTERVAL = 15.seconds
   STALE_AFTER = DEFAULT_INTERVAL * 3
+  # A host Meridian may write into a Kamal config: a DNS name or an IP. No
+  # spaces, quotes, newlines or "<%", so it can't add YAML keys or ERB, which
+  # Kamal evaluates whenever it reads the config.
+  HOST_FORMAT = /\A[A-Za-z0-9][A-Za-z0-9._:-]{0,252}\z/
 
   has_many :assignments, dependent: :delete_all
   has_many :apps, -> { distinct }, through: :assignments

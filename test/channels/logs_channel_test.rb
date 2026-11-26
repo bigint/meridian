@@ -26,6 +26,21 @@ class LogsChannelTest < ActionCable::Channel::TestCase
     assert_no_broadcasts AgentChannel.broadcasting_for(@web_1)
   end
 
+  # A page open past the grant's life is turned down when it next
+  # reconnects, and the viewer asks for a reload, which records a new viewing.
+  test "a grant lapses after twelve hours, so one viewing doesn't stream for good" do
+    grant = LiveLogs.grant(users(:deployer), "logs", @web.id)
+
+    travel 12.hours - 1.minute do
+      subscribe placement_ids: [ @web.id ], grant: grant
+      assert subscription.confirmed?
+    end
+    travel 12.hours + 1.minute do
+      subscribe placement_ids: [ @web.id ], grant: grant
+      assert subscription.rejected?
+    end
+  end
+
   test "a deployer streams each container's lines" do
     subscribe placement_ids: [ @web.id, @worker.id ]
 

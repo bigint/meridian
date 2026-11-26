@@ -272,6 +272,7 @@ export default class extends Controller {
   connect() {
     this.closed = false
     this.connected = false
+    this.rejected = false
     this.lines = []
     this.structured = new WeakMap()
     this.queue = []
@@ -362,7 +363,11 @@ export default class extends Controller {
       {
         received: batch => this.#receive(batch),
         connected: () => { this.connected = true; this.lastActivityAt = performance.now(); this.#drawStatus() },
-        disconnected: () => { this.connected = false; this.#drawStatus() }
+        disconnected: () => { this.connected = false; this.#drawStatus() },
+        // The channel turned the page down: its grant expired (a page open
+        // for half a day reconnecting), or the reader lost the right to logs.
+        // Either way only a reload can tell, and Action Cable won't retry.
+        rejected: () => { this.rejected = true; this.connected = false; this.#drawStatus() }
       }
     )
     if (this.closed) subscription.unsubscribe()
@@ -592,13 +597,14 @@ export default class extends Controller {
 
   #drawStatus() {
     const sources = [ ...this.sources.values() ]
-    const state = !this.connected ? "connecting"
+    const state = this.rejected ? "rejected"
+      : !this.connected ? "connecting"
       : sources.every(source => source.off || source.refused) ? "unavailable"
       : performance.now() - this.lastActivityAt > WAITING_AFTER ? "waiting"
       : "live"
-    const labels = { connecting: "Connecting…", live: "Live", waiting: "Waiting for new lines", unavailable: "Not streaming" }
+    const labels = { rejected: "Stopped: reload the page to keep reading", connecting: "Connecting…", live: "Live", waiting: "Waiting for new lines", unavailable: "Not streaming" }
 
-    this.element.dataset.state = state
+    this.element.dataset.state = state === "rejected" ? "unavailable" : state
     if (this.statusTarget.textContent !== labels[state]) this.statusTarget.textContent = labels[state]
   }
 }

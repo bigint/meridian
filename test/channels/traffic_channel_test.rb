@@ -26,6 +26,21 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     end
   end
 
+  # One recorded viewing isn't a way to read for good: a page open past the
+  # grant's life is turned down when it reconnects, and asks for a reload.
+  test "a grant lapses after twelve hours" do
+    grant = LiveLogs.grant(users(:deployer), "traffic", @app.id)
+
+    travel 12.hours - 1.minute do
+      subscribe app_id: @app.id, grant: grant
+      assert subscription.confirmed?
+    end
+    travel 12.hours + 1.minute do
+      subscribe app_id: @app.id, grant: grant
+      assert subscription.rejected?
+    end
+  end
+
   # kamal-proxy lines run to a kilobyte, and the agent sends at most 512 KB a
   # second of one container, history included, dropping the newest lines past
   # that. 200 lines fit; 1,000 lost the most recent requests.

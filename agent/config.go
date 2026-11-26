@@ -21,6 +21,7 @@ type config struct {
 	machineID  string
 	hostname   string
 	proxyState string
+	live       bool // hold the live stats line (MERIDIAN_LIVE)
 }
 
 // Host files are preferred over the container's own: inside the agent
@@ -36,6 +37,7 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 		dockerHost: getenv("DOCKER_HOST"),
 		proxyState: getenv("MERIDIAN_PROXY_STATE"),
 		interval:   defaultInterval,
+		live:       true,
 	}
 
 	if raw := strings.TrimSpace(getenv("MERIDIAN_URL")); raw != "" {
@@ -60,6 +62,14 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 			return cfg, err
 		}
 		cfg.interval = d
+	}
+
+	if raw := strings.TrimSpace(getenv("MERIDIAN_LIVE")); raw != "" {
+		live, err := strconv.ParseBool(raw)
+		if err != nil {
+			return cfg, fmt.Errorf("MERIDIAN_LIVE: %q is not a boolean (use 0/false to turn the live line off)", raw)
+		}
+		cfg.live = live
 	}
 
 	labels, err := parseLabels(getenv("MERIDIAN_LABELS"))

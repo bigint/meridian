@@ -22,8 +22,11 @@ var errNotFound = errors.New("not found")
 
 // dockerClient speaks to the Docker Engine API. It only ever issues GETs.
 type dockerClient struct {
-	http *http.Client
-	base string
+	http *http.Client // bounded by dockerTimeout, for one-shot calls
+	// stream has no overall Timeout, which would cut a long-lived response
+	// off. Only the time to the response headers is bounded.
+	stream *http.Client
+	base   string
 }
 
 func newDockerClient(host string) (*dockerClient, error) {
@@ -38,14 +41,25 @@ func newDockerClient(host string) (*dockerClient, error) {
 				var d net.Dialer
 				return d.DialContext(ctx, "unix", path)
 			},
+			ResponseHeaderTimeout: dockerTimeout,
 		}
-		return &dockerClient{http: &http.Client{Transport: transport, Timeout: dockerTimeout}, base: "http://docker"}, nil
+		return &dockerClient{
+			http:   &http.Client{Transport: transport, Timeout: dockerTimeout},
+			stream: &http.Client{Transport: transport},
+			base:   "http://docker",
+		}, nil
 	case strings.HasPrefix(host, "tcp://"), strings.HasPrefix(host, "http://"):
 		u, err := url.Parse(host)
 		if err != nil || u.Host == "" {
 			return nil, fmt.Errorf("cannot parse %q", host)
 		}
-		return &dockerClient{http: &http.Client{Timeout: dockerTimeout}, base: "http://" + u.Host}, nil
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.ResponseHeaderTimeout = dockerTimeout
+		return &dockerClient{
+			http:   &http.Client{Timeout: dockerTimeout},
+			stream: &http.Client{Transport: transport},
+			base:   "http://" + u.Host,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported scheme in %q (want unix:// or tcp://)", host)
 	}
@@ -84,6 +98,7 @@ type listedContainer struct {
 	Names  []string          `json:"Names"`
 	Image  string            `json:"Image"`
 	Labels map[string]string `json:"Labels"`
+	State  string            `json:"State"`
 }
 
 type inspectedContainer struct {

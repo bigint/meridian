@@ -1,6 +1,8 @@
 // Command meridian-agent is a read-only observer that runs on each Kamal host.
 // It lists the host's Kamal containers through the Docker API and POSTs a
-// snapshot of them to Meridian on a jittered interval.
+// snapshot of them to Meridian on a jittered interval. While someone has the
+// server's page open in Meridian it also streams live CPU, memory and network
+// stats over an outbound WebSocket.
 package main
 
 import (
@@ -66,7 +68,12 @@ func main() {
 
 	logger.Info("meridian agent starting",
 		"version", version, "url", cfg.url, "interval", cfg.interval.String(),
-		"machine_id", cfg.machineID, "hostname", cfg.hostname)
+		"machine_id", cfg.machineID, "hostname", cfg.hostname, "live", cfg.live)
+	liveDone := a.startLive(ctx)
 	a.run(ctx)
+	select { // let the live line say goodbye, but never hold up shutdown
+	case <-liveDone:
+	case <-time.After(2 * time.Second):
+	}
 	logger.Info("meridian agent stopped")
 }

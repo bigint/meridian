@@ -94,6 +94,13 @@
 - Signing in after a session ended goes back to the page you were on, never to a form's POST URL or a bare search frame.
 - A sign-in missing its email or password is a failed sign-in, not an error page.
 - Removing a user who deployed, set a secret or appears in Activity no longer fails.
+- The board's state chips, grid toggle and pages, and Activity's pages, no longer follow `?host=`, `?protocol=` or `?script_name=` to another site, and `?controller=` no longer breaks them.
+- Activity takes a repeated `action_name` or `page` parameter as text instead of raising.
+- A secret set by someone since removed says "by a removed user" instead of trailing off.
+- A live refresh keeps what you are typing (a search, a version to ship, unapplied filters) and the search's results, instead of wiping them.
+- Copy works over plain HTTP: with no clipboard API it selects the text and says to press ⌘C or Ctrl+C.
+- Enter in the search opens a match for what the box says now, never an older query's, and a reply arriving after Escape no longer refills the list.
+- The "Browser too old" page is styled again. The error pages' styles moved to `public/error-pages.css`, which the CSP allows.
 
 ### Upgrading
 

@@ -5,7 +5,7 @@ class Projects::WorkflowsController < AdminController
     proposal = project.propose(
       files: { ".github/workflows/#{Project::Changes::WORKFLOW_FILE}" => project.workflow_template },
       title: "ci: deploy with Kamal when a version file changes",
-      body: "Adds the workflow Meridian uses to ship deploys, rollbacks and previews. Every run is `kamal deploy` (or `kamal remove`) from this repository.\n\nBefore merging, add the `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` repository secrets, plus any secrets your configs reference.",
+      body: "Adds the workflow Meridian uses to ship deploys, rollbacks and previews. Every run is `kamal deploy` (or `kamal app remove`, for a preview) from this repository.\n\nBefore merging, add the `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` repository secrets, plus any secrets your configs reference.",
       actor: current_user, slug: "ci")
     redirect_to project, notice: proposal.direct ? "Committed the workflow." : "Opened a pull request: #{proposal.url}"
   rescue GitHost::Error => error

@@ -11,7 +11,9 @@ class WorkflowTest < ActionDispatch::IntegrationTest
   test "adding the CI workflow opens a pull request" do
     ref = stub_request(:post, "https://api.github.com/repos/example/infra/git/refs").to_return_json(status: 201, body: { ref: "refs/heads/x" })
     writes = stub_github_writes(@project)
-    pull = stub_request(:post, "https://api.github.com/repos/example/infra/pulls").to_return_json(status: 201, body: { number: 5, html_url: "https://github.com/example/infra/pull/5" })
+    body = nil
+    pull = stub_request(:post, "https://api.github.com/repos/example/infra/pulls").with { body = JSON.parse(it.body)["body"] }
+      .to_return_json(status: 201, body: { number: 5, html_url: "https://github.com/example/infra/pull/5" })
 
     post project_workflow_path(@project)
 
@@ -23,6 +25,9 @@ class WorkflowTest < ActionDispatch::IntegrationTest
     assert_match %r{\Ameridian/ci-}, write["branch"]
     assert_match "kamal deploy", write["content"]
     assert_match "gem install kamal -v 2.12.0", write["content"]
+    commands = body.scan(/`(kamal [^`]+)`/).flatten
+    assert_equal [ "kamal deploy", "kamal app remove" ], commands
+    commands.each { assert_includes write["content"], it, "the pull request names a command the workflow doesn't run" }
   end
 
   test "projects that allow direct commits get a commit instead" do

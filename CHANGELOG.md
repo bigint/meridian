@@ -116,6 +116,7 @@
 - The agent template on the Agents page boots its two accessories with one `kamal accessory boot` each, since the command takes one name, and says that `roles: [ web ]` boots them on web hosts only.
 - An unknown cell on the board shows `–`, the mark the badges, chips and docs give unknown, instead of `?`, which is the mark for stray.
 - New app shows a missing or unknown infra repository under the **Infra repository** field as well as at the top of the form. The field looked for the error on `project_id`, while it is on `project`.
+- The **Add CI workflow** pull request says the workflow removes previews with `kamal app remove`, the command it runs, rather than `kamal remove`.
 
 ### Upgrading
 

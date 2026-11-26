@@ -27,7 +27,14 @@ class GitHost::GitHub
   end
 
   def head_sha(branch = project.default_branch)
-    request { client.branch(repo, branch).commit.sha }
+    conditional("branches/#{branch}", ->(data) { data.commit.sha }) { client.branch(repo, branch, headers: it) }
+  end
+
+  # The branch's latest workflow runs, newest first, shaped like a workflow_run webhook's.
+  def workflow_runs(branch: project.default_branch, limit: 20)
+    conditional("runs/#{branch}", ->(data) { data.workflow_runs.map { it.to_attrs.deep_stringify_keys } }) do
+      client.repository_workflow_runs(repo, branch: branch, per_page: limit, headers: it)
+    end
   end
 
   def tree(sha)
@@ -107,6 +114,20 @@ class GitHost::GitHub
       raise GitHost::NotFound, error.message
     rescue Octokit::Error, Faraday::Error => error
       raise GitHost::Error, error.message
+    end
+
+    # Sent with the last answer's ETag, a GET that finds nothing changed gets a
+    # 304, which costs no rate limit, and the value comes from the cache.
+    def conditional(name, value)
+      key = [ "github", repo, name ]
+      cached = Rails.cache.read(key)
+      data = request { yield(cached ? { "If-None-Match" => cached[:etag] } : {}) }
+      return cached[:value] if cached && client.last_response.status == 304
+
+      value.(data).tap do |fresh|
+        etag = client.last_response.headers["etag"]
+        Rails.cache.write(key, { etag: etag, value: fresh }) if etag
+      end
     end
 
     def client

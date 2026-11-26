@@ -30,6 +30,10 @@
 - Solid arcs link places that run the same app, thicker when they share more. Dotted flows show agent reports arriving at Meridian and deploys going out from it, live. Meridian sees containers, not packets, so it draws only traffic it takes part in.
 - Land outlines are Natural Earth's public-domain 1:110m data, projected once into a cached SVG (`script/world_map.rb`).
 
+### Polling
+
+- Meridian works without webhooks: every 30 seconds it reads Git and the branch's recent workflow runs, so deploys made outside Meridian appear and finish. Requests carry ETags, so an unchanged repository costs no GitHub rate limit. Webhooks still make it instant.
+
 ### Local lab
 
 - `bin/lab` runs three Docker-in-Docker servers, a registry and a self-hosted GitHub Actions runner, so Meridian can drive real Kamal deploys end to end on one laptop.

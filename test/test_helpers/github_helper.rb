@@ -6,9 +6,16 @@ module GitHubHelper
   API = "https://api.github.com"
   INFRA = Rails.root.join("test/fixtures/files/infra")
 
-  def stub_github_repo(project, dir: INFRA, head: "a" * 40, history: {}, files: {})
+  def stub_github_repo(project, dir: INFRA, head: "a" * 40, history: {}, files: {}, runs: [])
     tree = Dir.glob("**/*", File::FNM_DOTMATCH, base: dir).select { File.file?(File.join(dir, it)) }.index_with { File.read(File.join(dir, it)) }
     stub_github_files(project, tree.merge(files), head: head, history: history)
+    stub_github_runs(project, runs)
+  end
+
+  # The repository's recent workflow runs, as GitHub lists them.
+  def stub_github_runs(project, runs)
+    stub_request(:get, %r{\A#{Regexp.escape(API)}/repos/#{project.repo_full_name}/actions/runs\?})
+      .to_return_json(body: { total_count: runs.size, workflow_runs: runs })
   end
 
   # history: { "deploy/web.production.version" => [ ["sha1", "v41\n"], ["sha2", "v40\n"] ] }

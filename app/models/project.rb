@@ -1,5 +1,5 @@
 class Project < ApplicationRecord
-  include Changes, Syncable
+  include Changes, Syncable, WorkflowRuns
 
   has_many :apps, dependent: :destroy
   has_many :secret_names, dependent: :delete_all

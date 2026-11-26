@@ -16,7 +16,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 
 **What should run comes from Git.**
 
-1. A `push` webhook, the reconcile job (every 10 minutes) or an operator pressing *Sync* enqueues `ProjectSyncJob`.
+1. A `push` webhook, the reconcile job (every 30 seconds) or an operator pressing *Sync* enqueues `ProjectSyncJob`. It reads Git, then the branch's recent workflow runs, so deploys show up even without webhooks. Both GitHub calls carry the last answer's ETag: an unchanged repository answers 304, which costs no rate limit.
 2. The job reads the repository tree at the default branch's head through the GitHub API. It keeps only the paths that match the project's `config_globs`, together with their destination files (`deploy.<dest>.yml`), version files (`deploy.version`) and `.kamal/secrets*` files. Blobs are fetched by SHA and cached, so a blob that has not changed is never fetched again.
 3. The files are written to a temporary directory, and `bin/kamal-parse` parses them in a **separate process with an empty environment**. The script uses `Kamal::Configuration`, the same code that `kamal deploy` runs, so Meridian sees what Kamal sees: ERB, aliases, destinations, roles and accessories. The environment is empty because Kamal configs evaluate ERB, and ERB is arbitrary Ruby from the infra repository. That Ruby must not be able to read Meridian's own credentials.
 4. The sync upserts these records:
@@ -48,7 +48,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 - **Deploy** is a contents-API commit to the app's version file, using the file's current blob SHA. The message is `deploy(<app>): <version>`, followed by an `Meridian-Actor:` trailer.
 - **Roll back** reverts a release commit's change to the version file, with the message `rollback(<app>): <version>`.
 - **New app, preview setup and the CI workflow** arrive as pull requests. A project setting lets admins commit them directly instead.
-- **Deploy status** comes only from `workflow_run` and `workflow_job` webhooks.
+- **Deploy status** comes from `workflow_run` webhooks and from polling the branch's workflow runs every 30 seconds; both go through `Project#track_workflow_run`, and one repository's jobs run one at a time.
 
 ## Domain model
 

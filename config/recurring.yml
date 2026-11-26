@@ -1,7 +1,7 @@
 shared: &shared
   reconcile_projects:
     class: ReconcileProjectsJob
-    schedule: every 10 minutes
+    schedule: every 30 seconds
   expire_previews:
     class: PreviewExpiryJob
     schedule: every hour

@@ -7,6 +7,8 @@ class Snapshot
   MAX_CONTAINERS = 2_000
   STATES = %w[ created running paused restarting removing exited dead ].freeze
   KINDS = %w[ app accessory proxy ].freeze
+  # The placement columns pages show. observed_at moves on every snapshot.
+  SHOWN = %i[ container_id name kind app_id service role destination image version state health started_at ].freeze
 
   class Rejected < StandardError; end
 
@@ -46,14 +48,22 @@ class Snapshot
       .merge("containers" => containers.map { it.slice(*%w[ id name image service role destination version kind state health started_at ]) })
   end
 
+  # Returns the server. Afterwards changed? says whether any page now draws
+  # differently: a placement came, went or changed, the server's labels or
+  # place moved, or a quiet agent is back. Most snapshots change nothing.
   def ingest
     Server.transaction do
       server = claim_server
-      server.update!(machine_id: machine_id, labels: labels, agent_version: agent_version, last_seen_at: Time.current, **location)
-      record_placements(server)
+      was_quiet = !server.reporting? || server.stale?
+      server.assign_attributes(machine_id: machine_id, labels: labels, agent_version: agent_version, **location)
+      server_changed = server.changed?
+      server.update!(last_seen_at: Time.current)
+      @changed = record_placements(server) || server_changed || was_quiet
       server
     end
   end
+
+  def changed? = @changed
 
   private
     def containers_shape
@@ -86,9 +96,11 @@ class Snapshot
     def record_placements(server)
       now = Time.current
       rows = containers.filter_map { placement_row(server, it, now) }.uniq { it[:container_id] }
+      before = server.placements.pluck(*SHOWN).to_set
 
       Placement.upsert_all(rows, unique_by: %i[ server_id container_id ]) if rows.any?
       server.placements.where.not(container_id: rows.map { it[:container_id] }).delete_all unless truncated?
+      server.placements.pluck(*SHOWN).to_set != before
     end
 
     def placement_row(server, container, now)

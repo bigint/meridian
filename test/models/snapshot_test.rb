@@ -67,6 +67,19 @@ class SnapshotTest < ActiveSupport::TestCase
     assert_equal [ "web · production", "api" ], attention.map { it.app.name }
   end
 
+  test "changed? is true only when a page would draw differently" do
+    assert snapshot.tap(&:ingest).changed?, "first report"
+    assert_not snapshot.tap(&:ingest).changed?, "same report again"
+
+    { "health" => ->(p) { p["containers"].first["health"] = "unhealthy" },
+      "removal" => ->(p) { p["containers"].pop },
+      "labels" => ->(p) { p["labels"]["region"] = "ams" } }.each do |what, change|
+      change.(@payload)
+      assert snapshot.tap(&:ingest).changed?, what
+      assert_not snapshot.tap(&:ingest).changed?, "#{what}, reported again"
+    end
+  end
+
   test "a per-server token can't report for another machine" do
     ingest
     assert_raises(Snapshot::Rejected) { ingest(@payload.merge("machine_id" => "other")) }
@@ -90,6 +103,10 @@ class SnapshotTest < ActiveSupport::TestCase
 
   private
     def ingest(payload = @payload, token: agent_tokens(:web_1))
-      Snapshot.new(payload, token: token.reload).ingest
+      snapshot(payload, token: token).ingest
+    end
+
+    def snapshot(payload = @payload, token: agent_tokens(:web_1))
+      Snapshot.new(payload, token: token.reload)
     end
 end

@@ -58,6 +58,26 @@ class AppDraftTest < ActiveSupport::TestCase
     assert_includes draft.errors.full_messages, "Choose at least one server, or a label selector that matches some"
   end
 
+  test "never takes over an existing config, whatever the destination" do
+    @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", destination: "")
+    draft = build(destination: "production")
+    assert_not draft.valid?
+    assert_includes draft.errors[:service], "already has a config at deploy/shop.yml"
+
+    @project.apps.where(service: "shop").update_all(destination: "staging")
+    assert_not build.valid?
+  end
+
+  test "never overwrites a file already in Git, even one that isn't an app" do
+    stub_github_files(@project, { "deploy/shop.yml" => "service: [ broken\n" })
+    writes = stub_github_writes(@project)
+    draft = build
+
+    assert_not draft.submit(users(:admin))
+    assert_includes draft.errors.full_messages, "deploy/shop.yml already exists in example/infra"
+    assert_empty writes
+  end
+
   test "a server whose hostname an agent made up is refused, and its ERB never runs" do
     Dir.mktmpdir do |dir|
       marker = File.join(dir, "ran")

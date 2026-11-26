@@ -17,6 +17,7 @@
 - Webhooks find their project whatever the case of its name. A project added as `Example/Infra` ignored GitHub's `example/infra` webhooks and waited for the 30-second poll.
 - Edit connectors refuses any host that isn't plainly a host name. Hosts came from the page's URL and went into the edge config Kamal checks, so a link carrying `<%= … %>` ran Ruby on Meridian's server when an admin opened it.
 - Agents must report a plain host name, and New app refuses servers whose hostname isn't one and registries that aren't registry hosts. A hostname such as `web-9<%= … %>`, from any agent token, reached the generated config verbatim (even through a label selector the admin never saw it match), and its Ruby ran on Meridian's server while Kamal checked the config, then in CI once merged. The tunnel setup page leaves out picked hosts that aren't host names.
+- New app never overwrites a file. Making `shop` with a destination when `deploy/shop.yml` already existed without one (or the other way round) passed the check, which only compared the same destination, and rewrote the existing app's config without its servers. Any of the new files already in Git, such as a config Kamal can't parse, is now refused too.
 
 ## v0.1.0 (2026-11-26)
 

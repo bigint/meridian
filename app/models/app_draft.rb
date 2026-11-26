@@ -100,7 +100,7 @@ class AppDraft
   end
 
   def submit(actor)
-    return false unless valid?
+    return false unless valid? && absent_from_git?
 
     project.propose(files: files, title: "feat(#{service}): add #{kind} app", body: pull_request_body, actor: actor, slug: "new-#{service}")
   end
@@ -148,11 +148,27 @@ class AppDraft
       errors.add(:base, "Can't write these servers into a config, their hostnames aren't host names: #{bad.map(&:name).to_sentence}") if bad.any?
     end
 
+    # Any destination counts: a new destination of an existing config would
+    # rewrite the config the existing app deploys from.
     def path_free
       return unless project && service.present?
-      if project.apps.exists?(config_path: config_path, destination: destination.to_s)
-        errors.add(:service, "already has a config at #{config_path}")
+      paths = [ config_path, (project.destination_path(config_path, destination) if destination.present?) ].compact
+      if (taken = project.apps.where(config_path: paths).pick(:config_path))
+        errors.add(:service, "already has a config at #{taken}")
       end
+    end
+
+    # A new app never replaces a file, even one Meridian doesn't list as an
+    # app, such as a config Kamal can't parse.
+    def absent_from_git?
+      taken = files.keys.select do |path|
+        project.git.file(path)
+        true
+      rescue GitHost::NotFound
+        false
+      end
+      errors.add(:base, "#{taken.to_sentence} already #{taken.one? ? "exists" : "exist"} in #{project.repo_full_name}") if taken.any?
+      taken.empty?
     end
 
     # Never propose a config Kamal would reject.

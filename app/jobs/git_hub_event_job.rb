@@ -29,6 +29,9 @@ class GitHubEventJob < ApplicationJob
       App.where("LOWER(source_repo) = ?", repo.to_s.downcase).find_each do |app|
         case payload["action"]
         when "opened", "reopened", "synchronize"
+          # A late delivery for a pull request that has closed since.
+          next if pull["state"] == "closed"
+
           Preview.deploy(app, number: payload["number"], head_sha: pull.dig("head", "sha"), url: pull["html_url"])
         when "closed"
           app.previews.find_by(pr_number: payload["number"])&.close(reason: pull["merged"] ? "merged" : "closed")

@@ -43,7 +43,10 @@ class Preview < ApplicationRecord
 
       preview = Preview.joins(:app).find_by(apps: { config_path: config }, destination: destination) or return true
       success = run["conclusion"] == "success"
-      if command == "remove" && success then preview.finish_removal
+      # Only a preview still waiting on its removal is finished by one: a
+      # remove run replayed by polling, or one that ends after the pull
+      # request reopened, must not take down the preview deployed since.
+      if command == "remove" && success && preview.removing? then preview.finish_removal
       elsif command == "deploy" && preview.deploying? then preview.update!(state: success ? "active" : "failed")
       end
       true

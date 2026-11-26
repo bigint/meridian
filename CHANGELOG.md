@@ -12,6 +12,7 @@
 - Redeploy runs the version in the version file now, read from Git, rather than the newest release Meridian had synced, which could be the version before one that had just landed. Apps without a version file have no Redeploy button: there was no image tag to give Kamal, so it passed the config commit's short SHA.
 - Deploying the version already in the version file is refused with a pointer to Redeploy. The commit changed no file, so CI never ran and the deploy showed Pending forever.
 - Versions must be Docker image tags (letters, digits, `_`, `.` and `-`, not starting with `.` or `-`). A version such as `--skip-hooks` reached Kamal as a flag in CI, and ones with `+`, `:` or `@` always failed there, since Kamal names containers after the version.
+- When GitHub refuses a deploy or rollback commit for a reason other than a stale file, such as branch protection or a repository rule, Meridian shows GitHub's reason. Every 409 and 422 used to read "The version file changed in Git since this page loaded".
 
 ## v0.1.0 (2026-11-26)
 

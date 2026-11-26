@@ -5,6 +5,12 @@
 class GitHost::GitHub
   TOKENS = Concurrent::Map.new
 
+  # GitHub answers a write whose blob SHA is stale with "<path> does not
+  # match <sha>", or '"sha" wasn't supplied' when the file appeared since it
+  # was read. Other 409s and 422s, such as branch protection or repository
+  # rules, are refusals the user has to see, not races to retry.
+  STALE = /does not match|"sha" wasn't supplied/
+
   class << self
     def app_id = setting(:app_id, "GITHUB_APP_ID")
     def private_key = setting(:private_key, "GITHUB_APP_PRIVATE_KEY")&.gsub("\\n", "\n")
@@ -109,7 +115,7 @@ class GitHost::GitHub
     def request
       yield
     rescue Octokit::Conflict, Octokit::UnprocessableEntity => error
-      raise GitHost::Conflict, error.message
+      raise (error.message.match?(STALE) ? GitHost::Conflict : GitHost::Error), error.message
     rescue Octokit::NotFound => error
       raise GitHost::NotFound, error.message
     rescue Octokit::Error, Faraday::Error => error

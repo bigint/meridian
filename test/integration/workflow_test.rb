@@ -62,6 +62,20 @@ class WorkflowTest < ActionDispatch::IntegrationTest
       workflow.dig("jobs", "kamal", "concurrency"))
   end
 
+  test "a commit GitHub refuses for a reason other than a stale SHA says why" do
+    sign_in_as users(:deployer)
+    @project.sync
+    app = @project.apps.find_by!(service: "web", destination: "production")
+    stub_request(:put, %r{/contents/deploy/web.production.version}).to_return(status: 409,
+      body: { message: "Repository rule violations found\n\nChanges must be made through a pull request." }.to_json, headers: { "Content-Type" => "application/json" })
+
+    post app_deploys_path(app), params: { deploy: { version: "v43" } }
+
+    assert_redirected_to app_path(app)
+    assert_match "GitHub refused the commit", flash[:alert]
+    assert_match "Changes must be made through a pull request", flash[:alert]
+  end
+
   test "viewers can't deploy" do
     sign_in_as users(:viewer)
     @project.sync

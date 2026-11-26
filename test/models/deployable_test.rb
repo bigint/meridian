@@ -36,7 +36,7 @@ class DeployableTest < ActiveSupport::TestCase
   end
 
   test "a concurrent change in Git surfaces as a conflict" do
-    stub_request(:put, %r{/contents/deploy/web.production.version}).to_return(status: 409, body: { message: "sha mismatch" }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:put, %r{/contents/deploy/web.production.version}).to_return(status: 409, body: { message: "deploy/web.production.version does not match #{blob_sha("v42\n")}" }.to_json, headers: { "Content-Type" => "application/json" })
 
     assert_raises(GitHost::Conflict) { @app.deploy("v43", actor: @actor) }
     assert_empty @app.deploys

@@ -164,8 +164,15 @@ class Snapshot
         service: service.presence, role: container["role"].to_s.first(64).presence, destination: destination,
         image: container["image"].to_s.first(255), version: container["version"].to_s.first(128).presence,
         state: (container["state"] if STATES.include?(container["state"])), health: container["health"].to_s.first(16).presence,
-        started_at: (Time.iso8601(container["started_at"]) rescue nil), observed_at: now
+        started_at: started_at(container), observed_at: now
       }
+    end
+
+    # The agent sends RFC 3339. Anything else is left out, not guessed.
+    def started_at(container)
+      Time.iso8601(container["started_at"].to_s)
+    rescue ArgumentError
+      nil
     end
 
     def app_for(server, service, destination)

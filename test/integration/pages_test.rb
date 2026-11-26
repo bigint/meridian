@@ -94,6 +94,16 @@ class PagesTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a deploy by someone since removed still says who asked for it" do
+    app = @project.apps.find_by!(service: "web", destination: "production")
+    app.deploys.create!(version: "v43", commit_sha: "d" * 40, actor: users(:deployer))
+    users(:deployer).destroy!
+
+    get app_path(app)
+
+    assert_select ".card__meta", text: /By Dee Deployer \(removed\)/
+  end
+
   test "an app runs its release everywhere only when no server runs another version too" do
     server = Server.create!(name: "shop-1.example.com", hostname: "shop-1.example.com", last_seen_at: Time.current)
     app = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", version_path: "deploy/shop.version")

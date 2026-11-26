@@ -11,7 +11,14 @@ class Deploy < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
   scope :active, -> { where.not(status: "completed") }
 
+  # The name stays after that person is removed (actor_id is then nulled).
+  before_save -> { self.actor_name = actor.display_name }, if: :actor
   after_commit -> { broadcast_refresh_later_to app }
+
+  # Who asked for it. A deploy with no person behind it came from Git.
+  def requested_by
+    actor&.display_name || actor_name&.then { "#{it} (removed)" } || "Git"
+  end
 
   def self.from_workflow_run(project, run)
     sha = run["head_sha"]

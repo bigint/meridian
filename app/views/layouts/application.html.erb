@@ -12,7 +12,8 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
+  <body data-controller="tooltip"
+    data-action="pointerover->tooltip#enter pointerout->tooltip#leave focusin->tooltip#focus focusout->tooltip#blur pointerdown->tooltip#hide">
     <div class="shell" data-controller="sidebar" <%= "data-collapsed" if sidebar_collapsed? %>>
       <aside id="sidebar" class="sidebar" popover aria-label="Navigation">
         <%= render "layouts/sidebar" %>
@@ -26,5 +27,7 @@
         </main>
       </div>
     </div>
+
+    <div id="tooltip" class="tooltip" popover="manual" role="tooltip" data-tooltip-target="tip" data-turbo-permanent></div>
   </body>
 </html>

@@ -14,7 +14,7 @@ export default class extends Controller {
 
     this.toggleTarget.setAttribute("aria-expanded", String(!collapsed))
     this.toggleTarget.setAttribute("aria-label", label)
-    this.toggleTarget.title = label
+    this.toggleTarget.dataset.tooltip = label
     this.labelTarget.textContent = label
   }
 }

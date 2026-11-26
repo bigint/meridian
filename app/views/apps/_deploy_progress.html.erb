@@ -13,7 +13,7 @@
   <ul>
     <% deploy.progress.each do |server, versions, done| %>
       <li class="row">
-        <%= link_to server.short_name, server, title: server.name, class: "mono txt-small" %>
+        <%= link_to server.short_name, server, class: "mono txt-small", data: { tooltip: server.name } %>
         <span class="row__trail ml-auto">
           <code><%= versions.join(", ").presence || "–" %></code>
           <%= badge(done ? "✓ Running #{deploy.version}" : "… Waiting", tone: (done ? :ok : nil)) %>

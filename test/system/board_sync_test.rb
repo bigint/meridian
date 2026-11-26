@@ -19,7 +19,7 @@ class BoardSyncTest < ApplicationSystemTestCase
     within "[data-board-grid]" do
       assert_text "web · production"
       assert_text "blog"
-      assert_selector "a[title='api-1.example.com']", text: "api-1"
+      assert_selector "a[data-tooltip='api-1.example.com']", text: "api-1"
     end
     assert_selector "[data-summary]", text: "Unknown"
   end

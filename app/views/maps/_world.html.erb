@@ -12,18 +12,15 @@
 
       <g class="world__links">
         <% links.each do |link| %>
-          <path d="<%= WorldMap.arc([ link.from.x, link.from.y ], [ link.to.x, link.to.y ]) %>" stroke-width="<%= (1.4 + [ link.weight, 8 ].min * 0.6).round(2) %>">
-            <title><%= link.from.name %> ↔ <%= link.to.name %>: <%= link.apps.map(&:name).to_sentence %></title>
-          </path>
+          <path d="<%= WorldMap.arc([ link.from.x, link.from.y ], [ link.to.x, link.to.y ]) %>" stroke-width="<%= (1.4 + [ link.weight, 8 ].min * 0.6).round(2) %>"
+            data-tooltip="<%= link.from.name %> ↔ <%= link.to.name %>: <%= link.apps.map(&:name).to_sentence %>"/>
         <% end %>
       </g>
 
       <% if hub %>
         <g class="world__flows">
           <% flows.each do |flow| %>
-            <path d="<%= WorldMap.arc(flow.from ? [ flow.from.x, flow.from.y ] : hub, flow.to ? [ flow.to.x, flow.to.y ] : hub, bend: -0.12) %>" class="flow <%= flow.kind %> <%= "live" if flow.live %>">
-              <title><%= flow_title(flow) %></title>
-            </path>
+            <path d="<%= WorldMap.arc(flow.from ? [ flow.from.x, flow.from.y ] : hub, flow.to ? [ flow.to.x, flow.to.y ] : hub, bend: -0.12) %>" class="flow <%= flow.kind %> <%= "live" if flow.live %>" data-tooltip="<%= flow_title(flow) %>"/>
           <% end %>
         </g>
         <g class="world__hub" transform="translate(<%= hub.join(" ") %>)"><rect x="-5" y="-5" width="10" height="10" rx="2"/></g>
@@ -32,13 +29,12 @@
       <g class="world__sites">
         <% sites.each do |site| %>
           <%= link_to map_place_path(site), class: site_class(map, site, selected),
-                data: { controller: "svg-link", action: "svg-link#visit", turbo_prefetch: false },
+                data: { controller: "svg-link", action: "svg-link#visit", turbo_prefetch: false, tooltip: site_title(map, site) },
                 aria: { label: site_title(map, site), current: (site == selected ? "true" : nil) } do %>
             <g transform="translate(<%= site.x %> <%= site.y %>)">
               <circle r="<%= map.radius(site) %>"/>
               <text class="symbol" dy="0.35em"><%= site_text(map, site) %></text>
             </g>
-            <title><%= site_title(map, site) %></title>
           <% end %>
         <% end %>
       </g>

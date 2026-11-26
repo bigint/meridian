@@ -68,7 +68,7 @@
                   <div class="container-cell__title">
                     <%= safe_join([ (placement.app ? link_to(placement.service, placement.app) : placement.service), (badge(placement.kind) unless placement.kind == "app"), (tag.span("· #{placement.role}", class: "txt-faint") if placement.role) ].compact, " ") %>
                   </div>
-                  <div class="container-cell__name mono txt-small txt-faint" title="<%= placement.name %>"><%= placement.name %></div>
+                  <div class="container-cell__name mono txt-small txt-faint" data-tooltip="<%= placement.name %>"><%= placement.name %></div>
                 </td>
                 <td class="mono txt-small"><%= placement.short_version %></td>
                 <td class="nowrap">

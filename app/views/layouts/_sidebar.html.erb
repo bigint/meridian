@@ -1,7 +1,7 @@
 <%# The navigation. A drawer on phones; from 64rem up a sidebar that the
     toggle collapses to a rail of icons (sidebar_controller.js). %>
 <div class="sidebar__inner">
-  <%= link_to root_path, class: "sidebar__brand", title: "Meridian" do %>
+  <%= link_to root_path, class: "sidebar__brand", data: { tooltip: "Meridian" } do %>
     <%= icon :logo, class: "txt-accent", width: 24, height: 24 %><span class="sidebar__brand-name">Meridian</span>
   <% end %>
 
@@ -30,7 +30,7 @@
     <% end %>
     <% label = sidebar_collapsed? ? "Expand sidebar" : "Collapse sidebar" %>
     <button type="button" class="sidebar__toggle" data-action="sidebar#toggle" data-sidebar-target="toggle"
-      aria-label="<%= label %>" aria-expanded="<%= !sidebar_collapsed? %>" title="<%= label %>">
+      aria-label="<%= label %>" aria-expanded="<%= !sidebar_collapsed? %>" data-tooltip="<%= label %>">
       <%= icon :collapse, class: "sidebar__when-expanded" %><%= icon :expand, class: "sidebar__when-collapsed" %>
       <span class="sidebar__label" data-sidebar-target="label"><%= label %></span>
     </button>

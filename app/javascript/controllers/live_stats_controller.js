@@ -224,11 +224,11 @@ export default class extends Controller {
       const { cpu_cores = 0, memory_used = 0, memory_limit = 0, net_rx = 0, net_tx = 0 } = stats
       const cpu = share(cpu_cores, cores)
       cell("cpu").textContent = percent(cpu)
-      cell("cpu").title = `${cpu_cores.toFixed(3)} cores${this.latest.host ? "" : " (host cores unknown, shown against one)"}`
+      cell("cpu").dataset.tooltip = `${cpu_cores.toFixed(3)} cores${this.latest.host ? "" : " (host cores unknown, shown against one)"}`
       this.#meter(cell("cpu-meter"), cpu)
 
       cell("memory").textContent = formatBytes(memory_used)
-      cell("memory").title = memory_limit ? `of ${formatBytes(memory_limit)}` : ""
+      cell("memory").dataset.tooltip = memory_limit ? `of ${formatBytes(memory_limit)}` : ""
       this.#meter(cell("memory-meter"), share(memory_used, memory_limit))
 
       cell("rx").textContent = formatRate(net_rx)

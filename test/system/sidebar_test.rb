@@ -58,7 +58,7 @@ class SidebarTest < ApplicationSystemTestCase
     visit map_path
     assert_selector "[data-controller=sidebar][data-collapsed]", wait: 0
     assert_operator sidebar_width, :<, 80, "rendered collapsed by the server, with no animation"
-    assert_selector "#sidebar a[title=Map][aria-current=page]"
+    assert_selector "#sidebar a[data-tooltip=Map][aria-current=page]"
 
     click_on "Expand sidebar"
     assert_no_selector "[data-controller=sidebar][data-collapsed]"

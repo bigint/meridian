@@ -9,7 +9,7 @@ module ApplicationHelper
   # shown on every page and the board refreshes itself anyway.
   def sidebar_link(name, path, icon_name, count = nil)
     current = path == root_path ? request.path.in?([ root_path, board_path ]) : request.path.start_with?(path)
-    link_to path, class: "sidebar__link", title: name, aria: { current: (current ? "page" : nil) } do
+    link_to path, class: "sidebar__link", data: { tooltip: name }, aria: { current: (current ? "page" : nil) } do
       safe_join([
         icon(icon_name),
         tag.span(name, class: "sidebar__label"),
@@ -24,7 +24,7 @@ module ApplicationHelper
 
   def time_ago(time)
     return tag.span("never", class: "txt-faint") unless time
-    tag.time("#{time_ago_in_words(time)} ago", datetime: time.iso8601, title: time.to_fs(:long))
+    tag.time("#{time_ago_in_words(time)} ago", datetime: time.iso8601, data: { tooltip: time.to_fs(:long) })
   end
 
   def short_sha(sha)
@@ -74,7 +74,7 @@ module ApplicationHelper
 
   # A drift state as a symbol and a word: never colour alone.
   def state_badge(state)
-    return tag.span("–", class: "txt-faint", title: "Nothing here") unless state
+    return tag.span("–", class: "txt-faint", data: { tooltip: "Nothing here" }) unless state
     tag.span class: "badge", data: { state: state } do
       safe_join([ tag.span(Drift::SYMBOLS[state], aria: { hidden: true }), Drift::LABELS[state] ], " ")
     end
@@ -103,7 +103,7 @@ module ApplicationHelper
     else cell.version&.first(10) || "–"
     end
     title = "#{cell.app.name} on #{cell.server.name}: #{Drift::LABELS[cell.state]}#{", running #{running}" if running.present?}"
-    tag.span class: "cell", title: title, data: { cell: true, state: cell.state } do
+    tag.span class: "cell", data: { cell: true, state: cell.state, tooltip: title } do
       safe_join([ tag.span("#{Drift::LABELS[cell.state]}: ", class: "sr-only"), text ])
     end
   end

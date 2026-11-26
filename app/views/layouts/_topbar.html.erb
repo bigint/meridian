@@ -1,7 +1,7 @@
 <%# Search on the left, the person on the right, and on phones the button
     that opens the navigation drawer. %>
 <div id="topbar" class="topbar">
-  <button type="button" popovertarget="sidebar" class="btn btn--icon btn--plain topbar__menu" aria-label="Menu" title="Menu"><%= icon :menu %></button>
+  <button type="button" popovertarget="sidebar" class="btn btn--icon btn--plain topbar__menu" aria-label="Menu" data-tooltip="Menu"><%= icon :menu %></button>
 
   <div class="search" data-controller="jump">
     <%= form_with url: jump_path, method: :get, data: { turbo_frame: "jump_results", jump_target: "form" } do |form| %>

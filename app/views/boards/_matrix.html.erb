@@ -20,7 +20,7 @@
           <% board.groups.each do |group| %>
             <% group.columns.each_with_index do |server, index| %>
               <th scope="col" class="matrix__server <%= "matrix__first" if index.zero? %>">
-                <%= link_to matrix_server_label(server, grouped), server, title: server.name %>
+                <%= link_to matrix_server_label(server, grouped), server, data: { tooltip: server.name } %>
               </th>
             <% end %>
           <% end %>
@@ -47,7 +47,7 @@
         <tr>
           <th scope="col" class="matrix__name matrix__head">Server</th>
           <% apps.each do |app| %>
-            <th scope="col" class="matrix__server"><%= link_to app.name, app, title: app.name %></th>
+            <th scope="col" class="matrix__server"><%= link_to app.name, app, data: { tooltip: app.name } %></th>
           <% end %>
         </tr>
       </thead>
@@ -58,7 +58,7 @@
           <% end %>
           <% group.rows.each do |server| %>
             <tr>
-              <th scope="row" class="matrix__name"><%= link_to matrix_server_label(server, false), server, title: server.name, class: "mono" %></th>
+              <th scope="row" class="matrix__name"><%= link_to matrix_server_label(server, false), server, class: "mono", data: { tooltip: server.name } %></th>
               <% apps.each do |app| %>
                 <td><% if (cell = group.cells[[ app.id, server.id ]]) %><%= version_cell cell %><% end %></td>
               <% end %>

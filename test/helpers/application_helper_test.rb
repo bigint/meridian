@@ -10,7 +10,7 @@ class ApplicationHelperTest < ActionView::TestCase
 
   test "a version cell shows the running version and says the state in words" do
     render html: version_cell(cell("in_sync"))
-    assert_select "span.cell[data-cell][data-state=in_sync][title=?]", "web on web-1: In sync, running v42", text: /v42/
+    assert_select "span.cell[data-cell][data-state=in_sync][data-tooltip=?]", "web on web-1: In sync, running v42", text: /v42/
     assert_select ".cell .sr-only", text: "In sync:"
   end
 
@@ -31,7 +31,7 @@ class ApplicationHelperTest < ActionView::TestCase
 
   test "no state is a dash" do
     render html: state_badge(nil)
-    assert_select "span[title='Nothing here']", text: "–"
+    assert_select "span[data-tooltip='Nothing here']", text: "–"
   end
 
   test "a chip with an href is a filter that knows when it is on" do

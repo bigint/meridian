@@ -15,7 +15,7 @@ class MapTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "svg[role=img] use[href*='world'][href$='#land']"
     assert_select ".world__sites a.site", 2
-    assert_select ".world__links path title", text: /api/
+    assert_select ".world__links path[data-tooltip*=api]"
     assert_select "table tbody th", 2
     assert_select ".world__flows", 0, "no flows until Meridian's location is set"
   end

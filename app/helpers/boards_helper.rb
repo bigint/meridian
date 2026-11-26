@@ -11,7 +11,7 @@ module BoardsHelper
   # One thing that needs attention, as a plain sentence.
   def attention_sentence(item)
     app = item.app && tag.strong(item.app.name)
-    server = item.server && tag.strong(item.server.short_name, title: item.server.name, class: "mono")
+    server = item.server && tag.strong(item.server.short_name, class: "mono", data: { tooltip: item.server.name })
 
     case item.state
     when "missing" then safe_join([ app, " isn't running on ", server, ", but Git says it should." ])

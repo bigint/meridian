@@ -13,7 +13,7 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "[data-board-grid] tbody th", text: "web · production"
-    assert_select "[data-board-grid] thead th a[title=?]", "web-1.example.com", text: "web-1"
+    assert_select "[data-board-grid] thead th a[data-tooltip=?]", "web-1.example.com", text: "web-1"
     assert_select "[data-board-grid] [data-cell][data-state]", count: 7
   end
 
@@ -34,7 +34,7 @@ class PagesTest < ActionDispatch::IntegrationTest
 
   test "servers × apps toggle" do
     get root_path(view: "servers")
-    assert_select "[data-board-grid] tbody th a[title=?]", "web-1.example.com"
+    assert_select "[data-board-grid] tbody th a[data-tooltip=?]", "web-1.example.com"
   end
 
   test "app, server and project pages render" do

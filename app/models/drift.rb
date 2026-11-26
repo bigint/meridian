@@ -28,6 +28,9 @@ module Drift
     end
   end
 
+  # States that need a person, most urgent first.
+  ATTENTION_RANK = { "missing" => 0, "drifted" => 1, "stray" => 2, "stale" => 3 }.freeze
+
   # The state that needs attention first, when several roles share a cell.
   def self.worst(states)
     states.compact.min_by { %w[ missing drifted stale stray unknown in_sync ].index(it) }

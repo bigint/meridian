@@ -1,0 +1,51 @@
+<div class="space-y-5" data-place-inspector>
+  <div class="space-y-1.5">
+    <p class="text-[11px] font-semibold tracking-wide text-ink-muted">PLACE</p>
+    <h2 class="text-lg font-bold tracking-tight text-ink"><%= @site.name %></h2>
+    <div class="flex flex-wrap items-center gap-2 text-ink-muted">
+      <% if deploying? %><%= render Ui::BadgeComponent.new("↗ Deploying", tone: :info) %><% end %>
+      <%= render Ui::StateComponent.new(@site.state) %>
+      <% if region %><code class="text-xs"><%= region %></code><% end %>
+      <span class="text-xs"><%= coordinates %></span>
+    </div>
+    <p class="text-ink-muted"><%= summary %></p>
+  </div>
+
+  <%= render Ui::SectionComponent.new(title: "Servers", count: @site.servers.size, id: "place-servers") do %>
+    <ul class="divide-y divide-line rounded-lg border border-line bg-canvas">
+      <% @site.servers.sort_by(&:name).each do |server| %>
+        <% text, tone = agent(server) %>
+        <li class="space-y-1.5 px-3 py-2.5">
+          <%= link_to server.name, server, class: "block break-all font-mono text-xs font-medium text-ink hover:text-accent" %>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <% cells_for(server).each do |cell| %>
+              <span class="flex items-center gap-1.5"><%= render VersionCellComponent.new(cell: cell) %><%= link_to cell.app.name, cell.app, class: "text-ink-muted hover:text-accent" %></span>
+            <% end %>
+            <span class="<%= classes("ml-auto text-xs", tone) %>"><%= text %></span>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <%= render Ui::SectionComponent.new(title: "Shares apps with", id: "place-neighbours") do %>
+    <% if neighbours.any? %>
+      <p class="leading-relaxed text-ink-muted">
+        <%= safe_join(neighbours.map { |site, apps| safe_join([ link_to(site.name, @place_url.call(site), class: "text-ink hover:text-accent"), " (#{apps.map(&:service).uniq.join(", ")})" ]) }, " · ") %>
+      </p>
+    <% else %>
+      <p class="text-ink-muted">No other place runs the same apps.</p>
+    <% end %>
+  <% end %>
+
+  <% if note %>
+    <p class="rounded-lg border border-line bg-canvas px-3 py-2.5 leading-relaxed text-ink"><%= note %></p>
+  <% end %>
+
+  <div class="flex flex-wrap gap-2">
+    <%= render Ui::ButtonComponent.new(label: "Open on the board", href: board_url, size: :sm) %>
+    <% if @site.servers.one? %>
+      <%= render Ui::ButtonComponent.new(label: "Open server", href: helpers.server_path(@site.servers.first), size: :sm, variant: :ghost) %>
+    <% end %>
+  </div>
+</div>

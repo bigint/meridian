@@ -95,13 +95,35 @@ class WorldMap
     end
   end
 
+  def site(key) = sites.find { it.key.to_s == key.to_s }
+
+  # The place shown in the side panel when none was asked for: the one most
+  # in need of attention, else the biggest.
+  def default_site
+    sites.min_by { [ Drift::ATTENTION_RANK.fetch(it.state, 9), deploying?(it) ? 0 : 1, -it.servers.size, it.name ] }
+  end
+
+  # Places that share an app with this one, and the apps they share.
+  def neighbours(site)
+    links.filter_map { |link| [ link.from == site ? link.to : link.from, link.apps ] if link.from == site || link.to == site }
+  end
+
+  def deploying?(site) = deploying_keys.include?(site.key)
+
+  # Names on the map: Meridian, places that need you or are being deployed
+  # to, and the one you picked. The rest are named on hover.
+  def named_keys(selected = nil)
+    keys = sites.select { it.state.in?(Drift::ATTENTION_RANK.keys) || deploying?(it) }.map(&:key)
+    keys << selected.key if selected
+    keys << :hub if hub
+    keys.uniq
+  end
+
   def flows
     return [] unless hub
 
     reports = sites.map { |site| Flow.new(from: site, to: nil, kind: "report", live: !site.stale?) }
-    deploys = Deploy.active.includes(app: :servers).flat_map do |deploy|
-      deploy.app.servers.filter_map { |server| sites.find { it.servers.include?(server) } }.uniq
-    end.uniq.map { |site| Flow.new(from: nil, to: site, kind: "deploy", live: true) }
+    deploys = deploying_sites.map { |site| Flow.new(from: nil, to: site, kind: "deploy", live: true) }
     reports + deploys
   end
 
@@ -112,14 +134,17 @@ class WorldMap
 
   # Places every name where it overlaps no other name and no dot. Bigger
   # places choose first; each tries beside its dot, then further out with a
-  # leader line, and keeps its first spot if nothing is free.
-  def labels
-    @labels ||= begin
+  # leader line, and keeps its first spot if nothing is free. Pass keys to
+  # name only some places; every dot is still kept clear.
+  def labels(keys = nil)
+    @labels ||= {}
+    @labels[keys] ||= begin
       dots = sites.map { |site| box_around(site.x, site.y, radius(site)) }
       dots << box_around(*hub, HUB_RADIUS) if hub
 
-      items = sites.sort_by { [ -it.servers.size, it.key ] }.map { [ it.key, [ it.x, it.y ], radius(it), it.name ] }
-      items.unshift([ :hub, hub, HUB_RADIUS, hub_name ]) if hub
+      named = keys ? sites.select { keys.include?(it.key) } : sites
+      items = named.sort_by { [ -it.servers.size, it.key ] }.map { [ it.key, [ it.x, it.y ], radius(it), it.name ] }
+      items.unshift([ :hub, hub, HUB_RADIUS, hub_name ]) if hub && (keys.nil? || keys.include?(:hub))
 
       taken = []
       items.to_h do |key, (x, y), r, text|
@@ -137,6 +162,14 @@ class WorldMap
   end
 
   private
+    def deploying_sites
+      @deploying_sites ||= Deploy.active.includes(app: :servers).flat_map do |deploy|
+        deploy.app.servers.filter_map { |server| sites.find { it.servers.include?(server) } }.uniq
+      end.uniq
+    end
+
+    def deploying_keys = @deploying_keys ||= deploying_sites.map(&:key).to_set
+
     def box_around(x, y, r) = [ x - r, y - r, x + r, y + r ]
 
     def overlap?(a, b)

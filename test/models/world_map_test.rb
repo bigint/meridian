@@ -78,4 +78,20 @@ class WorldMapTest < ActiveSupport::TestCase
     def place(name, lat, lng)
       Server.find_by!(name: name).update!(latitude: lat, longitude: lng, last_seen_at: @now)
     end
+
+  test "only places that need attention, the picked one and Meridian are named" do
+    Server.find_by!(name: "jobs-1.example.com").update!(last_seen_at: 2.hours.ago)
+    map = WorldMap.new
+    by_server = ->(name) { map.sites.find { it.servers.map(&:name).include?(name) } }
+    new_york, singapore, frankfurt = by_server["jobs-1.example.com"], by_server["web-1.example.com"], by_server["api-1.example.com"]
+
+    assert_equal "stale", new_york.state
+    keys = map.named_keys(singapore)
+    assert_includes keys, new_york.key, "a quiet place is always named"
+    assert_includes keys, singapore.key, "the picked place is named"
+    assert_not_includes keys, frankfurt.key unless frankfurt.state.in?(Drift::ATTENTION_RANK.keys)
+    assert_equal keys.size, map.labels(keys).size
+    assert_equal "missing", singapore.state
+    assert_equal singapore, map.default_site, "missing outranks a quiet agent"
+  end
 end

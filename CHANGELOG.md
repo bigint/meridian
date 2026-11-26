@@ -7,6 +7,8 @@
 - Meridian's own look, chosen from three mockups: zinc neutrals, one indigo accent, monospace for versions and hosts, dense tables, light and dark, and no shadows. See `docs/design.md`.
 - The board is one grid where every cell shows the version a server actually runs, tinted by drift state, with servers grouped under their region. Click an app to open it in a side panel: its servers, recent releases, a deploy form, Redeploy and Roll back, without leaving the board.
 - App and server pages use the same layout: content on the left, what you act on in a panel on the right.
+- The Map works the same way: click a place to see its servers, the version each app runs there, and the places it shares apps with. Dots show how many servers share a spot and turn purple while a deploy goes out; only places that need you are named, so Europe no longer crowds. App chips filter the map, and the places table lists problems first.
+- Fixed: clicking a place on the map made Turbo throw and reload the whole page.
 - An icon rail replaces the sidebar, with search and the account menu in a top bar. On phones the rail is a drawer behind a Menu button.
 - Built with Tailwind 4 (standalone binary, still no Node) and a ViewComponent library, `app/components/ui/`, browsable at `/lookbook` in development.
 - Install snippets and one-time tokens have a copy button. Servers list their place (city and region) in its own column.

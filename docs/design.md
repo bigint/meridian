@@ -20,7 +20,7 @@ Browse every component, in every state, at [`/lookbook`](http://localhost:3000/l
 - **Icon rail** (`SidebarComponent`): the main places (Board, Map, Apps, Servers, Activity, Previews), then Projects, Agents and Secrets, and Settings and Jobs for admins at the bottom. Each icon is named on hover and for screen readers; the Board icon carries the number of things that need attention.
 - **Top bar** (`TopbarComponent`): a search box that finds any app, server or project as you type (Enter opens the first match), and the account menu with sign out.
 - **Phones:** the rail is a native `popover` drawer behind a **Menu** button, with the names beside the icons, so it needs no JavaScript.
-- **Main column and side panel:** the Board, an app and a server put their content in a main column and what you act on in a panel on the right: the Board's panel inspects the app you click (`AppInspectorComponent`, in a Turbo Frame, so the grid stays put and the URL remembers it); an app's panel ships versions and shows the current deploy; a server's panel holds its facts, labels and location. On narrow screens the panel drops below.
+- **Main column and side panel:** the Board, the Map, an app and a server put their content in a main column and what you act on in a panel on the right: the Map's panel shows the place you click (`PlaceInspectorComponent`): its servers with the version each app runs, the places it shares apps with, and what is wrong there; the Board's panel inspects the app you click (`AppInspectorComponent`, in a Turbo Frame, so the grid stays put and the URL remembers it); an app's panel ships versions and shows the current deploy; a server's panel holds its facts, labels and location. On narrow screens the panel drops below.
 - Other pages are `max-w-6xl`; the Board, Map, apps and servers use full width with `content_for :wide`.
 - **Sign-in and first run** use a centred card (`layouts/auth.html.erb`).
 
@@ -68,6 +68,8 @@ Generic components live in `app/components/ui/`. Each has a Lookbook preview in 
 Meridian-specific components sit directly in `app/components/`: `SidebarComponent`, `TopbarComponent`, `BoardMatrixComponent`, `VersionCellComponent`, `AppInspectorComponent`, `AttentionItemComponent`, `AppStatusComponent`, `DeployProgressComponent` and `WorldMapComponent`.
 
 **The version cell** is the unit of the whole interface: one app on one server, showing the version actually running, tinted by its drift state (green: what Git says; amber with ≠: another version; red ✕: missing; dotted: stray; dashed: quiet agent or unknown). The state is also a word for screen readers and a different border, never colour alone. The board matrix puts servers under their region as column groups (`aps2-az1-node-01` reads as `az1-01` under `ap-south-2`).
+
+**The map** marks each place with its worst state (purple while a deploy goes out) and the number of servers there. It names only Meridian, places that need you and the one you picked; the rest are named on hover and in the table, which keeps crowded regions readable. The places table lists what needs attention first, with a version cell for every app on every server.
 
 Forms need no per-form markup. `MeridianFormBuilder` is the default form builder: it styles every input, select, check box and submit button, and `form.field :name, hint: "…"` renders the label, input, hint and errors together. Pass `compact: true` for dense filter forms.
 

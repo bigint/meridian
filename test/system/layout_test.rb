@@ -19,7 +19,7 @@ class LayoutTest < ApplicationSystemTestCase
     page.driver.browser.manage.window.resize_to(390, 844)
     sign_in users(:viewer)
 
-    [ root_path(group: "none"), app_path(App.order(:id).first), server_path(Server.order(:id).first) ].each do |path|
+    [ root_path(group: "none"), map_path, app_path(App.order(:id).first), server_path(Server.order(:id).first) ].each do |path|
       visit path
       assert_selector "h1"
       assert_equal page.evaluate_script("document.documentElement.clientWidth"),

@@ -20,6 +20,19 @@ class MapTest < ActionDispatch::IntegrationTest
     assert_select ".world__flows", 0, "no flows until Meridian's location is set"
   end
 
+  test "a place opens in the side panel, and the map names only places that need you" do
+    sign_in_as users(:viewer)
+    singapore = WorldMap.new.sites.find { it.servers.map(&:name) == [ "web-2.example.com" ] }
+
+    get map_path(place: singapore.key)
+    assert_select "#place [data-place-inspector] h2", text: singapore.name
+    assert_select "#place [data-cell]", minimum: 1
+    assert_select ".world__sites a.site.selected[aria-current=true]", 1
+    assert_select ".world__sites a.site[href*='place=']", 2
+    assert_select "table tbody th a[href*='place=']", 2
+    assert_select ".world__labels text", WorldMap.new.named_keys(singapore).size
+  end
+
   test "admins place a server by hand" do
     sign_in_as users(:admin)
     server = Server.find_by!(name: "jobs-1.example.com")

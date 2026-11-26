@@ -135,7 +135,9 @@
     &.drifted circle { fill: var(--color-warn); }
     &.missing circle { fill: var(--color-bad); }
     &.stray circle { fill: var(--color-info); }
+    &.deploying circle { fill: var(--color-info); }
     &:hover circle, &:focus-visible circle { stroke: var(--color-ink); }
+    &.selected circle { stroke: var(--color-accent); stroke-width: 3; }
   }
 
   .world__labels {

@@ -17,6 +17,28 @@ class JumpTest < ActionDispatch::IntegrationTest
     assert_operator names.size, :<=, JumpsController::LIMIT
   end
 
+  test "underscores and percent signs are matched as themselves" do
+    app = projects(:infra).apps.create!(service: "my_app", config_path: "deploy/my_app.yml")
+    projects(:infra).apps.create!(service: "myxapp", config_path: "deploy/myxapp.yml")
+    Server.create!(name: "db_1", hostname: "db_1")
+
+    get jump_path(q: "my_app")
+    assert_equal [ "my_app" ], css_select("#jump_results a span.truncate").map(&:text)
+
+    get apps_path(q: "my_app")
+    assert_select "table tbody th a", text: "my_app"
+    assert_select "table tbody th a", text: "myxapp", count: 0
+
+    get servers_path(q: "db_1")
+    assert_select "table tbody th a", text: "db_1"
+
+    assert_equal [ app ], Board.new(app: "my_app").apps.values, "the board's app filter"
+
+    Event.record("agent_token.created", summary: "Created a token")
+    get events_path(action_name: "agent_token")
+    assert_select ".row__title", text: "Created a token"
+  end
+
   test "says so when nothing matches" do
     get jump_path(q: "zzz")
     assert_select "#jump_results", text: /Nothing called “zzz”/

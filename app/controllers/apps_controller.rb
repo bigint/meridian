@@ -3,7 +3,7 @@ class AppsController < ApplicationController
 
   def index
     @apps = App.includes(:project).ordered
-    @apps = @apps.where("service LIKE ?", "%#{App.sanitize_sql_like(params[:q])}%") if params[:q].present?
+    @apps = @apps.where("service LIKE ? ESCAPE '\\'", "%#{App.sanitize_sql_like(params[:q].to_s)}%") if params[:q].present?
   end
 
   def new

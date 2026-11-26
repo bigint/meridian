@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Search finds names with `_` or `%` in them: the top-bar search, the Apps and Servers searches, the board's app filter and the Activity page's action filter. SQLite's LIKE has no escape character unless told, so `my_app` matched nothing. The Apps and Servers searches also no longer fail on a `q` that isn't text.
 - A server's page lists every app on it. It showed the board's first page, so a server running more than 25 apps silently left the rest out of its Apps table and count.
 - An app's status line says "✓ Running v42 everywhere" only when no server runs another version or has a role down. A server still running a v41 container beside v42 counted as running v42, while its cell showed drifted.
 - The board checks each role Git assigns to a server. A cell with a running `web` container showed in sync while the `job` container Git also put there was stopped, so the dead worker never reached Needs attention; a role running where Git doesn't put it now shows as stray.

@@ -3,7 +3,7 @@ class ServersController < ApplicationController
 
   def index
     @servers = Server.ordered
-    @servers = @servers.where("name LIKE ? OR hostname LIKE ?", *[ "%#{Server.sanitize_sql_like(params[:q])}%" ] * 2) if params[:q].present?
+    @servers = @servers.where("name LIKE ? ESCAPE '\\' OR hostname LIKE ? ESCAPE '\\'", *[ "%#{Server.sanitize_sql_like(params[:q].to_s)}%" ] * 2) if params[:q].present?
     @silent = params[:silent].present?
     @servers = @servers.silent if @silent
   end

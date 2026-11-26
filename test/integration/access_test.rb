@@ -119,4 +119,22 @@ class AccessTest < ActionDispatch::IntegrationTest
     sign_in_as users(:admin)
     assert_broadcasts(cables, 1) { delete settings_user_path(users(:deployer)) }
   end
+
+  test "signing in goes back to the page that asked, but not to a form's POST or a bare frame" do
+    sign_in = -> { post session_path, params: { email_address: users(:deployer).email_address, password: "correct horse battery" } }
+
+    get servers_path
+    sign_in.call
+    assert_redirected_to servers_url
+
+    delete session_path
+    post app_deploys_path(App.create!(project: projects(:infra), service: "api", config_path: "deploy/api.yml", kind: "rails"))
+    sign_in.call
+    assert_redirected_to root_url
+
+    delete session_path
+    get jump_path(q: "web"), headers: { "Turbo-Frame" => "jump" }
+    sign_in.call
+    assert_redirected_to root_url
+  end
 end

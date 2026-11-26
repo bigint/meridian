@@ -24,8 +24,10 @@ module Authentication
       Session.find_by(id: cookies.signed[:session_id]) if cookies.signed[:session_id]
     end
 
+    # Only a whole page is worth coming back to: a form's POST has no page at
+    # its URL, and a turbo-frame GET is a bare frame.
     def request_authentication
-      session[:return_to_after_authenticating] = request.url
+      session[:return_to_after_authenticating] = request.url if request.get? && !request.headers["Turbo-Frame"]
       redirect_to main_app.new_session_path
     end
 

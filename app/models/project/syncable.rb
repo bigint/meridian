@@ -10,6 +10,8 @@ module Project::Syncable
   # A head the parser failed on is tried again after 1, 2, 4… minutes, at most hourly.
   PARSE_RETRY = 1.minute
   PARSE_RETRY_MAX = 1.hour
+  # Settings that change what a sync reads, though the head hasn't moved.
+  SYNC_SETTINGS = %w[ repo_full_name default_branch installation_id config_globs ].freeze
 
   def sync(force: false)
     sha = git.head_sha
@@ -52,6 +54,10 @@ module Project::Syncable
       update!(last_synced_sha: sha, synced_at: Time.current, config_errors: results.filter_map { it["error"] }, parse_failed_sha: nil, parse_failures: 0)
     end
     true
+  end
+
+  def sync_settings_changed?
+    saved_changes.keys.intersect?(SYNC_SETTINGS)
   end
 
   def sync_later(force: false)

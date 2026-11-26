@@ -21,6 +21,14 @@ module Project::Changes
     end
   end
 
+  def propose_workflow(actor:)
+    propose(
+      files: { ".github/workflows/#{WORKFLOW_FILE}" => workflow_template },
+      title: "ci: deploy with Kamal when a version file changes",
+      body: "Adds the workflow Meridian uses to ship deploys, rollbacks and previews. Every run is `kamal deploy` (or `kamal app remove`, for a preview) from this repository.\n\nBefore merging, add the `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` repository secrets, plus any secrets your configs reference.",
+      actor: actor, slug: "ci")
+  end
+
   def workflow_template
     Templates.render("github/meridian-deploy.yml", branch: default_branch, kamal_version: KamalConfig::KAMAL_VERSION)
   end

@@ -20,6 +20,7 @@ class Server < ApplicationRecord
   validates :name, :hostname, presence: true
 
   scope :ordered, -> { order(:name) }
+  scope :search, ->(query) { where("name LIKE :q ESCAPE '\\' OR hostname LIKE :q ESCAPE '\\'", q: "%#{sanitize_sql_like(query.to_s)}%") }
   scope :silent, -> {
     where(last_seen_at: ...STALE_AFTER.ago)
       .where("julianday(last_seen_at) < julianday(:now) - MAX(:floor, 3 * COALESCE(interval_seconds, :default)) / 86400.0",

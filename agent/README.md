@@ -371,5 +371,6 @@ go vet ./... && go test ./...
 docker build --build-arg VERSION=$(git rev-parse --short HEAD) -t meridian-agent .
 ```
 
-The image is a static `CGO_ENABLED=0` binary on
-`gcr.io/distroless/static-debian12:nonroot`, about 3.5 MB.
+The image is a static `CGO_ENABLED=0` binary of about 7 MB on
+`gcr.io/distroless/static-debian12:nonroot`. Compressed, as a registry
+serves it, the image is about 3.5 MB.

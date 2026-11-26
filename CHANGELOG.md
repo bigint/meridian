@@ -119,6 +119,7 @@
 - The **Add CI workflow** pull request says the workflow removes previews with `kamal app remove`, the command it runs, rather than `kamal remove`.
 - The Logs page's notice for dropped lines reads "N lines skipped: logged faster than the agent sends". It said "over 512 KB/s", but the agent also drops live lines past 500 in 250 ms, whatever their size.
 - The board's side panel (`/?inspect=<id>`) for an accessories-only config shows no Deploy form, Redeploy or Roll back, as its app page already doesn't. Each could only fail.
+- The agent's README gives its binary as about 7 MB and its image as about 3.5 MB compressed. It gave 3.5 MB alone, which read as the size of the binary.
 
 ### Upgrading
 

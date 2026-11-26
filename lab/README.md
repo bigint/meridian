@@ -1,27 +1,25 @@
 # Lab
 
-A local fleet for trying Meridian against real Kamal deploys, inside Docker
-(kiri, Docker Desktop, OrbStack…). Nothing here is used in production.
+A local fleet for trying Meridian against real Kamal deploys, inside Docker:
+six Docker-in-Docker servers, a registry and a GitHub Actions runner, deploying
+the real bigint sites. Nothing here is used in production.
 
-- Six servers named like AWS availability zones: two in Bangalore (`aps2-az1-node-01`, `aps2-az1-node-02`), and one each in Singapore (`apse1-az1-node-01`), New York (`use1-az1-node-01`), Frankfurt (`euc1-az1-node-01`) and Sydney (`apse2-az1-node-01`): each runs sshd and its own Docker daemon (Docker in Docker), so Kamal deploys to them exactly as it would to a VM.
-- `registry`: a private image registry, `registry:5000` inside the lab and `localhost:5555` from your machine.
-- `runner`: a GitHub Actions self-hosted runner registered on your test infra repository, on the same network as the servers, so the Meridian workflow can run `kamal deploy` against them.
-- The apps are the six real bigint sites (yoginth-com, asiafibernet-com, nailbykyro-com, asiagigafibernet-com, occasions, pckumar-in). Each version is a public files-only image at `ghcr.io/bigint/<site>:<commit>`; `bin/lab push` wraps it in nginx (`lab/site/`) the way bigint/infra does in production and pushes it as `bigint/<site>:<7-character commit>`. Their Kamal configs live in bigint/meridian-infra-test, with the real hostnames: try one with `curl -H 'Host: yoginth.com' http://<server>/` from inside the lab.
-- Umami, web analytics with its database split across regions: Postgres writes go to the primary in Bangalore (`aps2-az1-node-01`), and a streaming replica in Singapore (`apse1-az1-node-01`) serves the Singapore server's reads through Umami's `DATABASE_REPLICA_URL`. Umami runs on the three tunnel servers, at https://umami.yoginth.net through Cloudflare Tunnel meridian-lab. `bin/lab push umami VERSION` takes a release tag from ghcr.io/umami-software (`lab/umami/` labels it for Kamal). Boot the databases once, primary first: `bin/lab kamal owner/infra-repo accessory boot db -c deploy/umami.yml`, then `db-replica`. Log in as admin / umami and change the password.
+The whole guide is the [Lab page](https://meridian.yoginth.com/internals/lab)
+of the docs ([`docs/internals/lab.mdx`](../docs/internals/lab.mdx)).
 
 ```bash
 bin/lab up owner/infra-repo   # build and start everything, register the runner
+bin/lab secrets owner/infra-repo  # set the repository secrets the infra repo needs (only missing ones)
 bin/lab push all              # push the newest version of every site to the registry
 bin/lab versions occasions    # list a site's versions, oldest first
 bin/lab push occasions 6c45ebf  # push an older one, to deploy or roll back to
+bin/lab push umami 3.5.0      # push an Umami release
 bin/lab agents                # run meridian-agent on every server
-bin/lab secrets owner/infra-repo  # set the repository secrets the infra repo needs (only missing ones)
 bin/lab kamal owner/infra-repo accessory boot db -c deploy/umami.yml  # Kamal from inside the lab
 bin/lab webhooks owner/infra-repo  # optional: forward the repo's webhooks, for instant updates
+bin/lab ssh use1-az1-node-01  # a shell on one server
 bin/lab status
 bin/lab down
 ```
 
-Meridian polls GitHub every 30 seconds, so the lab works without webhooks. For instant updates, `bin/lab webhooks` uses `gh webhook forward` (install it with `gh extension install cli/gh-webhook`), so GitHub relays them without exposing the dev server. Start the dev server with `GITHUB_APP_WEBHOOK_SECRET=$(cat lab/.secrets/webhook_secret)`.
-
-Secrets the lab generates (an SSH key, the registry password, the webhook secret and Umami's passwords and app secret) live in `lab/.secrets/`, which is git-ignored.
+Secrets the lab generates live in `lab/.secrets/`, which is git-ignored.

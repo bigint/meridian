@@ -6,7 +6,7 @@ A pull request in an app's **source** repository can run as a Kamal destination,
 
 1. **The pull request opens, or is pushed to.** Meridian commits `<config>.pr-<n>.yml` next to the app's config. Kamal resolves destination files as siblings of `-c` ([source](architecture.md#destination-files)), so `kamal deploy -c deploy/shop.yml -d pr-12` reads `deploy/shop.pr-12.yml`. The overlay sets:
    - `service: <app>-pr-<n>`, so its containers and proxy route never touch the real app;
-   - one server for every role, chosen by the preview label selector;
+   - one server for every role, chosen by the preview label selector; each role keeps its own settings (`cmd`, `env`, `options`) from the base config and the destination file, and a role's own proxy host becomes the preview hostname;
    - the preview hostname;
    - everything else from the app's destination file, if it has one.
 

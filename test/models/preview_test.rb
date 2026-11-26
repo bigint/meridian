@@ -42,8 +42,40 @@ class PreviewTest < ActiveSupport::TestCase
     assert_equal "web-pr-9", overlay["service"]
     assert_equal({ "hosts" => [ "pr-9.web.preview.example.com" ], "app_port" => 3000 }, overlay["proxy"])
     assert_equal %w[ job web ], overlay["servers"].keys.sort
-    assert_equal 1, overlay["servers"].values.flatten.uniq.size
+    hosts = overlay["servers"].values.map { it.is_a?(Hash) ? it["hosts"] : it }
+    assert_equal 1, hosts.flatten.uniq.size
+    assert_equal({ "cmd" => "bin/jobs", "hosts" => hosts.first }, overlay.dig("servers", "job"), "the job role still runs bin/jobs")
     assert_match(/\A# Preview of example\/shop#9/, @writes.sole["content"])
+  end
+
+  test "each role keeps its own settings from the base config, and its own proxy host goes" do
+    base = file_fixture("infra/deploy/api.yml").read.sub("servers:\n  web:\n    - web-2.example.com\n    - api-1.example.com\n", <<~YAML)
+      servers:
+        web:
+          hosts:
+            - web-2.example.com
+          proxy:
+            host: api.example.com
+            app_port: 3000
+        job:
+          hosts:
+            - api-1.example.com
+          cmd: bin/jobs
+          env:
+            clear:
+              QUEUE: "*"
+    YAML
+    stub_github_files(@project, { "deploy/api.yml" => base }, head: "b" * 40)
+    @project.sync
+    app = @project.apps.find_by!(service: "api")
+    app.update!(source_repo: "example/api-src")
+    Preview.deploy(app, number: 7, head_sha: "h" * 40, url: nil)
+
+    config = kamal_config({ "deploy/api.yml" => base, "deploy/api.pr-7.yml" => @writes.sole["content"] }, "pr-7")
+    assert_equal "bin/jobs", config.role(:job).cmd
+    assert_equal "*", config.role(:job).env(config.role(:job).hosts.first).clear["QUEUE"]
+    assert_equal [ [ "pr-7.api.preview.example.com" ] ], config.roles.select(&:running_proxy?).map { it.proxy.hosts }
+    assert_equal 1, config.roles.flat_map(&:hosts).uniq.size
   end
 
   test "pushes redeploy without rewriting the overlay" do
@@ -196,6 +228,14 @@ class PreviewTest < ActiveSupport::TestCase
   end
 
   private
+    def kamal_config(files, destination)
+      require "kamal"
+      Dir.mktmpdir do |dir|
+        files.each { |path, content| FileUtils.mkdir_p(File.dirname(File.join(dir, path))) && File.write(File.join(dir, path), content) }
+        Dir.chdir(dir) { Kamal::Configuration.create_from(config_file: Pathname.new(files.keys.first), destination: destination, version: "0") }
+      end
+    end
+
     def track(title, conclusion: "success", repository: "example/infra")
       Preview.track("display_title" => title, "status" => "completed", "conclusion" => conclusion, "repository" => { "full_name" => repository })
     end

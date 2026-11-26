@@ -1,7 +1,7 @@
 ---
 title: "A control room for Kamal"
 sidebarTitle: "Introduction"
-description: "Meridian is an open-source control room for Kamal. See every app on every server, deploy and roll back, add apps and preview pull requests. Git keeps the record of every change."
+description: "Meridian is an open-source control room for Kamal. See every app on every server, deploy and roll back, and add apps. Git keeps the record of every change."
 icon: "house"
 mode: "custom"
 ---
@@ -11,7 +11,7 @@ mode: "custom"
   <div className="max-w-3xl">
     <p className="text-sm font-semibold tracking-wide text-primary dark:text-primary-light">Open source · MIT licence · v0.1.0</p>
     <h1 className="mt-4 text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-gray-50">Meridian</h1>
-    <p className="mt-6 text-2xl leading-snug text-gray-700 dark:text-gray-200">An open-source control room for <a href="https://kamal-deploy.org" className="underline decoration-primary/40 underline-offset-4">Kamal</a>. See every app on every server. Deploy, roll back, add apps and preview pull requests.</p>
+    <p className="mt-6 text-2xl leading-snug text-gray-700 dark:text-gray-200">An open-source control room for <a href="https://kamal-deploy.org" className="underline decoration-primary/40 underline-offset-4">Kamal</a>. See every app on every server. Deploy, roll back and add apps.</p>
     <p className="mt-6 text-lg text-gray-500 dark:text-gray-400">Navigators measure every position from a line called a meridian. Meridian measures every server against Git.</p>
     <div className="mt-10 flex flex-wrap gap-3">
       <a href="/quickstart" className="inline-flex items-center rounded-full bg-primary dark:bg-primary-light px-5 py-2.5 text-sm font-semibold text-white dark:text-gray-950 no-underline">Get started</a>
@@ -40,9 +40,6 @@ mode: "custom"
       </Card>
       <Card title="Add apps" icon="box" href="/guides/new-app">
         Fill in a form for a static, Node or Rails app. Meridian writes the Kamal config, checks it with Kamal and opens a pull request.
-      </Card>
-      <Card title="Preview pull requests" icon="eye" href="/guides/previews">
-        Each pull request in an app's repository gets its own copy of the app, as the Kamal destination `pr-<n>`. Meridian removes it when the pull request closes.
       </Card>
       <Card title="Set secrets" icon="key" href="/guides/secrets">
         Meridian reads secret names from your configs. You type a value, and it goes straight to GitHub Actions secrets. Meridian never keeps it.

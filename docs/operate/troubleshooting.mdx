@@ -72,7 +72,7 @@ Two places help with most problems:
     When you save new config paths, Meridian syncs at once. See [Choose config paths](/guides/projects#choose-config-paths).
   </Accordion>
   <Accordion title="The project page lists parse errors">
-    Kamal couldn't read a config. Each error gives the file and line, with a link to it on GitHub. Until the config parses again, its app stays as it was, with its deploys, releases and previews.
+    Kamal couldn't read a config. Each error gives the file and line, with a link to it on GitHub. Until the config parses again, its app stays as it was, with its deploys and releases.
 
     Fix the config in Git and push. The next sync clears the error. See [Fix parse errors](/guides/projects#fix-parse-errors).
 
@@ -94,8 +94,8 @@ Two places help with most problems:
 
     Rename the secret in the config.
   </Accordion>
-  <Accordion title="Pushes and CI runs show up late, or previews never start">
-    GitHub's [webhooks](/reference/glossary#webhook) don't reach Meridian. Meridian still checks each project every 30 seconds, so pushes and CI runs show up within 30 seconds. Previews need the `pull_request` webhook, so without it they never start.
+  <Accordion title="Pushes and CI runs show up late">
+    GitHub's [webhooks](/reference/glossary#webhook) don't reach Meridian. Meridian still checks each project every 30 seconds, so pushes and CI runs show up within 30 seconds.
 
     - **Settings → Connections** says **Webhooks: Off**. Set `GITHUB_APP_WEBHOOK_SECRET`.
     - In the App's settings, **Advanced → Recent Deliveries** shows each delivery and Meridian's answer. `401` means the secret in GitHub and `GITHUB_APP_WEBHOOK_SECRET` differ. `400` from a repository webhook means its content type isn't `application/json`.
@@ -222,31 +222,6 @@ kamal accessory logs meridian_agent
     [Drift](/reference/glossary#drift) compares Git's version with what agents report. A cell stays drifted while any container of that app on that server runs another version. When Git assigns a role there and nothing runs, the cell shows missing instead.
 
     Open the server's page to see each container. Kamal names containers after the version, so the version in the file must be the image tag Kamal deployed.
-  </Accordion>
-</AccordionGroup>
-
-## Previews
-
-<AccordionGroup>
-  <Accordion title="A pull request gets no preview">
-    Meridian logs why, as `Preview for <app> #<n> skipped: <reason>`. Check these in order:
-
-    1. **Settings → Previews → Domain** is set. Without it, Meridian skips every preview with `Set a preview domain in Settings first`.
-    2. The app's config has `meridian.source`, naming the repository the pull request is in.
-    3. The `pull_request` webhook reaches Meridian. The 30-second check doesn't read pull requests.
-    4. The pull request isn't from a fork. Forks never get a preview, and Activity records `preview.skipped`.
-    5. A server matches **Preview servers**. If none does, the log says `No server matches the preview selector`.
-    6. The CI workflow exists on the infra repository's branch.
-  </Accordion>
-  <Accordion title="A preview is Failed">
-    The preview's CI run failed. The [preview](/reference/glossary#preview) deploys the pull request's latest commit SHA as its version. So the source repository's CI must push an image tagged with the full commit SHA before the run starts.
-
-    Open the run from the **Previews** page to see the error. To try again, push a commit to the pull request.
-  </Accordion>
-  <Accordion title="A preview stays Removing">
-    Meridian asked CI to run `kamal app remove`. It waits for the run to finish before it deletes the preview's file from Git.
-
-    If the run fails, the preview goes back to **Failed**, and **Destroy** tries again. If the run never reports back, the hourly expiry job deletes the file after a day.
   </Accordion>
 </AccordionGroup>
 

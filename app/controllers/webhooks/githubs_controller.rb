@@ -1,7 +1,7 @@
 # GitHub App webhooks. Verified with the App's webhook secret, then handed to
 # a job so GitHub gets its answer quickly.
 class Webhooks::GithubsController < ActionController::API
-  EVENTS = %w[ push workflow_run pull_request ].freeze
+  EVENTS = %w[ push workflow_run ].freeze
 
   before_action :verify_signature
 

@@ -88,7 +88,7 @@ The workflow names dispatched runs `<command> <config> <destination>`, because `
 
 ## 21. A preview inherits the destination file of its app
 
-> **Note:** Its own `service` was reversed by [42](#42-a-preview-keeps-its-apps-service).
+> **Note:** Its own `service` was reversed by [42](#42-a-preview-keeps-its-apps-service). Superseded by [43](#43-previews-are-out-of-the-first-release).
 
 It inherits everything except `service` and the proxy host, so settings such as `app_port` carry over. Each role keeps its settings from the base config and the destination file, and only its hosts change (a role's own proxy host becomes the preview hostname). The base config is shared through Kamal's own merge.
 
@@ -172,16 +172,28 @@ A server Git places whose agent has been silent for 10 minutes can be claimed by
 
 ## 39. Previews skip pull requests from forks
 
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
+
 A fork's code is anyone's code, and a preview runs it on real servers with the app's secrets. The activity log says when one is skipped.
 
 ## 40. A config gets one preview per pull request, even with several destinations
+
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
 
 They would all share `<config>.pr-<n>.yml`. The preview inherits the destination it already runs, or else the first one alphabetically.
 
 ## 41. CI removes a preview with kamal app remove, not kamal remove
 
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
+
 A preview shares the base config's accessories, registry login and kamal-proxy, which `kamal remove` takes down too. `kamal app remove` takes only the preview's containers, images and proxy route.
 
 ## 42. A preview keeps its app's service
 
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
+
 A preview runs the app's image, and `kamal deploy --skip-push` checks that the image's `service` label matches the config's service before it boots anything. A preview renamed to `<service>-pr-<n>` therefore never deployed. Kamal already tells destinations apart in container names, labels, proxy routes and `kamal app remove`, so the `pr-<n>` destination is enough. Tried in the lab on Kamal 2.12.0: the preview and the app run side by side on one server, and removing the preview leaves the app's containers, image and route alone.
+
+## 43. Previews are out of the first release
+
+Pull request previews were removed to keep the first release small. Meridian has no Previews page or settings, handles no `pull_request` webhook, and its CI workflow only runs `kamal deploy`. A `<config>.pr-<n>.yml` is a destination like any other. This supersedes [21](#21-a-preview-inherits-the-destination-file-of-its-app) and [39](#39-previews-skip-pull-requests-from-forks) to [42](#42-a-preview-keeps-its-apps-service).

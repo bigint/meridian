@@ -82,27 +82,9 @@
   </section>
 <% end %>
 
-<div class="grid-2">
-  <div class="card">
-    <div class="card__header">Previews</div>
-    <div class="card__body">
-      <% if @account.preview_domain.blank? %>
-        <p class="txt-muted">No preview domain is set, so previews have no hostname yet.</p>
-      <% elsif @account.preview_hostnames_nested? %>
-        <%= alert_box :warn, title: "Previews need flat hostnames behind a tunnel" do %>
-          <p>They're named like <code><%= @account.preview_hostname("shop", 12) %></code>, two levels below the domain. Cloudflare's free certificate covers one.
-          <% if current_user.admin? %><%= link_to "Switch to flat names", settings_account_path %>.<% else %>An admin can switch to flat names in Settings.<% end %></p>
-        <% end %>
-      <% else %>
-        <p class="txt-muted">Previews are named like <code><%= @account.preview_hostname("shop", 12) %></code>, which Cloudflare's free certificate covers.</p>
-      <% end %>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card__header">Meridian itself</div>
-    <div class="card__body">
-      <p class="txt-muted">GitHub webhooks and agents must reach Meridian. To serve it through the tunnel, run it on the connectors' servers, add a route for its hostname, and set <code>proxy.ssl: false</code>. See <code>docs/guides/cloudflare-tunnel.mdx</code>.</p>
-    </div>
+<div class="card">
+  <div class="card__header">Meridian itself</div>
+  <div class="card__body">
+    <p class="txt-muted">GitHub webhooks and agents must reach Meridian. To serve it through the tunnel, run it on the connectors' servers, add a route for its hostname, and set <code>proxy.ssl: false</code>. See <code>docs/guides/cloudflare-tunnel.mdx</code>.</p>
   </div>
 </div>

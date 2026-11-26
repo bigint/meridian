@@ -26,7 +26,7 @@ See [Agent protocol](/reference/agent-protocol#snapshots) for the fields and eve
 
 ## POST /webhooks/github
 
-Where GitHub sends [webhooks](/reference/glossary#webhook), the messages it sends when something changes. Meridian checks each one's HMAC-SHA256 signature against `GITHUB_APP_WEBHOOK_SECRET`. It queues `push`, `workflow_run` and `pull_request` events, and answers `202`.
+Where GitHub sends [webhooks](/reference/glossary#webhook), the messages it sends when something changes. Meridian checks each one's HMAC-SHA256 signature against `GITHUB_APP_WEBHOOK_SECRET`. It queues `push` and `workflow_run` events, and answers `202`.
 
 - A bad signature, or no secret set, gets `401`.
 - A body that is not JSON gets `400`.
@@ -42,7 +42,7 @@ Rails' Action Cable WebSocket, a connection that stays open so Meridian can push
 | The agent | `Authorization: Bearer <agent token>`. A connection with this header never falls back to a cookie. | `AgentChannel` |
 | A browser | The signed `session_id` cookie | Turbo Streams for live pages, `ServerStatsChannel`, `LogsChannel`, `TrafficChannel` |
 
-Live pages refresh through Turbo Streams: the board, the map, an app's page and previews. Stats, logs and traffic stream through their own channels.
+Live pages refresh through Turbo Streams: the board, the map and an app's page. Stats, logs and traffic stream through their own channels.
 
 Logs and traffic need the deployer role, plus a grant. The page creates that grant when it records the viewing in Activity. When a person's role changes or they sign out, Meridian closes their open connections.
 
@@ -93,8 +93,6 @@ Every other address is a page for people. The rate limits in the **What it is** 
 | `/events` | Activity | Viewer |
 | `/secrets` | Secret names per project | Viewer |
 | `POST /secrets`, `PATCH /secrets/:id` | Add a name, set a value. 20 a minute. | Admin |
-| `/previews` | Previews | Viewer |
-| `POST /previews/:id/closure` | Destroy a preview: CI removes it, then Meridian drops its overlay | Deployer |
 | `/tunnels`, `/tunnels/setup` | Tunnels and tunnel setup | Viewer |
 | `/tunnels/connectors/edit` | Edit connectors | Admin |
 | `/agents` | Agent tokens and silent servers | Viewer |

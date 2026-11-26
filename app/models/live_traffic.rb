@@ -9,23 +9,18 @@ module LiveTraffic
 
   module_function
 
-  # kamal-proxy on each server the app is placed on or assigned to, or runs a
-  # preview on: a preview's server is picked by the preview selector, and its
-  # containers carry the preview's destination, so they belong to no app.
+  # kamal-proxy on each server the app is placed on or assigned to.
   def proxies(app)
-    server_ids = app.placements.distinct.pluck(:server_id) | app.assignments.pluck(:server_id) |
-      Placement.where(service: app.service, destination: app.previews.map(&:destination)).distinct.pluck(:server_id)
+    server_ids = app.placements.distinct.pluck(:server_id) | app.assignments.pluck(:server_id)
     Placement.includes(:server).where(kind: "proxy", server_id: server_ids).order(:server_id).limit(MAX_PROXIES).to_a
   end
 
   # The names kamal-proxy logs the app's requests under. Kamal deploys each
   # role as "<service>-<role>[-<destination>]" (kamal v2.12.0,
-  # Kamal::Configuration::Role#container_prefix). A preview is the same roles
-  # under its own destination.
+  # Kamal::Configuration::Role#container_prefix).
   def services(app)
     roles = app.roles.map { it["name"] }.presence || [ "web" ]
-    deployments = [ [ app.service, app.destination.presence ], *app.previews.map { [ app.service, it.destination ] } ]
-    deployments.product(roles).to_set { |(service, destination), role| [ service, role, destination ].compact.join("-") }
+    roles.to_set { |role| [ app.service, role, app.destination.presence ].compact.join("-") }
   end
 
   # Someone is reading the app's traffic. Renewed with the tail leases.
@@ -69,19 +64,11 @@ module LiveTraffic
   end
 
   def watched_apps(server)
-    ids = Placement.where(server: server).where.not(app_id: nil).distinct.pluck(:app_id) | Assignment.where(server: server).pluck(:app_id) | preview_app_ids(server)
+    ids = Placement.where(server: server).where.not(app_id: nil).distinct.pluck(:app_id) | Assignment.where(server: server).pluck(:app_id)
     watched = Rails.cache.read_multi(*ids.map { app_key(it) })
-    App.includes(:previews).where(id: ids.select { watched[app_key(it)] }).to_a
+    App.where(id: ids.select { watched[app_key(it)] }).to_a
   end
-  # The apps whose previews run on server, found from the preview containers' service and destination.
-  def preview_app_ids(server)
-    Placement.where(server: server, app_id: nil).distinct.pluck(:service, :destination).flat_map do |service, destination|
-      next [] unless destination.to_s.match?(Project::Syncable::PREVIEW_DESTINATION)
-
-      App.joins(:previews).where(service: service, previews: { destination: destination }).pluck(:id)
-    end
-  end
-  private_class_method :watched_apps, :preview_app_ids
+  private_class_method :watched_apps
 
   def app_key(app_id) = [ "live-traffic", app_id ]
   def server_key(server_id) = [ "live-traffic-server", server_id ]

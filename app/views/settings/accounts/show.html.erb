@@ -15,36 +15,6 @@
       </div>
     </div>
     <div class="card">
-      <div class="card__header">Previews</div>
-      <div class="card__body">
-        <div class="fields">
-          <div class="field">
-            <%= form.label :preview_domain, "Domain" %>
-            <%= form.text_field :preview_domain, placeholder: "preview.example.com" %>
-            <p class="field__hint">Previews are named under this domain, in the format chosen below. Needs a wildcard DNS record.</p>
-            <%= field_errors(@account, :preview_domain) %>
-          </div>
-          <div class="field">
-            <%= form.label :preview_hostnames, "Hostnames" %>
-            <%= form.select :preview_hostnames, [ [ "pr-<n>.<app>.<domain>", "nested" ], [ "pr-<n>-<app>.<domain>", "flat" ] ] %>
-            <p class="field__hint">Flat names need one wildcard record, <code>*.&lt;domain&gt;</code>, for every app, and work with Cloudflare's free certificate. Only new previews change.</p>
-            <%= field_errors(@account, :preview_hostnames) %>
-          </div>
-          <div class="field">
-            <%= form.label :preview_selector, "Preview servers" %>
-            <%= form.text_field :preview_selector, placeholder: "role=preview" %>
-            <p class="field__hint">Labels a server needs to host previews. The least busy match is used. Blank: the app's own servers.</p>
-            <%= field_errors(@account, :preview_selector) %>
-          </div>
-          <div class="field">
-            <%= form.label :preview_ttl_days, "Expire after (days)" %>
-            <%= form.number_field :preview_ttl_days, min: 1 %>
-            <%= field_errors(@account, :preview_ttl_days) %>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="card">
       <div class="card__header">Where Meridian runs</div>
       <div class="card__body">
         <p class="txt-small txt-muted">The centre of the map's flows: agent reports arrive here, deploys go out from here.</p>

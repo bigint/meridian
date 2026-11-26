@@ -22,7 +22,7 @@
         <div class="field">
           <%= form.label :source_repo, "Source repository" %>
           <%= form.text_field :source_repo, required: true, placeholder: "acme/shop" %>
-          <p class="field__hint">Where the app's code and Dockerfile live. Previews watch its pull requests.</p>
+          <p class="field__hint">Where the app's code and Dockerfile live.</p>
           <%= field_errors(form.object, :source_repo) %>
         </div>
         <fieldset class="field">

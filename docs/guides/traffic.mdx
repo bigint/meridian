@@ -35,7 +35,7 @@ The bar above the lines has **Filter lines**, **Wrap**, **Follow** and **Clear**
 
 ## Which servers and lines
 
-Meridian reads kamal-proxy on up to 20 servers. These are the servers where the app has containers, where Git places it, and where one of its previews runs.
+Meridian reads kamal-proxy on up to 20 servers. These are the servers where the app has containers, and where Git places it.
 
 kamal-proxy logs every app's requests in one stream. Meridian keeps only lines whose `service` is one of the app's:
 
@@ -43,7 +43,6 @@ kamal-proxy logs every app's requests in one stream. Meridian keeps only lines w
 | --- | --- |
 | `shop-web` | each role, as `<service>-<role>` |
 | `shop-web-production` | an app with a destination, as `<service>-<role>-<destination>` |
-| `shop-web-pr-12` | each of the app's previews, with its `pr-<n>` destination |
 
 Other apps' requests and kamal-proxy's own lines stop at Meridian and never reach the page.
 

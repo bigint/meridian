@@ -21,9 +21,6 @@ Rails.application.routes.draw do
   resources :servers, only: %i[ index show update ]
   resources :events, only: :index
   resources :secrets, only: %i[ index create update ]
-  resources :previews, only: :index do
-    resource :closure, only: :create, module: :previews
-  end
   namespace :tunnels do
     resource :setup, only: :show
     resource :connectors, only: %i[ edit update ]

@@ -17,7 +17,7 @@ Meridian never touches a server. To change what runs, it writes to Git. GitHub A
 flowchart LR
   op([Operator]) -- HTTPS --> m[Meridian]
   m -- "commits, pull requests,<br/>secret values" --> gh[(GitHub)]
-  gh -- "push, pull_request,<br/>workflow_run webhooks" --> m
+  gh -- "push and<br/>workflow_run webhooks" --> m
   gh -- Actions --> k["kamal deploy"]
   k -- SSH --> s[Servers]
   a["meridian-agent<br/>on each server"] -- "snapshots and live line,<br/>outbound only" --> m
@@ -119,12 +119,11 @@ For every app on every server, Meridian compares the agent's report with the new
 | Roll back | A commit that puts back the version file's previous value. |
 | Redeploy | A request to run the deploy workflow again, for the version already in the file. |
 | New app, CI workflow, tunnel connectors | A pull request on a `meridian/…` branch, or a direct commit when the project allows it and an admin acts. |
-| Preview | A destination file `<config>.pr-<n>.yml`, and a request to run the deploy workflow. |
 | Secret value | An encrypted GitHub Actions secret on the repository. Meridian keeps the name only. |
 
-A commit that a person asked for names them in a `Meridian-Actor:` line. Preview commits never carry one. Every action shows in [Activity](/guides/activity).
+A commit that a person asked for names them in a `Meridian-Actor:` line. Every action shows in [Activity](/guides/activity).
 
-Webhooks are optional. With them, Meridian reacts within a second or two. Without them, it finds the same changes within 30 seconds. [Previews](/guides/previews) are the exception. A [preview](/reference/glossary#preview) starts from a `pull_request` webhook, so it needs one.
+Webhooks are optional. With them, Meridian reacts within a second or two. Without them, it finds the same changes within 30 seconds.
 
 ## What Meridian never does
 

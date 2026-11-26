@@ -7,7 +7,7 @@ icon: "folder-git-2"
 
 A [project](/reference/glossary#project) is one [infra repository](/reference/glossary#infra-repository) added to Meridian. That is the Git repository that holds your Kamal configs. Add one, and the board shows every app in it.
 
-Meridian reads the configs, and commits deploys, rollbacks, new apps and preview files back to the repository. It changes nothing else there. Everyone can see **Projects**, but only admins can change one.
+Meridian reads the configs, and commits deploys, rollbacks and new apps back to the repository. It changes nothing else there. Everyone can see **Projects**, but only admins can change one.
 
 ## Before you start
 
@@ -54,9 +54,9 @@ Meridian never runs Kamal. The [CI workflow](/reference/glossary#ci-workflow), `
   </Step>
 </Steps>
 
-The workflow runs `kamal deploy` when a push changes a `.version` file. Meridian also starts it for a redeploy or a preview.
+The workflow runs `kamal deploy` when a push changes a `.version` file. Meridian also starts it for a redeploy.
 
-You can edit the workflow, but keep its `run-name`, because Meridian finds preview runs by it. If GitHub's runners can't reach your servers, set the repository variable `MERIDIAN_RUNS_ON` to your own runner, such as `self-hosted`. See [CI workflow](/reference/ci-workflow).
+You can edit the workflow, but keep its `run-name`, because Meridian finds redeploy runs by it. If GitHub's runners can't reach your servers, set the repository variable `MERIDIAN_RUNS_ON` to your own runner, such as `self-hosted`. See [CI workflow](/reference/ci-workflow).
 
 ## Choose config paths
 
@@ -85,8 +85,6 @@ To keep one file per app in a folder, use `deploy/*.yml`. **New app** puts each 
 
 <Accordion title="Edge cases">
   A file such as `config/deploy.staging.yml` is a destination only when `config/deploy.yml` or `config/deploy.yaml` exists.
-
-  For each preview, Meridian writes a preview file, `<config>.pr-<n>.yml`. Other pages call it a preview overlay. It is never a config of its own.
 </Accordion>
 
 The full layout, with version files, is in [Infra repository](/reference/infra-repository).
@@ -97,7 +95,7 @@ By default, Meridian proposes new apps, the CI workflow and tunnel connector cha
 
 Tick **Let admins commit changes directly instead of opening pull requests**, and an admin's change goes straight to the branch. The project's page then says **Admins may commit directly** under **Changes**. Activity records a direct commit as `project.committed`, and a pull request as `project.pull_request`.
 
-Deploys, rollbacks and preview files always commit straight to the branch, whatever this setting says. They change only version files and preview files.
+Deploys and rollbacks always commit straight to the branch, whatever this setting says. They change only version files.
 
 ## Sync
 
@@ -110,7 +108,7 @@ Meridian reads a project again:
 
 Each sync reads only the files that changed, and parses the configs with Kamal. The project's page shows **Synced**, with the commit and the time.
 
-An app whose config is gone from Git leaves the board. An app whose config fails to parse stays, with its deploys, releases and previews, until it parses again.
+An app whose config is gone from Git leaves the board. An app whose config fails to parse stays, with its deploys and releases, until it parses again.
 
 ## Fix parse errors
 
@@ -143,21 +141,13 @@ proxy: unknown key: hots
 
 Click **Edit** on the project's page to change any field. Click **Update Project** to save.
 
-To remove a project, click **Remove project** on its **Edit** page and confirm. Meridian forgets the project and its apps, releases, deploys, previews and secret names. It says `Project removed. Nothing in Git was changed.`
-
-<Warning>
-Removing a project changes nothing on your servers either. Running previews keep running, and Meridian stops removing them when their pull requests close. Close or destroy them first.
-
-The confirm names each preview still running or being removed, such as `Preview acme/shop#12 keeps running: Destroy it on Previews first.`
-
-Activity then names the containers and preview files left for you to remove by hand.
-</Warning>
+To remove a project, click **Remove project** on its **Edit** page and confirm. Meridian forgets the project and its apps, releases, deploys and secret names. It says `Project removed. Nothing in Git was changed.` Nothing on your servers changes either.
 
 ## Related
 
 <Columns cols={2}>
   <Card title="Infra repository" icon="folder-tree" href="/reference/infra-repository">
-    Configs, destinations, version files and preview files.
+    Configs, destinations and version files.
   </Card>
   <Card title="New app" icon="square-plus" href="/guides/new-app">
     Add a config from Meridian.

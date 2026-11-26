@@ -5,10 +5,10 @@
 ### Removed
 
 - The demo fleet. `bin/rails meridian:demo` and its `SERVERS` and `APPS` settings are gone, and the Quickstart now points Meridian at your own infra repository with a `GITHUB_TOKEN`. The development seed user is `admin@example.com` / `admin-password-123`.
+- Pull request previews. The **Previews** page, the **Previews** settings, the CI workflow's `remove` command and the `preview.*` activity events are gone, and Meridian no longer needs the **Pull request** webhook event. The `previews` table and the account's preview columns are dropped. See decision 43.
 
 ### Fixed
 
-- Previews deploy. The overlay renamed the service `<app>-pr-<n>`, but a preview runs the app's image, which is labelled with the app's service, and Kamal won't boot an image whose label doesn't match, so every preview failed in CI with "missing the 'service' label". A preview now keeps the app's service and is told apart by its `pr-<n>` destination. An open pull request gets the new overlay on its next push.
 - A server's page refreshes live even when nothing of it is on the board yet, such as a database host that runs only accessories. It listened only to the regions of its board cells, so with none it waited on a stream nothing sent to.
 - Open boards, maps and server pages always get the last change. The once-a-second refresh dropped every change after the first in each second, so a server that reported its new version just after a refresh went out stayed drifted on screen until something else changed. A server whose region label changes is now refreshed in the region it left too.
 - The map groups servers into one place only within 60 km, one metro area. The threshold was six map units, about 240 km, so Amsterdam and Brussels became one place named after one of them.
@@ -28,7 +28,7 @@
 - A late or replayed `workflow_run` delivery no longer moves a finished deploy back to In progress, and an older run no longer takes a deploy over from a newer one, so a redeploy made at another app's deploy commit shows its own result.
 - Roll back checks with Git that the release it reverts is still the newest. Clicked before Meridian had synced a newer version (one deployed a moment earlier, say), it reverted the older release and silently replaced the newer version with the one before both. Rolling back the commit that created the version file now says there is nothing to go back to, instead of "GitHub refused the commit: 404".
 - Redeploy runs the version in the version file now, read from Git, rather than the newest release Meridian had synced, which could be the version before one that had just landed. Apps without a version file have no Redeploy button: there was no image tag to give Kamal, so it passed the config commit's short SHA.
-- A redeploy or preview whose workflow GitHub can't find says so. GitHub's 404 was ignored, so with no `meridian-deploy.yml` on the default branch a redeploy was recorded though nothing ran, and a preview said Deploying for good.
+- A redeploy whose workflow GitHub can't find says so. GitHub's 404 was ignored, so with no `meridian-deploy.yml` on the default branch a redeploy was recorded though nothing ran.
 - Deploying the version already in the version file is refused with a pointer to Redeploy. The commit changed no file, so CI never ran and the deploy showed Pending forever.
 - Versions must be Docker image tags (letters, digits, `_`, `.` and `-`, not starting with `.` or `-`). A version such as `--skip-hooks` reached Kamal as a flag in CI, and ones with `+`, `:` or `@` always failed there, since Kamal names containers after the version.
 - When GitHub refuses a deploy or rollback commit for a reason other than a stale file, such as branch protection or a repository rule, Meridian shows GitHub's reason. Every 409 and 422 used to read "The version file changed in Git since this page loaded".
@@ -45,33 +45,19 @@
 - A New app label selector with a term that isn't `key=value` (`web`, or a leading space) is a form error. It raised and the page answered 500.
 - New app writes its config where the project's config paths find it. A `deploy/**/*.yml` glob gave the literal path `deploy/shop*/*.yml`, and a project whose paths had no `*` got `config/deploy-shop.yml`, which sync then ignored; the form now says so instead.
 - New app's port must be a TCP port, 1 to 65535. Ports such as 0, -1 or 70000, and text (read as 0), were proposed and Kamal accepted them.
-- Previews never run on a server whose hostname isn't a plain host name. An agent could report one with ERB in it and labels matching the preview selector, and since it ran nothing it was picked first: the overlay Meridian commits on its own carried the ERB, which ran on Meridian's server and in CI.
-- Preview hostnames are always valid host names, whatever the service is called.
-- Each role keeps its own `cmd`, `env` and options in a preview, so a `job` role runs its jobs.
-- A config with several destinations gets one preview per pull request, instead of several fighting over one `<config>.pr-<n>.yml`.
-- Pull requests from forks never get a preview, and the activity log says so when one opens. A fork's code ran on real servers with the app's secrets.
-- Settings checks the preview selector, and stray spaces or commas no longer turn previews off. A selector such as ` role=preview` or `preview` raised, and every pull request silently got no preview.
-- Preview CI runs are matched within their own repository, so two infra repositories with the same config path no longer remove each other's previews.
-- A preview run GitHub cancelled for a newer one no longer marks the preview failed, and the newest run's result counts.
-- A remove run that finishes late, or that polling replays, no longer takes down a preview deployed since, such as after the pull request reopened.
-- A preview is marked removed only once GitHub has deleted its overlay.
-- A failed removal goes back to Failed, with its overlay, so Destroy and expiry can try again.
-- One project GitHub refuses no longer stops every other preview from expiring.
-- CI removes a preview with `kamal app remove`. `kamal remove` also took down the accessories, registry login and kamal-proxy the preview shares with the app. See Upgrading below.
-- A config that fails to parse keeps its app. Sync used to destroy it, with its deploy history, releases and previews (leaving those preview containers running with nothing to remove them), and unlinked its containers, so the board showed its containers as stray until the typo was fixed and the app came back with a new id.
-- When an app's config leaves Git, Meridian deletes its previews' overlays and the activity log names the `<service>-pr-<n>` containers left to remove by hand, and on which servers; a leftover `<config>.pr-<n>.yml` is never read as a config of its own, which showed as a parse error forever. Kamal can't remove a destination without its base config, so asking CI to, as this did at first, always failed, and the overlays stayed in Git with nothing left to delete them.
+- A config that fails to parse keeps its app. Sync used to destroy it, with its deploy history and releases, and unlinked its containers, so the board showed its containers as stray until the typo was fixed and the app came back with a new id.
 - Sync reads everything it needs from GitHub before it opens its database transaction. Commit history and version files were fetched inside it, so a first sync of many apps held SQLite's only write lock for minutes and snapshots and sign-ins failed meanwhile.
 - A config that references a secret GitHub can't store, such as `GITHUB_TOKEN`, no longer stops the project syncing. The name failed validation, which rolled every sync back, so nothing in the repository changed in Meridian again and no error showed.
 - A secret name added by hand on the Secrets page without a value survives the next sync, which deleted it. A name that was set and that no config references any more says so, instead of listing the apps that used to.
 - Secret names are recorded from the apps a sync just wrote. When a push landed during a sync job, its second sync read the first one's apps from memory and missed new names until the next push.
 - A repository tree GitHub cuts short (it truncates trees of more than about 100,000 files) stops the sync. It was read as whole, so every config past the cut looked deleted and its app was destroyed.
 - One config that prints, hangs or kills the parser no longer stops the whole project syncing with no error shown. Output from ERB goes to stderr instead of corrupting the parser's answer, and a timeout or crash is shown on the project page while every app stays as it was.
-- Taking `meridian.source` or `meridian.kind` out of a config clears it in Meridian. The old values stuck, so pull requests in a repository the config no longer named kept getting previews on real servers, and an app once labelled `accessories` stayed off the board.
+- Taking `meridian.source` or `meridian.kind` out of a config clears it in Meridian. The old values stuck, so an app kept a source repository the config no longer named, and an app once labelled `accessories` stayed off the board.
 - Saving a project with new config paths, branch, repository or installation syncs it at once. The scheduled sync skips a repository whose head hasn't moved, so the new paths took effect only after the next push or a press of Sync now.
 - A YAML syntax error in a destination file is reported against that file. It named the base config, with the destination file's line number, and linked to the wrong file.
 - A `.yaml` file next to a config, such as `deploy/web.staging.yaml` beside `deploy/web.yml`, is no longer taken for a destination file, which made every sync fail looking for `deploy/web.staging.yml`. Like Kamal, Meridian reads only `<config>.<destination>.yml` as a destination, and now finds it for a `.yaml` config too.
 - The newest release is the commit that landed on the branch last. Releases were ordered by author date, so a version bump written on a branch and rebased or merged after a newer deploy counted as older: the board showed every server as drifted, and Roll back offered the wrong release.
-- The agent's accessory template keeps the Docker socket proxy off Kamal's `kamal` network. Every app container on a server, preview deploys included, could reach it there and read every container's environment variables, files and logs through it. The proxy and the agent now share a `meridian` network of their own. See Upgrading below.
+- The agent's accessory template keeps the Docker socket proxy off Kamal's `kamal` network. Every app container on a server could reach it there and read every container's environment variables, files and logs through it. The proxy and the agent now share a `meridian` network of their own. See Upgrading below.
 - The agent never sends Docker API calls through `HTTP_PROXY`. With one set to reach Meridian, every inspect response, environment variables included, went through that proxy too.
 - One container can't crowd out the other containers' logs on its server. Blank and short lines cost nothing against the agent's 512 KB a second, and full batches went out at once, so one container could send about 200 batches a second and Meridian dropped that server's batches past 100. Each line now costs 64 bytes on top of its text, and a container sends at most one batch per 250 ms.
 - A running container's logs no longer say "Container stopped" after 10 quiet minutes. The socket proxy closes idle streams, and the agent took that for the container stopping. It now reopens the stream from its last line, and reports a stop only when the container has stopped.
@@ -92,7 +78,6 @@
 - A client can no longer run a channel's `subscribed` again as an action, which piled up cable listeners that never went away.
 - Demoting, removing or signing out a user ends the logs, traffic and stats streams they already had open.
 - Logs and traffic stream only what a page recorded in Activity. Subscribing over the cable directly read logs with no record.
-- An app's Traffic shows its previews' requests, including from servers set aside for previews.
 - Traffic keeps requests whose kamal-proxy line repeats a key, as logging `Content-Type` does.
 - A JSON log line whose values carry their own `toString` no longer makes the viewer drop that frame's lines.
 - A long-open logs page with many containers no longer remembers twenty times the lines it shows.
@@ -106,9 +91,6 @@
 - Copy works over plain HTTP: with no clipboard API it selects the text and says to press ⌘C or Ctrl+C.
 - Enter in the search opens a match for what the box says now, never an older query's, and a reply arriving after Escape no longer refills the list.
 - The "Browser too old" page is styled again. The error pages' styles moved to `public/error-pages.css`, which the CSP allows.
-- A pull request reopened, or pushed to, after its preview was removed gets its overlay back, and a push to an expired preview gives it a whole new lifetime. The overlay was never committed again, so CI ran Kamal for a destination with no file, and a preview brought back after expiry was taken down at the next hourly check.
-- Retrying a failed preview removal finishes it. Polling replays the newest finished run, so the old failed remove run came back while the retry ran, marked the preview failed again, and the retry's success was then ignored, leaving the overlay in Git. A preview now ignores runs from before its latest dispatch.
-- Expiry stops asking CI to remove a preview after three failed removals, and the Previews page and activity log say it needs a hand. A removal that could never succeed, such as one whose server was gone, was dispatched again every hour for good.
 - A head whose configs hang or crash the parser is tried again: after a minute, then two, four and so on, at most hourly, until it parses or the next commit lands, with the error on the project meanwhile. It was marked synced, so a parser that had only timed out kept the head unread, with its releases and deploys, until the next commit.
 - A redeploy shows the version it ran from the moment it is asked for, and its Redeploy button and confirmation name the version file rather than the last synced release. Its deploy was labelled with the newest release Meridian had synced, so after a version had just landed it showed the one before, and never finished on servers running the new one.
 - Two Git hosts that share a first DNS label (`web-1.sgp…` and `web-1.fra…`) no longer both take the one agent's server that reported before Git listed them, which swapped the two machines for good.
@@ -121,17 +103,16 @@
 - The agent template on the Agents page boots its two accessories with one `kamal accessory boot` each, since the command takes one name, and says that `roles: [ web ]` boots them on web hosts only.
 - An unknown cell on the board shows `–`, the mark the badges, chips and docs give unknown, instead of `?`, which is the mark for stray.
 - New app shows a missing or unknown infra repository under the **Infra repository** field as well as at the top of the form. The field looked for the error on `project_id`, while it is on `project`.
-- The **Add CI workflow** pull request says the workflow removes previews with `kamal app remove`, the command it runs, rather than `kamal remove`.
 - The Logs page's notice for dropped lines reads "N lines skipped: logged faster than the agent sends". It said "over 512 KB/s", but the agent also drops live lines past 500 in 250 ms, whatever their size.
 - The board's side panel (`/?inspect=<id>`) for an accessories-only config shows no Deploy form, Redeploy or Roll back, as its app page already doesn't. Each could only fail.
 - The agent's README gives its binary as about 7 MB and its image as about 3.5 MB compressed. It gave 3.5 MB alone, which read as the size of the binary.
 - A deploy by someone since removed says who it was in **Current deploy**, with `(removed)`, as Activity does. It said "By Git". Deploys keep the name of the person who asked for them, and existing ones take it from their person or from Activity.
 - With `GITHUB_API_URL` set for GitHub Enterprise, links to repositories, commits and files go to that server, such as `https://github.example.com` for `https://github.example.com/api/v3/`. They always went to `github.com`.
-- **Remove project** warns about previews still running or being removed, such as "Preview acme/shop#12 keeps running: Destroy it on Previews first.", and Activity names the containers and overlay files left behind. Removing the project forgets them, so nothing removes them after that.
 
 ### Upgrading
 
-- In each existing infra repository, press **Add CI workflow** on the project page again. The new workflow deploys destination apps with `-d`, runs one deploy per app at a time, and removes previews with `kamal app remove`.
+- Before you upgrade, press **Destroy** on each preview on the **Previews** page, and wait until it leaves the list. This release can't remove a preview. Meridian now reads a leftover `<config>.pr-<n>.yml` as a destination like any other, so delete any that stay in the infra repository.
+- In each existing infra repository, press **Add CI workflow** on the project page again. The new workflow deploys destination apps with `-d` and runs one deploy per app at a time.
 - On each host, create the `meridian` Docker network once, add `network: meridian` to both agent accessories (`meridian_docker` and `meridian_agent`), then reboot them:
 
   ```bash

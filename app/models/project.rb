@@ -3,7 +3,6 @@ class Project < ApplicationRecord
 
   has_many :apps, dependent: :destroy
   has_many :secret_names, dependent: :delete_all
-  has_many :previews, through: :apps
 
   validates :name, :default_branch, presence: true
   validates :repo_full_name, presence: true, uniqueness: { case_sensitive: false }, format: { with: %r{\A[\w.-]+/[\w.-]+\z}, message: "must look like owner/name" }
@@ -24,11 +23,6 @@ class Project < ApplicationRecord
 
   def repo_url = git.repo_url
 
-  # Previews running, or still being removed. Removing the project forgets
-  # them, so nothing removes their containers or overlays after that.
-  def live_previews
-    previews.current.includes(:app).order(:pr_number).to_a
-  end
 
   # Where a new config for this service goes: the first config glob with one
   # "*", which the service replaces ("deploy/**/*.yml" counts as

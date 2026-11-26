@@ -18,7 +18,7 @@ flowchart TB
   servers -- "agent snapshots and /cable, outbound only" --> meridian
 ```
 
-Meridian never opens a connection to a server. The agent reads Docker read-only and connects out to Meridian. CI connects to the servers over SSH. GitHub sends `push`, `pull_request` and `workflow_run` webhooks, and Meridian polls every 30 seconds as well, so webhooks are optional.
+Meridian never opens a connection to a server. The agent reads Docker read-only and connects out to Meridian. CI connects to the servers over SSH. GitHub sends `push` and `workflow_run` webhooks, and Meridian polls every 30 seconds as well, so webhooks are optional.
 
 ## What should run comes from Git
 
@@ -48,7 +48,7 @@ sequenceDiagram
 
    `ProjectSyncJob` reads Git, then polls the branch's recent workflow runs, so deploys show up without webhooks. Both jobs share one concurrency group per repository, so one repository has one writer at a time.
 2. The sync reads the default branch's head SHA. If it equals the last synced SHA, the sync stops there. Each GitHub read carries the last answer's ETag, so an unchanged repository answers `304`, which costs no rate limit.
-3. The sync reads the tree at that SHA and keeps the paths that match the project's `config_globs`. A matched `deploy/web.staging.yml` beside a matched `deploy/web.yml` is a destination file, not a config. Matched `.yml` and `.yaml` files count; a leftover `<config>.pr-<n>.yml` with no base config is ignored. Blobs are fetched by SHA and cached by SHA, so a blob that hasn't changed is never fetched again.
+3. The sync reads the tree at that SHA and keeps the paths that match the project's `config_globs`. A matched `deploy/web.staging.yml` beside a matched `deploy/web.yml` is a destination file, not a config. Matched `.yml` and `.yaml` files count. Blobs are fetched by SHA and cached by SHA, so a blob that hasn't changed is never fetched again.
 4. The files are written to a temporary directory, and `bin/kamal-parse` parses them in a separate Ruby process. The process gets an empty environment (only Bundler's paths, `PATH`, `HOME` and `LANG`), the temporary directory as its working directory, and 60 seconds. The script calls `Kamal::Configuration`, the same code that `kamal deploy` runs, so Meridian sees what Kamal sees: ERB, aliases, destinations, roles and accessories. Kamal configs evaluate ERB, and ERB is arbitrary Ruby from the infra repository, so that Ruby must not see Meridian's credentials.
 5. For each app whose config, destination file or version file changed, the sync reads its releases: the last 20 commits to its version file. Without a version file, a release is a commit to the destination file, or to the config when there is no destination, named by its short SHA. Meridian never reads `.kamal/secrets` files. Secret names come from the configs' `env.secret` and `registry.password`.
 6. Every GitHub read happens before the database transaction, which only writes. SQLite has one writer, and a write lock held across hundreds of API calls would stall every snapshot and sign-in. The transaction upserts these records:
@@ -57,7 +57,7 @@ sequenceDiagram
    - `Assignment`: one per app, server and role.
    - `Release`: one per commit found in step 5.
    - `SecretName`: one per secret name, with the apps that read it.
-7. Parse errors are stored on the project with file, line and message. A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews. Only an app whose config is gone from Git is removed. CI can't remove its previews without the base config, so Meridian deletes their overlays first and records in Activity which containers are left to remove by hand. If the parser itself times out or crashes, nothing is parsed, so every app is kept and the error is stored on the project.
+7. Parse errors are stored on the project with file, line and message. A config that fails to parse keeps its app as the last good parse left it, with its deploys and releases. Only an app whose config is gone from Git is removed. If the parser itself times out or crashes, nothing is parsed, so every app is kept and the error is stored on the project.
 
 ## What does run comes from the agents
 
@@ -118,7 +118,7 @@ sequenceDiagram
 - **Deploy** is a contents-API commit to the app's version file, `<config>.version` or `<config>.<destination>.version`. It passes the file's current blob SHA, so a concurrent change fails instead of being overwritten. The message is `deploy(<service>[-<destination>]): <version>`, then a `Meridian-Actor: Name <email>` trailer.
 - **Roll back** reverts the newest release only. Meridian checks with Git that the release is still the newest commit to the version file, then writes the content the file had at that commit's parent. The message is `rollback(<service>[-<destination>]): <previous version>`, with `This reverts commit <sha>.` in the body and the same trailer.
 - **Redeploy** changes no file. It dispatches the deploy workflow (`workflow_dispatch`) with the version the version file holds at that moment.
-- **New apps, tunnel connector changes and the CI workflow** arrive as pull requests on a `meridian/<slug>-<hex>` branch. A project setting lets admins commit them straight to the default branch instead. Preview overlays are always direct commits.
+- **New apps, tunnel connector changes and the CI workflow** arrive as pull requests on a `meridian/<slug>-<hex>` branch. A project setting lets admins commit them straight to the default branch instead.
 - **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored). Runs arrive through `workflow_run` webhooks and the 30-second poll, and both go through `Project#track_workflow_run`. A run is matched to apps by its `head_sha`; a dispatched run is matched by its run name, `<command> <config> <destination>`. A `Deploy` moves through `pending`, `queued`, `in_progress` and `completed`.
 - **Per-server progress** comes from the agents, not from CI. Kamal deploys every host in one CI job, so a server is done when its agent reports the target version running there.
 
@@ -130,11 +130,10 @@ Solid Queue runs inside Puma unless `SOLID_QUEUE_IN_PUMA` is `false`. Recurring 
 | --- | --- | --- |
 | `ReconcileProjectsJob` | Every 30 seconds | Enqueues `ProjectSyncJob` for every project. |
 | `ProjectSyncJob` | Reconcile, **Sync now**, a project added or edited, a deploy or rollback that hit a change in Git | Syncs Git, then polls the deploy workflow's runs. |
-| `GitHubEventJob` | Each signed webhook | `push` syncs, `workflow_run` tracks a run, `pull_request` deploys or closes a preview. |
+| `GitHubEventJob` | Each signed webhook | `push` syncs, `workflow_run` tracks a run. |
 | `SnapshotIngestJob` | Each accepted snapshot | Records the server and its placements, then refreshes the board. |
 | `BoardRefreshJob` | The end of a throttled second | Sends the trailing board refresh. |
 | `SilentAgentsJob` | Every minute | Refreshes the regions of servers whose agents went quiet. |
-| `PreviewExpiryJob` | Every hour | Closes previews past their lifetime, and deletes the overlay of a removal CI hasn't reported back on in a day. |
 
 Finished Solid Queue jobs are cleared every hour at minute 12.
 
@@ -144,7 +143,7 @@ These are the tables in `db/schema.rb`.
 
 | Model | What it is |
 | --- | --- |
-| `Account` | The single row that holds settings: workspace name, preview domain, hostname style, selector and lifetime, and where Meridian runs. |
+| `Account` | The single row that holds settings: workspace name and where Meridian runs. |
 | `User` | Email and password (Rails 8 authentication). Role is `viewer`, `deployer` or `admin`. |
 | `Session` | One signed-in browser. |
 | `Project` | One infra repository. It holds the GitHub installation, branch, config globs, the last synced SHA and parse errors. |
@@ -154,7 +153,6 @@ These are the tables in `db/schema.rb`.
 | `Placement` | A container that an agent says is running on a server. The row is upserted, never appended. |
 | `Release` | One commit that changed what an app should run. It holds version, SHA, author, time and message. |
 | `Deploy` | One CI run for one app: a deploy, rollback or redeploy, with its status. |
-| `Preview` | A `pr-<n>` destination overlay for a pull request in the app's source repository. |
 | `SecretName` | The name of a secret and the apps that reference it. **It never holds a value.** |
 | `AgentToken` | A bearer token, stored only as a SHA-256 digest, either bound to one server or a fleet token. |
 | `Event` | The audit trail of everything Meridian did, and who did it. |
@@ -186,7 +184,6 @@ Meridian pins **kamal 2.12.0** and has been checked against **kamal-proxy 0.10.3
 
 - **Overlay file.** `-c path/foo.yml -d staging` loads `path/foo.staging.yml` ([K configuration.rb#L49-L51](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/configuration.rb#L49-L51)). Each file is rendered with ERB, loaded as YAML and deep-merged over the base ([#L28-L47](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/configuration.rb#L28-L47)). An overlay may override any key, `service` included.
 - **Secrets.** Kamal reads them from `.kamal/secrets-common`, then from `.kamal/secrets`, or `.kamal/secrets.<dest>` with a destination, resolved against the **working directory** rather than the config's own directory ([K secrets.rb#L37-L45](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/secrets.rb#L37-L45)). A missing file is not an error. Meridian never fetches these files, so the parser sees none.
-- **Previews.** It follows that a preview overlay for `config/deploy.web.yml` is `config/deploy.web.pr-12.yml`.
 
 ### Parsing without SSH, secrets or git
 

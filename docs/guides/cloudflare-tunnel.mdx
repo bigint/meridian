@@ -206,24 +206,6 @@ Routes and the token stay in Cloudflare.
   Kamal checks the result before Meridian proposes it. It must start connectors on exactly the ticked servers, and leave every other accessory alone. When Meridian can't make a change, it says why, such as a connector entry that lists several hosts. Edit those in Git.
 </Accordion>
 
-## Previews behind a tunnel
-
-By default, previews are named `pr-<n>.<app>.<preview domain>`. That is two levels below the domain, which Cloudflare's free certificate doesn't cover. The **Previews** card on the **Tunnels** page warns about it.
-
-<Steps>
-  <Step title="Switch to flat hostnames">
-    In **Settings**, under **Previews**, set **Hostnames** to `pr-<n>-<app>.<domain>`. Only new and reopened previews change.
-  </Step>
-  <Step title="Route the wildcard">
-    Give the tunnel a wildcard route, `*.<preview domain>` to `http://kamal-proxy:80`. Add a proxied wildcard CNAME, `*.<preview domain>` to `<tunnel ID>.cfargotunnel.com`.
-  </Step>
-  <Step title="Run previews on the connector servers">
-    Set **Preview servers** to a selector that matches the connector servers, so every preview runs where the tunnel reaches it.
-  </Step>
-</Steps>
-
-See [Previews](/guides/previews#hostnames).
-
 ## Traffic behind a tunnel
 
 Every request reaches kamal-proxy from `cloudflared`. So an app's [Traffic](/guides/traffic) page can't tell visitors apart, unless kamal-proxy logs Cloudflare's headers.
@@ -256,8 +238,5 @@ GitHub's webhooks and the agents must reach Meridian. To serve Meridian through 
 <Columns cols={2}>
   <Card title="Secrets" icon="key-round" href="/guides/secrets">
     Set the tunnel's token.
-  </Card>
-  <Card title="Previews" icon="git-pull-request" href="/guides/previews">
-    Flat hostnames and preview servers.
   </Card>
 </Columns>

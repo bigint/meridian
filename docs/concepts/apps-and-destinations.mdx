@@ -57,8 +57,6 @@ With `kamal/*.yml`, the files `kamal/shop.yml` and `kamal/shop.staging.yml` beco
 
   To place a parse error, Meridian takes the key path that Kamal reports, such as `servers/web/hosts`, and finds that key's line in the YAML.
 
-  Preview files, `<base>.pr-<n>.yml`, are never read as configs or destinations. Meridian writes them for [previews](/guides/previews) and tracks them separately.
-
   **New app** writes a config to the project's first config path with exactly one `*` in it. It puts the service name in place of the `*`. With `config/deploy*.yml`, the service `shop` gets `config/deploy-shop.yml`. With `kamal/*.yml`, it gets `kamal/shop.yml`. A path with `**/` counts as the same path without it. See [Add a new app](/guides/new-app).
 </Accordion>
 
@@ -93,7 +91,7 @@ labels:
 ```
 
 - `meridian.kind` is `static`, `node`, `rails`, `other` or `accessories`. With no label, or any other value, the kind is `other`. **New app** writes the label for you.
-- `meridian.source` is the GitHub repository with the app's code and Dockerfile, as `owner/name`. [Previews](/guides/previews) follow pull requests there. Without it, an app gets no previews.
+- `meridian.source` is the GitHub repository with the app's code and Dockerfile, as `owner/name`. The app's page shows it as **Source**.
 
 If you remove a label from the config, the next sync clears it in Meridian too.
 
@@ -103,9 +101,9 @@ A config labelled `meridian.kind: accessories` runs only accessories, such as th
 
 ## When a config changes or breaks
 
-If a config fails to parse, its app keeps the last good parse, with its deploys, releases and previews. The project's page shows the error with its file and line.
+If a config fails to parse, its app keeps the last good parse, with its deploys and releases. The project's page shows the error with its file and line.
 
-If you delete a config, its app goes at the next sync, with its deploys and releases. Meridian also deletes the files of its open previews. CI can't remove those containers without the config, so the activity log names the containers to remove by hand.
+If you delete a config, its app goes at the next sync, with its deploys and releases.
 
 ## Related
 

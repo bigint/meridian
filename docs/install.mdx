@@ -39,7 +39,7 @@ You need:
 
         6. Create the App and note its **App ID**.
         7. Under **Private keys**, press **Generate a private key**. GitHub downloads a `.pem` file.
-        8. Press **Install App**. Pick the infra repository. Also pick the code repository of every app that should get [previews](/guides/previews).
+        8. Press **Install App**. Pick the infra repository.
         9. Note the installation ID. After you install, it is the number at the end of the page's URL, such as `12345678` in `https://github.com/settings/installations/12345678`.
 
         You now have four values: the App ID, the private key, the webhook secret and the installation ID.
@@ -48,20 +48,20 @@ You need:
         A token acts as the person who made it, on every repository they can reach. Use it for a homelab or a trial. If you set both, Meridian uses the App.
 
         1. In GitHub, open **Settings**, **Developer settings**, **Personal access tokens**.
-        2. Create a fine-grained token for the infra repository and every code repository that should get previews. Give it the same repository permissions as the App:
+        2. Create a fine-grained token for the infra repository. Give it the same repository permissions as the App:
            - **Contents**, **Pull requests**, **Actions**, **Secrets** and **Workflows**: read and write.
            - **Metadata**: read.
 
            A classic token with the `repo` and `workflow` scopes also works.
 
-        3. Webhooks are optional with a token. Without them, Meridian checks GitHub every 30 seconds. [Previews](/guides/previews) need them, though. To add them, open each repository's **Settings**, **Webhooks**, **Add webhook**, and fill in the form:
+        3. Webhooks are optional with a token. Without them, Meridian checks GitHub every 30 seconds. To add them, open the infra repository's **Settings**, **Webhooks**, **Add webhook**, and fill in the form:
 
            | Field | Value |
            | --- | --- |
            | **Payload URL** | `https://meridian.example.com/webhooks/github` |
            | **Content type** | `application/json` |
            | **Secret** | A long random string. It becomes `GITHUB_APP_WEBHOOK_SECRET`. |
-           | **Events** | **Pushes**, **Pull requests** and **Workflow runs** |
+           | **Events** | **Pushes** and **Workflow runs** |
 
         You now have the token, and the webhook secret if you added webhooks. Leave the installation ID blank in step 6.
       </Tab>
@@ -201,7 +201,7 @@ You need:
     A `200` response means Meridian is up.
   </Step>
 
-  <Step title="Create the first admin">
+  <Step title="Create your account">
     Open `https://meridian.example.com`. Meridian shows **Welcome to Meridian** and asks for a **Setup code**. The code proves that you run the server. Opening the page writes it to Meridian's log. Read it with either command:
 
     ```bash
@@ -209,7 +209,7 @@ You need:
     kamal app exec 'bin/rails meridian:setup_code'
     ```
 
-    Enter the code, your name, your email and a password of at least 12 characters. Press **Create admin**. Meridian signs you in and opens **Projects**. To add more people later, see [roles](/concepts/roles).
+    Enter the code, your name, your email and a password of at least 12 characters. Press **Create admin**. Meridian signs you in and opens **Projects**. This is the only account. You can change your name, email and password later under [Settings](/operate/settings).
   </Step>
 
   <Step title="Add your infra repository">
@@ -274,7 +274,7 @@ You need:
 
 ## Check the install
 
-Open **Settings** as an admin. The **Connections** card shows how Meridian reaches GitHub:
+Open **Settings**. The **Connections** card shows how Meridian reaches GitHub:
 
 | Connection | Expect |
 | --- | --- |
@@ -291,7 +291,7 @@ The board's **Getting started** list ticks off three steps as you go. They are a
     Ship a version from the board or the app's page.
   </Card>
   <Card title="Settings" icon="map-pin" href="/operate/settings">
-    The workspace name, previews, and where Meridian runs on the map.
+    The workspace name and where Meridian runs on the map.
   </Card>
   <Card title="Backups" icon="database" href="/operate/backups">
     Stream the SQLite databases off the server with Litestream.

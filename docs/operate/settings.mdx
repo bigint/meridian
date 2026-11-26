@@ -18,33 +18,6 @@ Click **Save** on **General**, and Activity records `settings.updated`.
   The install's name.
 </ResponseField>
 
-### Previews
-
-<ResponseField name="Domain" type="text">
-  The domain that previews get their names under, such as `preview.example.com`. It needs a wildcard DNS record. Until you set it, previews are off. A pull request gets no preview, and the log says `Set a preview domain in Settings first`.
-</ResponseField>
-
-<ResponseField name="Hostnames" type="select" default="nested">
-  How Meridian builds a preview's hostname from the pull request number, the app's service and the domain:
-
-  | Choice | Example | DNS |
-  | --- | --- | --- |
-  | `pr-<n>.<app>.<domain>` (nested) | `pr-42.web.preview.example.com` | A wildcard record per app, `*.web.preview.example.com` |
-  | `pr-<n>-<app>.<domain>` (flat) | `pr-42-web.preview.example.com` | One wildcard record, `*.preview.example.com`, for every app |
-
-  Flat names sit one level below the domain, so Cloudflare's free certificate covers them. A change applies to new previews only.
-</ResponseField>
-
-<ResponseField name="Preview servers" type="text">
-  The labels a server needs to host previews, separated by commas, such as `role=preview`. Of the servers that match, Meridian picks the one with the fewest containers. Leave it blank to use each app's own servers. Meridian refuses a term that isn't `key=value`.
-</ResponseField>
-
-<ResponseField name="Expire after (days)" type="number" default="7">
-  How long a preview lives, at least 1 day. An hourly job removes a preview this many days after its first deploy, even if its pull request is still open.
-</ResponseField>
-
-See [Previews](/guides/previews).
-
 ### Where Meridian runs
 
 Where Meridian itself sits on the map. The map centres its flows on this place: agent reports arrive here, and deploys go out from here.
@@ -96,7 +69,7 @@ Each [project](/reference/glossary#project) is one infra repository. Admins add 
 </ResponseField>
 
 <ResponseField name="Direct commits" type="checkbox" default="off">
-  **Let admins commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys, rollbacks and preview files are always commits.
+  **Let admins commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys and rollbacks are always commits.
 </ResponseField>
 
 A new repository, branch, installation ID or config paths syncs the project as soon as you save. Other changes wait for the next push, or for the check Meridian makes every 30 seconds.

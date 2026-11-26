@@ -10,18 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_27_000001) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", default: "Meridian", null: false
-    t.string "preview_domain"
-    t.integer "preview_ttl_days", default: 7, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "preview_selector"
     t.float "latitude"
     t.float "longitude"
     t.string "location_name"
-    t.string "preview_hostnames", default: "nested", null: false
   end
 
   create_table "agent_tokens", force: :cascade do |t|
@@ -122,25 +118,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_210000) do
     t.index ["server_id", "container_id"], name: "index_placements_on_server_id_and_container_id", unique: true
   end
 
-  create_table "previews", force: :cascade do |t|
-    t.integer "app_id", null: false
-    t.integer "pr_number", null: false
-    t.string "pr_url"
-    t.string "head_sha"
-    t.string "destination", null: false
-    t.string "hostname", null: false
-    t.string "overlay_path", null: false
-    t.string "state", default: "deploying", null: false
-    t.datetime "expires_at", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.bigint "latest_run_id"
-    t.bigint "dispatched_after_run_id"
-    t.integer "remove_attempts", default: 0, null: false
-    t.index ["app_id", "pr_number"], name: "index_previews_on_app_id_and_pr_number", unique: true
-    t.index ["state"], name: "index_previews_on_state"
-  end
-
   create_table "projects", force: :cascade do |t|
     t.string "name", null: false
     t.string "git_host", default: "github", null: false
@@ -216,7 +193,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_210000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "name"
-    t.string "role", default: "viewer", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
@@ -230,7 +206,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_210000) do
   add_foreign_key "events", "users", column: "actor_id"
   add_foreign_key "placements", "apps"
   add_foreign_key "placements", "servers"
-  add_foreign_key "previews", "apps"
   add_foreign_key "releases", "apps"
   add_foreign_key "secret_names", "projects"
   add_foreign_key "secret_names", "users", column: "last_set_by_id"

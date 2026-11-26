@@ -5,7 +5,6 @@
 module Project::Syncable
   extend ActiveSupport::Concern
 
-  PREVIEW_DESTINATION = /\Apr-\d+\z/
   DESTINATION_FILE = /\.([^.\/]+)\.yml\z/
   # A head the parser failed on is tried again after 1, 2, 4… minutes, at most hourly.
   PARSE_RETRY = 1.minute
@@ -42,10 +41,9 @@ module Project::Syncable
     found = results.map { |result| [ result, app_for(result) ] }
     parsed = found.reject { |result, _| result["error"] }.map { |result, app| app.assign_config(result, tree) }
     releases = parsed.index_with { it.releases_due? ? it.fetch_releases : [] }
-    # A config that fails to parse keeps its app, with its deploys, releases
-    # and previews, until it parses again; only a config gone from Git goes.
+    # A config that fails to parse keeps its app, with its deploys and
+    # releases, until it parses again; only a config gone from Git goes.
     gone = apps.where.not(id: found.filter_map { |_, app| app.id }).to_a
-    gone.each(&:abandon_previews)
 
     transaction do
       parsed.each { it.record_config(releases[it]) }
@@ -67,9 +65,7 @@ module Project::Syncable
   # { "deploy/web.yml" => ["production", "staging"], "deploy/blog.yml" => [nil] }
   def config_paths(paths)
     matched = paths.select { |path| config_globs.any? { |glob| File.fnmatch?(glob, path, File::FNM_PATHNAME | File::FNM_EXTGLOB) } }
-    # A preview overlay is only ever a destination: without its base config
-    # it is a leftover, not a config of its own.
-    matched = matched.select { it.end_with?(".yml", ".yaml") }.reject { destination_of(it)&.match?(PREVIEW_DESTINATION) }
+    matched = matched.select { it.end_with?(".yml", ".yaml") }
 
     bases = matched.reject { |path| base_for(path, matched) }
     bases.sort.index_with do |base|

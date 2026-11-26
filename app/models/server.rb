@@ -29,7 +29,7 @@ class Server < ApplicationRecord
         now: Time.current, floor: STALE_AFTER.to_i, default: DEFAULT_INTERVAL.to_i)
   }
 
-  # The servers with every one of these labels, such as { "role" => "preview" }.
+  # The servers with every one of these labels, such as { "role" => "web" }.
   def self.labelled(labels) = ordered.select { |server| labels.all? { |key, value| server.label(key) == value } }
 
   # Git names servers by the host Kamal SSHes to. Agents report the machine's

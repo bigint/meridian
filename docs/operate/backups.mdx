@@ -10,7 +10,7 @@ Meridian keeps its data in SQLite files under `/rails/storage`, in the `meridian
 
 | File | Holds | Back up |
 | --- | --- | --- |
-| `production.sqlite3` | People, sessions, projects, apps, releases, deploys, previews, servers, agent tokens, secret names, settings and Activity | Yes |
+| `production.sqlite3` | People, sessions, projects, apps, releases, deploys, servers, agent tokens, secret names, settings and Activity | Yes |
 | `production_queue.sqlite3` | Solid Queue: queued, scheduled and failed jobs | Optional. Recurring jobs are set up again on boot. |
 | `production_cache.sqlite3` | Solid Cache: cached GitHub files, and which live streams are open | No. Meridian refills it. |
 | `production_cable.sqlite3` | Solid Cable: messages from the last minute | No |

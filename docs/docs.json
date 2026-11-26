@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "aspen",
   "name": "Meridian",
-  "description": "An open-source control room for Kamal: every app on every server, deploys and rollbacks, new apps and pull request previews, with Git as the record of everything.",
+  "description": "An open-source control room for Kamal: every app on every server, deploys, rollbacks and new apps, with Git as the record of everything.",
   "colors": {
     "primary": "#4338ca",
     "light": "#818cf8",
@@ -67,8 +67,7 @@
               "concepts/apps-and-destinations",
               "concepts/versions-and-releases",
               "concepts/drift",
-              "concepts/servers-and-agents",
-              "concepts/roles"
+              "concepts/servers-and-agents"
             ]
           },
           {
@@ -92,8 +91,7 @@
             "pages": [
               "guides/deploy",
               "guides/new-app",
-              "guides/secrets",
-              "guides/previews"
+              "guides/secrets"
             ]
           },
           {
@@ -110,8 +108,7 @@
             "pages": [
               "guides/agent",
               "guides/projects",
-              "guides/cloudflare-tunnel",
-              "guides/people"
+              "guides/cloudflare-tunnel"
             ]
           }
         ]

@@ -2,9 +2,9 @@
 #
 # Meridian never deploys itself: it commits `<config>.version` (or
 # `<config>.<destination>.version`), and this workflow runs `kamal deploy`.
-# Previews use the same workflow through workflow_dispatch.
+# Redeploys use the same workflow through workflow_dispatch.
 name: Meridian deploy
-# Meridian matches preview runs by this name: "<command> <config> <destination>".
+# Meridian matches redeploy runs by this name: "<command> <config> <destination>".
 run-name: ${{ github.event_name == 'workflow_dispatch' && format('{0} {1} {2}', inputs.command, inputs.config, inputs.destination) || github.event.head_commit.message }}
 
 on:
@@ -20,10 +20,10 @@ on:
         description: Kamal destination (optional)
         required: false
       version:
-        description: Version to deploy (ignored by remove)
+        description: Version to deploy
         required: false
       command:
-        description: deploy or remove
+        description: Kamal command (deploy)
         required: true
         default: deploy
 
@@ -115,10 +115,4 @@ jobs:
           set -euo pipefail
           args=(-c "${{ matrix.config }}")
           [ -n "${{ matrix.destination }}" ] && args+=(-d "${{ matrix.destination }}")
-          if [ "${{ matrix.command }}" = "remove" ]; then
-            # Only the app: a preview shares the base config's accessories,
-            # registry login and kamal-proxy, which `kamal remove` takes down.
-            kamal app remove "${args[@]}"
-          else
-            kamal deploy "${args[@]}" --version "${{ matrix.version }}" --skip-push
-          fi
+          kamal deploy "${args[@]}" --version "${{ matrix.version }}" --skip-push

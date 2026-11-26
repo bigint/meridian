@@ -15,7 +15,7 @@ You need the admin role. The form is at **Apps** → **New app**, or **New app**
   <Step title="The app">
     - **Infra repository**: the project the config goes into.
     - **Name**: Kamal's `service`. Lowercase letters, digits, `-` and `_`, starting with a letter or digit, at most 63 characters.
-    - **Source repository**: where the app's code and Dockerfile live, as `owner/name`. The image is named after it, in lowercase. Previews watch its pull requests.
+    - **Source repository**: where the app's code and Dockerfile live, as `owner/name`. The image is named after it, in lowercase.
     - **Kind**: what the app is. It sets the default port and the Dockerfile guidance. See [Kinds](#kinds).
     - **Hostname**: the domain the app answers on, such as `shop.example.com`.
   </Step>
@@ -210,7 +210,7 @@ latest
 ```
 </CodeGroup>
 
-The `meridian.source` label turns on [previews](/guides/previews). If the project has a [Cloudflare Tunnel](/guides/cloudflare-tunnel), the config also logs Cloudflare's visitor headers under `proxy.logging`, for the [Traffic](/guides/traffic) page.
+The `meridian.source` label records the source repository, and the app's page shows it. If the project has a [Cloudflare Tunnel](/guides/cloudflare-tunnel), the config also logs Cloudflare's visitor headers under `proxy.logging`, for the [Traffic](/guides/traffic) page.
 
 ## Dockerfile guidance
 

@@ -1,6 +1,6 @@
 # Meridian
 
-Meridian is an open-source control room for [Kamal](https://kamal-deploy.org): see every app on every server, deploy, roll back, add apps and preview pull requests, with Git as the record of everything.
+Meridian is an open-source control room for [Kamal](https://kamal-deploy.org): see every app on every server, deploy, roll back and add apps, with Git as the record of everything.
 
 A meridian is the line navigators measure every position against. Here that line is Git.
 
@@ -44,7 +44,6 @@ Operator ──▶ Meridian ──commits, PRs──▶ GitHub ──Actions─�
 - **Deploy and roll back:** commit or revert a one-line version file next to the app's Kamal config. CI runs `kamal deploy`.
 - **New app:** a form that opens a pull request with a Kamal config for a static, Node (Next.js) or Rails app.
 - **Secrets:** names come from your configs. Values are sealed for GitHub Actions secrets.
-- **Previews:** each pull request becomes a `pr-<n>` Kamal destination, removed when the pull request closes.
 
 ## Documentation
 
@@ -52,7 +51,7 @@ The documentation is a [Mintlify](https://mintlify.com) site in [`docs/`](docs),
 
 - [Quickstart](docs/quickstart.mdx) and [Install](docs/install.mdx)
 - [How it works](docs/concepts/how-it-works.mdx) and [drift states](docs/concepts/drift.mdx)
-- Guides: [deploy and roll back](docs/guides/deploy.mdx), [new apps](docs/guides/new-app.mdx), [previews](docs/guides/previews.mdx), [the agent](docs/guides/agent.mdx), [Cloudflare Tunnel](docs/guides/cloudflare-tunnel.mdx)
+- Guides: [deploy and roll back](docs/guides/deploy.mdx), [new apps](docs/guides/new-app.mdx), [the agent](docs/guides/agent.mdx), [Cloudflare Tunnel](docs/guides/cloudflare-tunnel.mdx)
 - Reference: [environment variables](docs/reference/environment.mdx), [the infra repository](docs/reference/infra-repository.mdx), [the CI workflow](docs/reference/ci-workflow.mdx)
 - Operate: [security](docs/operate/security.mdx), [backups with Litestream](docs/operate/backups.mdx)
 

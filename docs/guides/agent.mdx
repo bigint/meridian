@@ -97,7 +97,7 @@ It never sends environment variables, commands, entrypoints or mounts, which can
 </Steps>
 
 <Warning>
-Keep both accessories on their own `meridian` network. Never put them on Kamal's `kamal` network, where your apps and previews run. The socket proxy gives anyone who reaches port 2375 every container's environment, files and logs. Never publish that port on the server.
+Keep both accessories on their own `meridian` network. Never put them on Kamal's `kamal` network, where your apps run. The socket proxy gives anyone who reaches port 2375 every container's environment, files and logs. Never publish that port on the server.
 </Warning>
 
 On the `meridian` network, the agent reaches `MERIDIAN_URL` like the server itself does, by hostname or IP address. It can't reach a container on the `kamal` network by name.
@@ -151,7 +151,7 @@ A server can also report before Git lists it, or be rebuilt with a new machine I
 | --- | --- |
 | `region` | Board filter and grouping, map place names, and the server's place |
 | `provider` | Board filter and grouping |
-| `role` | Board filter and grouping, and label selectors for new apps and previews |
+| `role` | Board filter and grouping, and label selectors for new apps |
 | `city` | Map place names, and the server's place |
 
 To put the server on the map, add `lat` and `lng` in decimal degrees. `latitude`, `longitude` and `lon` work too.

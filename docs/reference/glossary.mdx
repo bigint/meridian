@@ -66,7 +66,7 @@ To deploy, Meridian writes a version to an app's version file, and CI sees the c
 
 ## Deployer
 
-The role that can also deploy, redeploy, roll back, read logs and traffic, and remove previews. See [Roles](#roles).
+The role that can also deploy, redeploy, roll back, and read logs and traffic. See [Roles](#roles).
 
 ## Destination
 
@@ -114,7 +114,7 @@ What an app is built with: `static`, `node`, `rails` or `other`, from the `merid
 
 ## Label selector
 
-The labels a server needs to have, such as `role=preview`. **New app** and the preview settings use one to pick servers.
+The labels a server needs to have, such as `role=web`. **New app** uses one to pick servers.
 
 ## Labels
 
@@ -148,10 +148,6 @@ The board's list of cells that are missing, drifted, stray or stale, most urgent
 
 A server that Git lists but whose agent has never reported. The **Agents** page lists these servers.
 
-## Overlay
-
-See [Preview overlay](#preview-overlay).
-
 ## Place
 
 A spot on the map. Servers within 60 km of each other share one place. It is also the name of where Meridian itself runs, set in **Settings**.
@@ -159,14 +155,6 @@ A spot on the map. Servers within 60 km of each other share one place. It is als
 ## Placement
 
 A container that an agent reports on a server. Meridian replaces a server's placements with each new snapshot.
-
-## Preview
-
-A temporary copy of an app for one pull request. It runs as the `pr-<n>` destination of the app, at its own hostname. Its states are `deploying`, `active`, `failed`, `removing` and `removed`. See [Previews](/guides/previews).
-
-## Preview overlay
-
-The destination file `<config>.pr-<n>.yml` that Meridian commits for a preview. Meridian deletes it when the preview is removed.
 
 ## Project
 
@@ -222,7 +210,7 @@ What one agent saw on one server at one moment. The agent sends it to `POST /age
 
 ## Source repository
 
-The repository an app is built from, named by the `meridian.source` label. Its pull requests get previews.
+The repository an app is built from, named by the `meridian.source` label. The app's page shows it.
 
 ## Sync
 

@@ -11,7 +11,6 @@ class App < ApplicationRecord
   has_many :servers, -> { distinct }, through: :assignments
   has_many :placements, dependent: :nullify
   has_many :releases, -> { order(committed_at: :desc) }, dependent: :delete_all
-  has_many :previews, dependent: :delete_all
 
   validates :service, :config_path, presence: true
   validates :kind, inclusion: { in: [ *KINDS, ACCESSORIES ] }
@@ -70,13 +69,6 @@ class App < ApplicationRecord
     save!
     record_assignments(roles)
     record_releases(fetched_releases)
-  end
-
-  # Gone from Git. Kamal can't remove a destination without its base
-  # config, and once the rows go nothing would finish a removal, so each
-  # preview's overlay goes now and the activity log names what still runs.
-  def abandon_previews
-    previews.current.each(&:abandon)
   end
 
   private

@@ -21,7 +21,6 @@ module DocsChangelog
     "docs/design.md" => "#{REPOSITORY}contributing/design.md",
     "docs/install.md" => "/install",
     "docs/litestream.md" => "/operate/backups",
-    "docs/previews.md" => "/guides/previews",
     "docs/security.md" => "/operate/security"
   }.freeze
 

@@ -155,6 +155,9 @@ class AppDraft
     # rewrite the config the existing app deploys from.
     def path_free
       return unless project && service.present?
+      unless project.config_paths([ config_path ]).key?(config_path)
+        return errors.add(:base, "#{config_path} isn't matched by the project's config paths (#{project.config_globs.join(", ")}), so Meridian would never see it. Add a path with a * to the project.")
+      end
       paths = [ config_path, (project.destination_path(config_path, destination) if destination.present?) ].compact
       if (taken = project.apps.where(config_path: paths).pick(:config_path))
         errors.add(:service, "already has a config at #{taken}")

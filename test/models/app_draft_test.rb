@@ -57,6 +57,15 @@ class AppDraftTest < ActiveSupport::TestCase
     assert_equal "config/deploy-shop.yml", build.config_path
     @project.config_globs = [ "kamal/*.yml" ]
     assert_equal "kamal/shop.yml", build.config_path
+    @project.config_globs = [ "deploy/**/*.yml" ]
+    assert_equal "deploy/shop.yml", build.config_path
+  end
+
+  test "refuses a config path the project's globs wouldn't sync" do
+    @project.config_globs = [ "config/deploy.yml" ]
+    draft = build
+    assert_not draft.valid?
+    assert_includes draft.errors.full_messages, "config/deploy-shop.yml isn't matched by the project's config paths (config/deploy.yml), so Meridian would never see it. Add a path with a * to the project."
   end
 
   test "invalid input is refused before Kamal is asked" do

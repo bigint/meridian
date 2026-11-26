@@ -24,6 +24,7 @@
 - A tunnel counts an app as served from a connector's server only when one of its kamal-proxy roles runs there. An app whose `job` role alone ran on a connector's server was marked safe to route, though kamal-proxy there answers 404 for it.
 - New app refuses a service name another config in the project already uses (with the same destination) and a hostname another app already serves. Both passed, since only the config path was checked, and the two apps then fought over the same containers or kamal-proxy host.
 - A New app label selector with a term that isn't `key=value` (`web`, or a leading space) is a form error. It raised and the page answered 500.
+- New app writes its config where the project's config paths find it. A `deploy/**/*.yml` glob gave the literal path `deploy/shop*/*.yml`, and a project whose paths had no `*` got `config/deploy-shop.yml`, which sync then ignored; the form now says so instead.
 
 ## v0.1.0 (2026-11-26)
 

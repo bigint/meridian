@@ -37,7 +37,7 @@ module Project::Syncable
     # A config that fails to parse keeps its app, with its deploys, releases
     # and previews, until it parses again; only a config gone from Git goes.
     gone = apps.where.not(id: found.filter_map { |_, app| app.id }).to_a
-    gone.each(&:close_previews)
+    gone.each(&:abandon_previews)
 
     transaction do
       parsed.each { it.record_config(releases[it]) }

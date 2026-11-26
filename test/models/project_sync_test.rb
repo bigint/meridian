@@ -252,18 +252,20 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal %w[ jobs-1.example.com web-1.example.com web-2.example.com ], web.reload.servers.map(&:name).sort
   end
 
-  test "an app removed from Git asks CI to remove its previews first" do
+  test "an app removed from Git has its preview overlays deleted, and the activity log names what still runs" do
     @project.sync
     blog = @project.apps.find_by!(service: "blog")
     blog.previews.create!(pr_number: 3, destination: "pr-3", hostname: "pr-3.blog.preview.example.com", overlay_path: "deploy/blog.pr-3.yml", state: "active", expires_at: 1.day.from_now)
-    dispatches = []
-    stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return { |r| dispatches << JSON.parse(r.body); { status: 204 } }
+    dispatches = stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 204)
+    deleted = stub_request(:delete, %r{/contents/deploy/blog.pr-3.yml}).to_return_json(body: { commit: { sha: "e" * 40 } })
 
-    files = infra_files.except("deploy/blog.yml").merge("deploy/blog.pr-3.yml" => "service: blog-pr-3\nservers: [ web-1.example.com ]\n")
+    files = infra_files.except("deploy/blog.yml").merge("deploy/blog.pr-3.yml" => "service: blog-pr-3\nservers:\n  web: [ web-1.example.com ]\n")
     stub_github_files(@project, files, head: "d" * 40)
     @project.sync
 
-    assert_equal({ "config" => "deploy/blog.yml", "destination" => "pr-3", "version" => "", "command" => "remove" }, dispatches.sole["inputs"])
+    assert_requested deleted
+    assert_not_requested dispatches # Kamal can't remove a destination whose base config is gone
+    assert_match "remove the blog-pr-3 containers on web-1.example.com by hand", Event.where(action: "preview.abandoned").sole.details["summary"]
     assert_nil @project.apps.find_by(service: "blog")
     assert_not_includes @project.reload.config_errors.map { it["file"] }, "deploy/blog.pr-3.yml"
   end

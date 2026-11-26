@@ -110,6 +110,23 @@ class Preview < ApplicationRecord
     update!(state: "removed")
   end
 
+  # Its app's config left Git (see App#abandon_previews). The overlay is
+  # deleted directly, and the activity log says which containers are left
+  # to remove by hand, and where.
+  def abandon
+    existing = begin
+      project.git.file(overlay_path)
+    rescue GitHost::NotFound
+      nil
+    end
+    hosts = existing ? overlay_hosts(existing.content) : []
+    project.git.delete_file(overlay_path, sha: existing.sha, message: "chore(#{app.service}): remove preview pr-#{pr_number}, its config is gone") if existing
+    left = "#{app.service}-pr-#{pr_number} containers#{" on #{hosts.to_sentence}" if hosts.any?}"
+    Event.record("preview.abandoned", subject: self, summary: "#{app.config_path} left Git, so CI can't remove the #{app.service} preview for ##{pr_number}. Meridian deleted #{overlay_path}; remove the #{left} by hand")
+  rescue GitHost::Error => error
+    Event.record("preview.abandoned", subject: self, summary: "#{app.config_path} left Git, so CI can't remove the #{app.service} preview for ##{pr_number}, and GitHub refused to delete #{overlay_path} (#{error.message.truncate(100)}). Remove the file and the #{app.service}-pr-#{pr_number} containers by hand")
+  end
+
   def commit_overlay
     content = overlay
     result = KamalConfig.parse({ app.config_path => base_config, overlay_path => content }, [ { "path" => app.config_path, "destination" => destination } ]).sole
@@ -195,6 +212,13 @@ class Preview < ApplicationRecord
     def role_options(config, role)
       options = config["servers"].is_a?(Hash) ? config["servers"][role] : nil
       options.is_a?(Hash) ? options.except("hosts") : {}
+    end
+
+    # The servers an overlay runs on, from servers.<role> as a list or as a hash with hosts.
+    def overlay_hosts(text)
+      servers = load_yaml(text)["servers"]
+      roles = servers.is_a?(Hash) ? servers.values : Array(servers)
+      roles.flat_map { it.is_a?(Hash) ? Array(it["hosts"]) : Array(it) }.map(&:to_s).uniq
     end
 
     def load_yaml(text)

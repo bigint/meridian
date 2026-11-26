@@ -72,14 +72,11 @@ class App < ApplicationRecord
     record_releases(fetched_releases)
   end
 
-  # Gone from Git. Its previews are still running, and once the rows are
-  # gone nothing would ever remove them, so CI is asked to first.
-  def close_previews
-    previews.current.each do |preview|
-      preview.close(reason: "app removed from Git")
-    rescue GitHost::Error => error
-      Rails.logger.warn("Couldn't remove #{name} preview ##{preview.pr_number}: #{error.message}")
-    end
+  # Gone from Git. Kamal can't remove a destination without its base
+  # config, and once the rows go nothing would finish a removal, so each
+  # preview's overlay goes now and the activity log names what still runs.
+  def abandon_previews
+    previews.current.each(&:abandon)
   end
 
   private

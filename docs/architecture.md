@@ -24,7 +24,8 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
    - `Server`: matched by hostname until an agent claims it
    - `Assignment`: one per app, server and role
    - `Release`: from the commit history of the app's version file, or of its config when there is no version file
-5. Parse errors are stored on the project with file, line and message.
+5. Parse errors are stored on the project with file, line and message. A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews; only an app whose config is gone from Git is removed, and its previews are removed first.
+6. Every GitHub read (the tree, blobs, commit history and version files) happens before the sync's database transaction, which only writes.
 
 **What does run comes from the agents.**
 

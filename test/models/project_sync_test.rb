@@ -12,6 +12,10 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal({ "deploy/blog.yml" => [ nil ], "deploy/web.yml" => %w[ production staging ] }, @project.config_paths(paths))
   end
 
+  test "a preview overlay is never a config of its own, even without its base" do
+    assert_equal({ "deploy/api.yml" => [ nil ] }, @project.config_paths(%w[ deploy/api.yml deploy/blog.pr-3.yml ]))
+  end
+
   test "sync records every app, server and assignment Git describes" do
     assert @project.sync
 
@@ -109,4 +113,53 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_empty @project.reload.config_errors
     assert_equal "example/none", @project.apps.sole.image
   end
+
+  test "a config that stops parsing keeps its app, deploys, previews and releases" do
+    stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ], [ "b" * 40, "v41\n" ] ] })
+    @project.sync
+    web = @project.apps.find_by!(service: "web", destination: "production")
+    web.deploys.create!(version: "v42", commit_sha: "c" * 40, actor: users(:admin))
+    web.previews.create!(pr_number: 12, destination: "pr-12", hostname: "pr-12.web.preview.example.com", overlay_path: "deploy/web.pr-12.yml", state: "active", expires_at: 1.day.from_now)
+
+    stub_github_files(@project, infra_files.merge("deploy/web.production.yml" => "servers:\n  web:\n    hosts: web-1.example.com\n"), head: "d" * 40)
+    @project.sync
+
+    assert_includes @project.reload.config_errors.map { it["file"] }, "deploy/web.production.yml"
+    assert_equal [ 1, 1, 2 ], [ web.deploys.count, web.previews.count, web.releases.count ]
+    assert_equal %w[ jobs-1.example.com web-1.example.com web-2.example.com ], web.reload.servers.map(&:name).sort
+  end
+
+  test "an app removed from Git asks CI to remove its previews first" do
+    @project.sync
+    blog = @project.apps.find_by!(service: "blog")
+    blog.previews.create!(pr_number: 3, destination: "pr-3", hostname: "pr-3.blog.preview.example.com", overlay_path: "deploy/blog.pr-3.yml", state: "active", expires_at: 1.day.from_now)
+    dispatches = []
+    stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return { |r| dispatches << JSON.parse(r.body); { status: 204 } }
+
+    files = infra_files.except("deploy/blog.yml").merge("deploy/blog.pr-3.yml" => "service: blog-pr-3\nservers: [ web-1.example.com ]\n")
+    stub_github_files(@project, files, head: "d" * 40)
+    @project.sync
+
+    assert_equal({ "config" => "deploy/blog.yml", "destination" => "pr-3", "version" => "", "command" => "remove" }, dispatches.sole["inputs"])
+    assert_nil @project.apps.find_by(service: "blog")
+    assert_not_includes @project.reload.config_errors.map { it["file"] }, "deploy/blog.pr-3.yml"
+  end
+
+  test "releases are read from GitHub before the write transaction opens" do
+    outside = ActiveRecord::Base.connection.open_transactions
+    during = []
+    stub_request(:get, %r{\A#{Regexp.escape(GitHubHelper::API)}/repos/example/infra/commits\?}).to_return do
+      during << ActiveRecord::Base.connection.open_transactions
+      { status: 200, body: "[]", headers: { "Content-Type" => "application/json" } }
+    end
+
+    @project.sync
+    assert_not_empty during
+    assert_equal [ outside ], during.uniq
+  end
+
+  private
+    def infra_files
+      Dir.glob("**/*", File::FNM_DOTMATCH, base: GitHubHelper::INFRA).select { File.file?(GitHubHelper::INFRA.join(it)) }.index_with { File.read(GitHubHelper::INFRA.join(it)) }
+    end
 end

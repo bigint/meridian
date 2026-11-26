@@ -35,7 +35,9 @@ class App < ApplicationRecord
     releases.first
   end
 
-  def record_config(result, tree)
+  # Takes what Kamal parsed, without saving. Sync calls this, fetches the
+  # releases it needs from Git, and only then writes, in a short transaction.
+  def assign_config(result, tree)
     destination = result["destination"]
     version_path = project.version_path(config_path, destination)
     sources = [ config_path, destination && project.destination_path(config_path, destination), (version_path if tree.key?(version_path)) ].compact
@@ -52,12 +54,31 @@ class App < ApplicationRecord
     self.source_repo = labels["meridian.source"].presence || source_repo
 
     shas = sources.index_with { tree.fetch(it).sha }
-    changed = shas != source_shas
+    @releases_due = shas != source_shas || releases.none?
     self.source_shas = shas
-    save!
+    self
+  end
 
-    record_assignments(result["roles"])
-    record_releases if changed || releases.none?
+  # The files behind the app changed, or it has no releases yet.
+  def releases_due?
+    @releases_due
+  end
+
+  # Writes what assign_config took, and the releases fetched for it.
+  def record_config(fetched_releases)
+    save!
+    record_assignments(roles)
+    record_releases(fetched_releases)
+  end
+
+  # Gone from Git. Its previews are still running, and once the rows are
+  # gone nothing would ever remove them, so CI is asked to first.
+  def close_previews
+    previews.current.each do |preview|
+      preview.close(reason: "app removed from Git")
+    rescue GitHost::Error => error
+      Rails.logger.warn("Couldn't remove #{name} preview ##{preview.pr_number}: #{error.message}")
+    end
   end
 
   private

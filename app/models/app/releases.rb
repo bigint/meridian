@@ -10,17 +10,21 @@ module App::Releases
     version_path.present?
   end
 
-  def record_releases
-    known = releases.pluck(:commit_sha).to_set
+  # The commits that are releases Meridian doesn't know yet, read from Git.
+  # Nothing is written, so sync can call this outside its transaction.
+  def fetch_releases
+    known = persisted? ? releases.pluck(:commit_sha).to_set : Set.new
 
-    project.git.commits(path: release_source_path, limit: HISTORY).each do |commit|
-      next if known.include?(commit.sha)
-
-      releases.create!(
+    project.git.commits(path: release_source_path, limit: HISTORY).reject { known.include?(it.sha) }.map do |commit|
+      {
         version: versioned? ? read_version(commit.sha) : commit.sha.first(7),
         commit_sha: commit.sha, author: commit.author, committed_at: commit.committed_at, message: commit.message.lines.first.to_s.strip
-      )
+      }
     end
+  end
+
+  def record_releases(fetched = fetch_releases)
+    fetched.each { |release| releases.create!(release) unless releases.exists?(commit_sha: release[:commit_sha]) }
   end
 
   def release_source_path

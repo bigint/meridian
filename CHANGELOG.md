@@ -27,6 +27,9 @@
 - New app writes its config where the project's config paths find it. A `deploy/**/*.yml` glob gave the literal path `deploy/shop*/*.yml`, and a project whose paths had no `*` got `config/deploy-shop.yml`, which sync then ignored; the form now says so instead.
 - New app's port must be a TCP port, 1 to 65535. Ports such as 0, -1 or 70000, and text (read as 0), were proposed and Kamal accepted them.
 - Previews never run on a server whose hostname isn't a plain host name. An agent could report one with ERB in it and labels matching the preview selector, and since it ran nothing it was picked first: the overlay Meridian commits on its own carried the ERB, which ran on Meridian's server and in CI.
+- A config that fails to parse keeps its app. Sync used to destroy it, with its deploy history, releases and previews (leaving those preview containers running with nothing to remove them), and unlinked its containers, so the board showed its containers as stray until the typo was fixed and the app came back with a new id.
+- An app whose config is gone from Git has its previews removed (`command=remove`) before Meridian forgets it, and a leftover `<config>.pr-<n>.yml` is never read as a config of its own, which showed as a parse error forever.
+- Sync reads everything it needs from GitHub before it opens its database transaction. Commit history and version files were fetched inside it, so a first sync of many apps held SQLite's only write lock for minutes and snapshots and sign-ins failed meanwhile.
 
 ## v0.1.0 (2026-11-26)
 

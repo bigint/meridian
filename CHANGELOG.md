@@ -79,7 +79,7 @@
 - Snapshot bodies that aren't JSON objects, or whose labels aren't one, are refused with 422 instead of a 500 or a job that always fails.
 - An agent reporting an IP address no longer claims another IP's server by its first octet: `10.0.0.9` could take `10.0.0.5`'s server.
 - A server an agent created before Git listed its host is taken over by Git's host name, instead of leaving a second server that never reports.
-- A rebuilt machine (a new machine id, the same hostname) claims the server Git places once the old agent has been silent for 10 minutes. It used to get a new server of its own.
+- A rebuilt machine (a new machine id) takes back the server Git places once the old agent has been silent for 10 minutes and is stale: on a fleet token when it reports Git's exact host (set `MERIDIAN_HOSTNAME`), on a per-server token whatever its hostname. It used to get a new server of its own.
 - Finished Solid Queue jobs are no longer kept for a day. Snapshot jobs grew the queue database by gigabytes a day.
 - A revoked agent token can no longer subscribe on a cable it opened before the revoke.
 - Revoking an agent token hangs up its open cables at once, instead of within a minute.
@@ -106,6 +106,13 @@
 - Expiry stops asking CI to remove a preview after three failed removals, and the Previews page and activity log say it needs a hand. A removal that could never succeed, such as one whose server was gone, was dispatched again every hour for good.
 - A head whose configs hang or crash the parser is tried again: after a minute, then two, four and so on, at most hourly, until it parses or the next commit lands, with the error on the project meanwhile. It was marked synced, so a parser that had only timed out kept the head unread, with its releases and deploys, until the next commit.
 - A redeploy shows the version it ran from the moment it is asked for, and its Redeploy button and confirmation name the version file rather than the last synced release. Its deploy was labelled with the newest release Meridian had synced, so after a version had just landed it showed the one before, and never finished on servers running the new one.
+- Two Git hosts that share a first DNS label (`web-1.sgp…` and `web-1.fra…`) no longer both take the one agent's server that reported before Git listed them, which swapped the two machines for good.
+- A silent server is reclaimed only by an agent reporting its exact hostname or name, and only once it is stale as well as silent for 10 minutes. A new machine sharing just the first DNS label could take a server while it was down.
+- A fleet token is capped at 12,000 snapshots a minute in all. It was limited only per machine id, which the snapshot names, so new ids meant no limit.
+- An Activity page number past the last, however large, shows the last page instead of a 500.
+- The agent drops and counts live log lines that come faster than one full batch (500 lines) per 250 ms, instead of falling ever further behind Docker without saying so. History still arrives whole.
+- A Logs or Traffic page's grant to stream lapses after 12 hours. A page still open then says "Stopped: reload the page to keep reading" instead of "Connecting…" forever.
+- A form that is sent and redirects back to the same page takes the server's values again (the version box empties after a deploy), while text typed during a live refresh is still kept.
 
 ### Upgrading
 

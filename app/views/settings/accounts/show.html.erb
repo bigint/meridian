@@ -1,49 +1,79 @@
 <% content_for :title, "Settings" %>
-<%= page_header "Settings", tabs: render("settings/nav") %>
+<%= page_header "Settings" %>
 
 <div class="grid-2">
-  <%= form_with model: @account, url: settings_account_path, method: :patch, class: "stack-l" do |form| %>
-    <%= render "shared/errors", record: @account %>
-    <div class="card">
-      <div class="card__header">Workspace</div>
-      <div class="card__body">
-        <div class="field">
-          <%= form.label :name %>
-          <%= form.text_field :name, required: true %>
-          <%= field_errors(@account, :name) %>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card__header">Where Meridian runs</div>
-      <div class="card__body">
-        <p class="txt-small txt-muted">The centre of the map's flows: agent reports arrive here, deploys go out from here.</p>
-        <div class="fields fields--columns">
+  <div class="stack-l">
+    <%= form_with model: @account, url: settings_account_path, method: :patch, class: "stack-l" do |form| %>
+      <%= render "shared/errors", record: @account %>
+      <div class="card">
+        <div class="card__header">Workspace</div>
+        <div class="card__body">
           <div class="field">
-            <%= form.label :location_name, "Place" %>
-            <%= form.text_field :location_name, placeholder: "Singapore" %>
-            <%= field_errors(@account, :location_name) %>
-          </div>
-          <div class="field">
-            <%= form.label :latitude %>
-            <%= form.number_field :latitude, step: "any", min: -90, max: 90, placeholder: "1.35" %>
-            <%= field_errors(@account, :latitude) %>
-          </div>
-          <div class="field">
-            <%= form.label :longitude %>
-            <%= form.number_field :longitude, step: "any", min: -180, max: 180, placeholder: "103.82" %>
-            <%= field_errors(@account, :longitude) %>
+            <%= form.label :name %>
+            <%= form.text_field :name, required: true %>
+            <%= field_errors(@account, :name) %>
           </div>
         </div>
       </div>
-    </div>
-    <div><%= form.submit "Save", class: "btn btn--primary" %></div>
-  <% end %>
+      <div class="card">
+        <div class="card__header">Where Meridian runs</div>
+        <div class="card__body">
+          <p class="txt-small txt-muted">The centre of the map's flows: agent reports arrive here, deploys go out from here.</p>
+          <div class="fields fields--columns">
+            <div class="field">
+              <%= form.label :location_name, "Place" %>
+              <%= form.text_field :location_name, placeholder: "Singapore" %>
+              <%= field_errors(@account, :location_name) %>
+            </div>
+            <div class="field">
+              <%= form.label :latitude %>
+              <%= form.number_field :latitude, step: "any", min: -90, max: 90, placeholder: "1.35" %>
+              <%= field_errors(@account, :latitude) %>
+            </div>
+            <div class="field">
+              <%= form.label :longitude %>
+              <%= form.number_field :longitude, step: "any", min: -180, max: 180, placeholder: "103.82" %>
+              <%= field_errors(@account, :longitude) %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div><%= form.submit "Save", class: "btn btn--primary" %></div>
+    <% end %>
+
+    <%= form_with model: @user, url: settings_user_path, method: :patch, class: "stack-l" do |form| %>
+      <%= render "shared/errors", record: @user %>
+      <div class="card">
+        <div class="card__header">Your account</div>
+        <div class="card__body">
+          <div class="fields">
+            <div class="field">
+              <%= form.label :name %>
+              <%= form.text_field :name %>
+              <%= field_errors(@user, :name) %>
+            </div>
+            <div class="field">
+              <%= form.label :email_address, "Email" %>
+              <%= form.email_field :email_address, required: true, autocomplete: "email" %>
+              <%= field_errors(@user, :email_address) %>
+            </div>
+            <div class="field">
+              <%= form.label :password, "New password" %>
+              <%= form.password_field :password, autocomplete: "new-password", minlength: 12, maxlength: 72, value: nil %>
+              <p class="field__hint">Leave blank to keep the current one. A new password signs you out everywhere else.</p>
+              <%= field_errors(@user, :password) %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div><%= form.submit "Save account", class: "btn btn--primary" %></div>
+    <% end %>
+  </div>
 
   <div class="card connections">
     <div class="card__header">Connections</div>
     <% connections.each do |connection| %>
-      <%= render "connection", connection: connection %>
+      <%= render "settings/accounts/connection", connection: connection %>
     <% end %>
     <div class="card__footer txt-small txt-muted">Read from the environment, never stored. See <code>docs/reference/environment.mdx</code>.</div>
   </div>

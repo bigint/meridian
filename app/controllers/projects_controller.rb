@@ -1,5 +1,4 @@
 class ProjectsController < ApplicationController
-  require_admin except: %i[ index show ]
   before_action :set_project, only: %i[ show edit update destroy ]
 
   def index

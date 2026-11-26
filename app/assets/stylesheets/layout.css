@@ -180,7 +180,7 @@
     @media (min-width: 64rem) { padding-inline: var(--space-xl); } }
   .main--narrow { inline-size: 100%; max-inline-size: 72rem; margin-inline: auto; }
 
-  .page-header { display: flex; flex-direction: column; gap: var(--space); &:has(.tabs) { border-block-end: 1px solid var(--color-line); } }
+  .page-header { display: flex; flex-direction: column; gap: var(--space); }
   .page-header__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-s) var(--space); }
   .page-header__title { font-size: var(--text-l); font-weight: 700; letter-spacing: -0.02em; }
   .page-header__meta { color: var(--color-ink-muted); }

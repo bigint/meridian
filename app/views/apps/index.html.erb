@@ -3,7 +3,7 @@
   <%= form_with url: apps_path, method: :get, class: "filters" do |form| %>
     <%= form.label :q, "Search apps", class: "sr-only" %><%= form.search_field :q, value: params[:q], placeholder: "Search apps" %>
   <% end %>
-  <% if current_user.admin? %><%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %><% end %>
+  <%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %>
 <% end %>
 
 <div class="table-wrap">

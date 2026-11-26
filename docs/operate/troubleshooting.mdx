@@ -9,7 +9,7 @@ Find what you see in the titles below. Each entry says why it happens, then how 
 Two places help with most problems:
 
 - `kamal logs` follows Meridian's log. For more detail, set `RAILS_LOG_LEVEL` to `debug`.
-- `/jobs`, for admins, lists failed jobs with their error. A failed sync shows there as a failed `ProjectSyncJob`.
+- `/jobs` lists failed jobs with their error. A failed sync shows there as a failed `ProjectSyncJob`.
 
 ## Setup and sign-in
 
@@ -29,7 +29,7 @@ Two places help with most problems:
   <Accordion title="Sign-in says Try again later">
     Sign-in allows 10 tries in 3 minutes from one address. Wait 3 minutes and try again.
 
-    **Try another email address or password** means the email address or password is wrong. An admin can set a new password under **Settings → People**.
+    **Try another email address or password** means the email address or password is wrong. Once signed in, change your password under **Settings → Your account**.
   </Accordion>
   <Accordion title="The browser loops between http and https, or the page won't load">
     With an `https://` `MERIDIAN_URL`, Meridian sends every request to HTTPS. It expects a proxy in front of it to handle TLS. When nothing does, as when you try Meridian on a LAN, the page never loads.
@@ -40,11 +40,6 @@ Two places help with most problems:
     In production, Meridian answers only to `MERIDIAN_URL`'s host. It blocks a request for any other host, such as the server's IP address or a second DNS name. `/up` answers on any host.
 
     Use the URL's host, or change `MERIDIAN_URL`.
-  </Accordion>
-  <Accordion title="You don't have permission to do that">
-    The action needs a higher [role](/reference/glossary#roles). Deploys need a deployer. Projects, new apps, secrets, tokens and settings need an admin.
-
-    Ask an admin to change your role under **Settings → People**. See [Roles](/concepts/roles).
   </Accordion>
   <Accordion title="The page says your browser is too old">
     Meridian needs a current Chrome, Edge, Firefox or Safari. It answers older browsers with a `406` page.

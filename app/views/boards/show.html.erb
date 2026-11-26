@@ -7,7 +7,7 @@
 <%# Only when every cell was compared and matched: unknown cells were never compared. %>
 <% verdict = @board.summary.keys == [ "in_sync" ] ? "all matching Git" : "compared with Git" %>
 <%= page_header "Board", meta: "#{pluralize(@board.apps.size, "app")} on #{pluralize(@board.servers.size, "server")}, #{verdict}" do %>
-  <% if current_user.admin? %><%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %><% end %>
+  <%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %>
 <% end %>
 
 <% steps = getting_started %>

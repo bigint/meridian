@@ -6,6 +6,7 @@
 
 - The demo fleet. `bin/rails meridian:demo` and its `SERVERS` and `APPS` settings are gone, and the Quickstart now points Meridian at your own infra repository with a `GITHUB_TOKEN`. The development seed user is `admin@example.com` / `admin-password-123`.
 - Pull request previews. The **Previews** page, the **Previews** settings, the CI workflow's `remove` command and the `preview.*` activity events are gone, and Meridian no longer needs the **Pull request** webhook event. The `previews` table and the account's preview columns are dropped. See decision 43.
+- Roles and People. Meridian is single-user: the one account, made at first run, can do everything, and every button shows. The viewer, deployer and admin roles, the `users.role` column, **Settings → People**, the Settings tabs, Activity's **Who** filter and the `user.created` and `user.removed` events are gone, and direct commits depend only on the project's setting. Change your name, email address and password under **Settings → Your account**; saving records `user.updated`, and a new password signs you out everywhere else.
 
 ### Fixed
 
@@ -111,6 +112,7 @@
 
 ### Upgrading
 
+- Every user that exists when you upgrade can still sign in, and can now do everything. Settings no longer lists or removes people, so before you upgrade, remove anyone who shouldn't have that access under **Settings → People**.
 - Before you upgrade, press **Destroy** on each preview on the **Previews** page, and wait until it leaves the list. This release can't remove a preview. Meridian now reads a leftover `<config>.pr-<n>.yml` as a destination like any other, so delete any that stay in the infra repository.
 - In each existing infra repository, press **Add CI workflow** on the project page again. The new workflow deploys destination apps with `-d` and runs one deploy per app at a time.
 - On each host, create the `meridian` Docker network once, add `network: meridian` to both agent accessories (`meridian_docker` and `meridian_agent`), then reboot them:

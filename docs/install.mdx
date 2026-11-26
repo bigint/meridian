@@ -27,7 +27,7 @@ You need:
 
     <Tabs>
       <Tab title="GitHub App">
-        A GitHub App reaches only the repositories you install it on. Use it for any install that other people share.
+        A GitHub App reaches only the repositories you install it on. Use it for production.
 
         1. Open **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. For an organisation, open the organisation's **Settings**, then **Developer settings**, **GitHub Apps**.
         2. Set **Homepage URL** to your Meridian URL, such as `https://meridian.example.com`.
@@ -110,7 +110,7 @@ You need:
     | # | Key | Set it to |
     | --- | --- | --- |
     | 1 | `servers.web` | The host Kamal connects to over SSH. |
-    | 2 | `proxy.host` | The DNS name people use to reach Meridian. |
+    | 2 | `proxy.host` | The DNS name you use to reach Meridian. |
     | 3 | `registry.username` | A user that can pull from the registry. For the published image, any GitHub user with a token that can read packages. |
     | 4 | `env.clear.MERIDIAN_URL` | `https://` followed by `proxy.host`. Meridian answers only to this host. |
     | 5 | `image` | Leave it to run the published image. Set your own registry and repository only if you build the image yourself. |
@@ -209,7 +209,7 @@ You need:
     kamal app exec 'bin/rails meridian:setup_code'
     ```
 
-    Enter the code, your name, your email and a password of at least 12 characters. Press **Create admin**. Meridian signs you in and opens **Projects**. This is the only account. You can change your name, email and password later under [Settings](/operate/settings).
+    Enter the code, your name, your email and a password of at least 12 characters. Press **Create account**. Meridian signs you in and opens **Projects**. This is the only account. You can change your name, email and password later under [Settings](/operate/settings).
   </Step>
 
   <Step title="Add your infra repository">
@@ -223,7 +223,7 @@ You need:
     | **GitHub App installation ID** | The number from step 1. Leave it blank with a token. |
     | **Config paths** | File patterns for your Kamal configs, comma-separated. The default is `config/deploy*.yml`. Use `kamal/*.yml` for one config per app in a `kamal/` folder. |
 
-    Leave **Let admins commit changes directly instead of opening pull requests** off. Turn it on only if you want new apps and the CI workflow committed straight to the branch.
+    Leave **Commit changes directly instead of opening pull requests** off. Turn it on only if you want new apps and the CI workflow committed straight to the branch.
 
     Save, and Meridian reads the repository. Each config and [destination](/reference/glossary#destination) becomes an [app](/reference/glossary#app) on the board. A config that fails to parse shows under **Parse errors**, with its file and line. See [apps and destinations](/concepts/apps-and-destinations).
   </Step>

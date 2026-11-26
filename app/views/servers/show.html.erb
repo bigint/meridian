@@ -59,7 +59,7 @@
               <th scope="col" class="table__end">Memory</th>
               <th scope="col" class="table__end">Network<span class="sr-only"> in and out per second</span></th>
               <th scope="col">Started</th>
-              <% if current_user.can_deploy? %><th scope="col"><span class="sr-only">Logs</span></th><% end %>
+              <th scope="col"><span class="sr-only">Logs</span></th>
             </tr>
           </thead>
           <tbody>
@@ -89,13 +89,11 @@
                   <span class="stat__value"><span class="sr-only">Out </span><%= icon :upload, width: 12, height: 12 %><span data-part="tx">—</span></span>
                 </td>
                 <td class="nowrap"><%= time_ago(placement.started_at) %></td>
-                <% if current_user.can_deploy? %>
-                  <td><%= link_to icon(:logs), placement_log_path(placement), class: "btn btn--icon btn--plain btn--small", aria: { label: "Logs of #{placement.name}" }, data: { turbo_prefetch: false, tooltip: "Logs" } %></td>
-                <% end %>
+                <td><%= link_to icon(:logs), placement_log_path(placement), class: "btn btn--icon btn--plain btn--small", aria: { label: "Logs of #{placement.name}" }, data: { turbo_prefetch: false, tooltip: "Logs" } %></td>
               </tr>
             <% end %>
             <% if @placements.none? %>
-              <tr><td colspan="<%= current_user.can_deploy? ? 8 : 7 %>" class="table__empty">No containers reported.</td></tr>
+              <tr><td colspan="8" class="table__empty">No containers reported.</td></tr>
             <% end %>
           </tbody>
         </table>
@@ -130,15 +128,13 @@
         <% end %>
       <% end %>
 
-      <% if current_user.admin? %>
-        <%= titled_section "Location on the map" do %>
-          <%= form_with model: @server, class: "filters" do |form| %>
-            <div class="field"><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90 %></div>
-            <div class="field"><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180 %></div>
-            <%= form.submit "Save location", name: nil, class: "btn" %>
-          <% end %>
-          <p class="txt-small txt-muted">An agent that reports <code>lat</code> and <code>lng</code> labels overrides this on its next snapshot.</p>
+      <%= titled_section "Location on the map" do %>
+        <%= form_with model: @server, class: "filters" do |form| %>
+          <div class="field"><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90 %></div>
+          <div class="field"><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180 %></div>
+          <%= form.submit "Save location", name: nil, class: "btn" %>
         <% end %>
+        <p class="txt-small txt-muted">An agent that reports <code>lat</code> and <code>lng</code> labels overrides this on its next snapshot.</p>
       <% end %>
     </div>
   </aside>

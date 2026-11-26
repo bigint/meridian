@@ -25,8 +25,7 @@ sequenceDiagram
 
 ## Before you start
 
-- You are a deployer or an admin. Viewers see the deploy panel without its form. See [Roles](/concepts/roles).
-- The infra repository has the CI workflow, `.github/workflows/meridian-deploy.yml`. An admin adds it with **Add CI workflow** on the project page. See [Projects](/guides/projects#add-the-ci-workflow).
+- The infra repository has the CI workflow, `.github/workflows/meridian-deploy.yml`. Add it with **Add CI workflow** on the project page. See [Projects](/guides/projects#add-the-ci-workflow).
 - The image for the version is already in your registry. The workflow runs `kamal deploy --skip-push`, so it never builds or pushes an image. Your source repository's CI does that.
 - To watch each server pick up the version, it runs the [agent](/reference/glossary#agent), a small program that reports what runs there. See [Install the agent](/guides/agent).
 

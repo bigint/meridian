@@ -1,7 +1,6 @@
 # Changes which servers run a tunnel's connectors, as a pull request (or a
 # direct commit, where the project allows it) to the connector config.
 class Tunnels::ConnectorsController < ApplicationController
-  require_admin
   before_action :set_tunnel
 
   def edit

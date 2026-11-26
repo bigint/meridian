@@ -15,7 +15,6 @@ It never sends environment variables, commands, entrypoints or mounts, which can
 
 - A Kamal [config](/reference/glossary#config) whose `servers` include every server you want to watch. The agent runs as two accessories of that config. An accessory is an extra container Kamal runs beside your app.
 - A `MERIDIAN_URL` that each server can reach, such as `https://meridian.example.com`. Every proxy in front of Meridian must pass WebSockets through to `/cable`. [kamal-proxy](/reference/glossary#kamal-proxy) and Thruster both do.
-- The admin role, to create the token. Anyone can open **Agents** and read the steps.
 
 ## Install with Kamal
 
@@ -160,7 +159,7 @@ To put the server on the map, add `lat` and `lng` in decimal degrees. `latitude`
 MERIDIAN_LABELS: region=sgp,provider=ovh,role=web,city=Singapore,lat=1.35,lng=103.82
 ```
 
-An admin can also set a location on the server's page, under **Location on the map**. An agent that reports `lat` and `lng` overrides it on its next snapshot. See [The map](/guides/board-and-map#the-map).
+You can also set a location on the server's page, under **Location on the map**. An agent that reports `lat` and `lng` overrides it on its next snapshot. See [The map](/guides/board-and-map#the-map).
 
 ## Settings
 
@@ -172,7 +171,7 @@ The agent reads its settings from environment variables. These are the ones you 
 | `MERIDIAN_TOKEN` | required | The token from **Agents**. |
 | `MERIDIAN_LABELS` | none | Labels, such as `region=sgp,provider=ovh`. |
 | `MERIDIAN_INTERVAL` | `15s` | Time between snapshots, at least `1s`. Each wait varies at random by up to 20%. Meridian calls a server stale after three intervals, and never sooner than 45 seconds. |
-| `MERIDIAN_LOGS` | off | `1` or `true` lets deployers read Kamal containers' logs and traffic. |
+| `MERIDIAN_LOGS` | off | `1` or `true` lets you read Kamal containers' logs and traffic. |
 | `MERIDIAN_LIVE` | on | `0` or `false` turns the WebSocket off: no live stats, no logs, snapshots only. |
 | `MERIDIAN_HOSTNAME` | the server's `/etc/hostname` | The name the agent reports. |
 

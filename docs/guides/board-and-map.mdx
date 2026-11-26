@@ -9,8 +9,6 @@ import DriftStates from "/snippets/drift-states.mdx";
 
 The board tells you whether every server runs what Git says it should. Each cell is one app on one server, marked with its [drift](/reference/glossary#drift) state: how what runs differs from Git. The map shows the same cells by place. Both update as [agents](/reference/glossary#agent) report, without a reload.
 
-Everyone who can sign in sees the board and the map. See [Roles](/concepts/roles).
-
 ## The board
 
 The board is Meridian's home page, `/`. Its header counts the apps and servers it shows. It says `all matching Git` when every cell is in sync.
@@ -108,10 +106,10 @@ Click an app's name in the grid to open it in the side panel, the inspector. If 
 The panel shows:
 
 - The app's kind and project, and one status line. Examples: `✓ Running v1.4.2 everywhere`, `2 of 3 servers run v1.4.2`, or `No version file yet, so Meridian can't compare versions.`. When agents are quiet, it adds a note such as `· 2 agents quiet, last report may be old`.
-- **Ship a version**, for deployers and admins: type a tag and click **Deploy**. See [Deploy](/guides/deploy).
+- **Ship a version**: type a tag and click **Deploy**. See [Deploy](/guides/deploy).
 - **Servers**: each server's cell, with its `city` or `region` label.
 - **Recent releases**: the last three, with version, message, author, commit and age.
-- **Redeploy** and **Roll back**, for deployers and admins, when the app has a version file. **Redeploy** needs one release, and **Roll back** needs two.
+- **Redeploy** and **Roll back**, when the app has a version file. **Redeploy** needs one release, and **Roll back** needs two.
 - **Open app page**.
 
 ## Search
@@ -143,7 +141,7 @@ It shows the best eight. Names that start with what you typed come first, then s
 A place takes the worst state of its cells. On the map you also see:
 
 - **Lines** between places that run the same app. A line is thicker when the places share more apps. Stray cells don't count.
-- **Flows** for Meridian's own traffic: agents reporting in, and deploys going out to places being deployed. They need a location for Meridian itself. An admin sets it in **Settings**, under **Where Meridian runs**.
+- **Flows** for Meridian's own traffic: agents reporting in, and deploys going out to places being deployed. They need a location for Meridian itself. Set it in **Settings**, under **Where Meridian runs**.
 - **Names** for Meridian, for places that need attention or are being deployed, and for the place you picked. Hover any other dot to see its name.
 
 <Accordion title="How a place gets its name and state">
@@ -173,7 +171,7 @@ The **Places** table lists every place, problems first, with its region, its cel
 Use either:
 
 - **Agent labels.** Add `lat` and `lng`, in decimal degrees, to `MERIDIAN_LABELS`, such as `MERIDIAN_LABELS=region=sgp,city=Singapore,lat=1.35,lng=103.82`.
-- **The server page.** An admin sets **Latitude** and **Longitude** under **Location on the map** and clicks **Save location**.
+- **The server page.** Set **Latitude** and **Longitude** under **Location on the map** and clicks **Save location**.
 
 If the agent reports `lat` and `lng`, its next report replaces the location set on the server page. See [Labels and map location](/guides/agent#labels-and-map-location).
 

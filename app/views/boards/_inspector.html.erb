@@ -1,7 +1,7 @@
 <%# The board's side panel: one app at a glance, and what you can do to it. %>
 <% cells = app_cells(app) %>
 <% releases = app.releases.limit(3).to_a %>
-<% can_ship = current_user.can_deploy? && app.deployable? %>
+<% can_ship = app.deployable? %>
 <div class="stack-l" data-inspector>
   <div class="flex-col gap-s">
     <p class="panel__kicker">APP</p>

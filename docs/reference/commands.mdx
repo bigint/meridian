@@ -24,7 +24,7 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 ## Rake tasks
 
 <ResponseField name="bin/rails meridian:setup_code" type="task">
-  Prints the setup code that `/first_run` asks for before it creates the first admin. Meridian derives the code from `SECRET_KEY_BASE`, so it stores nothing. Meridian also logs it as `Meridian setup code: …` each time someone opens `/first_run`.
+  Prints the setup code that `/first_run` asks for before it creates your account. Meridian derives the code from `SECRET_KEY_BASE`, so it stores nothing. Meridian also logs it as `Meridian setup code: …` each time someone opens `/first_run`.
 </ResponseField>
 
 <ResponseField name="bin/rails db:prepare" type="task">

@@ -61,12 +61,7 @@
   .disclosure[open] > summary svg { rotate: 0deg; }
   .disclosure__body { margin-block-start: var(--space); }
 
-  /* Sub-pages and views of the same thing. */
-  .tabs { display: flex; gap: var(--space-l); }
-  .tabs a { padding-block-end: var(--space-s); border-block-end: 2px solid transparent; font-size: var(--text-m); font-weight: 500; color: var(--color-ink-muted);
-    &:hover { color: var(--color-ink); }
-    &[aria-current="page"] { border-color: var(--color-accent); color: var(--color-ink); } }
-
+  /* Views of the same thing. */
   .segmented { display: inline-flex; padding: 0.125rem; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
   .segmented :is(a, button) { padding: var(--space-xs) 0.625rem; border: 0; border-radius: var(--radius-small); background: none; font-size: var(--text-s); font-weight: 500; color: var(--color-ink-muted); cursor: pointer;
     &:hover { color: var(--color-ink); }

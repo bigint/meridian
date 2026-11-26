@@ -1,7 +1,7 @@
 <% content_for :title, "Welcome" %>
 <div class="flex-col gap-xs">
   <h1 class="page-header__title">Welcome to Meridian</h1>
-  <p class="txt-muted">Create the first admin. You can add more people later.</p>
+  <p class="txt-muted">Create your account. Meridian has one user, and they can do everything.</p>
 </div>
 
 <%= form_with model: @user, url: first_run_path, class: "fields" do |form| %>
@@ -28,5 +28,5 @@
     <p class="field__hint">At least 12 characters.</p>
     <%= field_errors(@user, :password) %>
   </div>
-  <%= form.submit "Create admin", class: "btn btn--primary btn--block" %>
+  <%= form.submit "Create account", class: "btn btn--primary btn--block" %>
 <% end %>

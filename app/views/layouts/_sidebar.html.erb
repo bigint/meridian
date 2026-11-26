@@ -22,12 +22,10 @@
   </nav>
 
   <div class="sidebar__foot">
-    <% if current_user.admin? %>
-      <nav class="sidebar__nav" aria-label="Admin">
-        <%= sidebar_link("Settings", settings_root_path, :settings) %>
-        <%= sidebar_link("Jobs", "/jobs", :jobs) %>
-      </nav>
-    <% end %>
+    <nav class="sidebar__nav" aria-label="System">
+      <%= sidebar_link("Settings", settings_root_path, :settings) %>
+      <%= sidebar_link("Jobs", "/jobs", :jobs) %>
+    </nav>
     <% label = sidebar_collapsed? ? "Expand sidebar" : "Collapse sidebar" %>
     <button type="button" class="sidebar__toggle" data-action="sidebar#toggle" data-sidebar-target="toggle"
       aria-label="<%= label %>" aria-expanded="<%= !sidebar_collapsed? %>" data-tooltip="<%= label %>">

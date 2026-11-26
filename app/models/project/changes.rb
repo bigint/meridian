@@ -1,5 +1,5 @@
 # Changes Meridian proposes to the infra repository. A pull request by
-# default; a direct commit when the project allows it and an admin asks.
+# default; a direct commit when the project allows it.
 module Project::Changes
   extend ActiveSupport::Concern
 
@@ -7,7 +7,7 @@ module Project::Changes
   WORKFLOW_FILE = "meridian-deploy.yml"
 
   def propose(files:, title:, body:, actor:, slug:)
-    if direct_commits? && actor.admin?
+    if direct_commits?
       sha = files.each_with_object([]) { |(path, content), shas| shas << write(path, content, title, actor) }.last
       Event.record("project.committed", subject: self, actor: actor, summary: title, commit: sha, files: files.keys)
       Proposal.new(url: git.commit_url(sha), number: nil, direct: true)

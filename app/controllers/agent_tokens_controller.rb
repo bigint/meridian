@@ -1,6 +1,4 @@
 class AgentTokensController < ApplicationController
-  require_admin except: :index
-
   def index
     load_lists
   end

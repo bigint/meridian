@@ -1,6 +1,4 @@
 class ServersController < ApplicationController
-  require_admin only: :update
-
   def index
     @servers = Server.ordered
     @servers = @servers.search(params[:q]) if params[:q].present?

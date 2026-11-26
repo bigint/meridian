@@ -99,7 +99,7 @@ A rollback works the same way. Meridian commits the previous version, and CI dep
 
 ## Where "should run" comes from
 
-Meridian reads each infra repository through the GitHub API. This read is a sync. It runs every 30 seconds, when GitHub sends a `push` webhook, and when an admin presses **Sync now**.
+Meridian reads each infra repository through the GitHub API. This read is a sync. It runs every 30 seconds, when GitHub sends a `push` webhook, and when you press **Sync now**.
 
 Meridian reads each config with Kamal's own code, so it sees what `kamal deploy` would see. A config that fails to parse shows its file and line on the project's page. Its app keeps the last good parse. See [Apps and destinations](/concepts/apps-and-destinations).
 
@@ -118,10 +118,10 @@ For every app on every server, Meridian compares the agent's report with the new
 | Deploy | A commit that puts the version in the app's version file, on the default branch. |
 | Roll back | A commit that puts back the version file's previous value. |
 | Redeploy | A request to run the deploy workflow again, for the version already in the file. |
-| New app, CI workflow, tunnel connectors | A pull request on a `meridian/…` branch, or a direct commit when the project allows it and an admin acts. |
+| New app, CI workflow, tunnel connectors | A pull request on a `meridian/…` branch, or a direct commit when the project allows it. |
 | Secret value | An encrypted GitHub Actions secret on the repository. Meridian keeps the name only. |
 
-A commit that a person asked for names them in a `Meridian-Actor:` line. Every action shows in [Activity](/guides/activity).
+A commit that you asked for names you in a `Meridian-Actor:` line. Every action shows in [Activity](/guides/activity).
 
 Webhooks are optional. With them, Meridian reacts within a second or two. Without them, it finds the same changes within 30 seconds.
 
@@ -132,7 +132,7 @@ Webhooks are optional. With them, Meridian reacts within a second or two. Withou
 - It never reads `.kamal/secrets` files, because they can hold real secret values.
 - It never changes a server.
 
-If you uninstall Meridian, Git still holds every config, version and deploy. You lose only the activity log, people, agent tokens and settings.
+If you uninstall Meridian, Git still holds every config, version and deploy. You lose only the activity log, your account, agent tokens and settings.
 
 <Accordion title="How this works under the hood">
   A sync never clones the repository. It lists the files at the head of the default branch and keeps the ones that match the project's config paths. It downloads each file once and caches it by its Git SHA, the ID Git gives each file's contents. It also asks GitHub whether the branch changed since the last answer, so an unchanged repository costs no API quota.

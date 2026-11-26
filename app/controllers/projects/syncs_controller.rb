@@ -1,6 +1,4 @@
 class Projects::SyncsController < ApplicationController
-  require_admin
-
   def create
     project = Project.find(params[:project_id])
     project.sync_later(force: true)

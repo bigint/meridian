@@ -1,4 +1,4 @@
-# A deployer reading an app's traffic: kamal-proxy's request lines from every
+# Someone reading an app's traffic: kamal-proxy's request lines from every
 # server the app runs on, only the app's own (LiveTraffic filters them).
 # Subscribing, and every ten seconds after, renews the tail leases, as
 # LogsChannel does. The servers come from the app, never from the browser.
@@ -6,7 +6,7 @@ class TrafficChannel < ApplicationCable::Channel
   include ApplicationCable::Renewal
 
   periodically every: LogsChannel::RENEW_EVERY do
-    next hang_up unless reader&.can_deploy?
+    next hang_up unless reader
     next unless heard_lately?
 
     LiveTraffic.watch(@app, @proxies)
@@ -26,6 +26,6 @@ class TrafficChannel < ApplicationCable::Channel
 
     def find_app
       user, id = reader, params[:app_id]
-      App.find_by(id: id) if user&.can_deploy? && id.is_a?(Integer) && LiveLogs.granted?(params[:grant], user, "traffic", id)
+      App.find_by(id: id) if user && id.is_a?(Integer) && LiveLogs.granted?(params[:grant], user, "traffic", id)
     end
 end

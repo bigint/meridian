@@ -28,11 +28,11 @@ env:
 <ResponseField name="SECRET_KEY_BASE" type="string" required>
   The key that signs session cookies, and the grants that open live logs and traffic. Rails reads it in production. Make one with `openssl rand -hex 64`.
 
-  Meridian also derives the first-run setup code from it, and `bin/rails meridian:setup_code` prints that code. If you change this key, everyone is signed out and the setup code changes.
+  Meridian also derives the first-run setup code from it, and `bin/rails meridian:setup_code` prints that code. If you change this key, every session is signed out and the setup code changes.
 </ResponseField>
 
 <ResponseField name="MERIDIAN_URL" type="string" required>
-  The address people and agents use, for example `https://meridian.example.com`. Meridian reads it in production only.
+  The address you and the agents use, for example `https://meridian.example.com`. Meridian reads it in production only.
 
   - An `https://` URL turns on forced HTTPS, HSTS (a header that tells browsers to use HTTPS only) and secure cookies. It also trusts the proxy in front that handles TLS, which is [kamal-proxy](/reference/glossary#kamal-proxy).
   - A plain `http://` URL turns all of that off. Use it to try Meridian on a local network.
@@ -158,7 +158,7 @@ The [agent](/reference/glossary#agent) reads these in `agent/config.go`. If a va
 </ResponseField>
 
 <ResponseField name="MERIDIAN_LOGS" type="boolean" default="false">
-  `1` or `true` lets Meridian follow the logs of Kamal containers while a deployer reads them. It needs the live line, so `MERIDIAN_LIVE=0` turns it off too. The accessory template sets it to `1`.
+  `1` or `true` lets Meridian follow the logs of Kamal containers while you read them. It needs the live line, so `MERIDIAN_LIVE=0` turns it off too. The accessory template sets it to `1`.
 </ResponseField>
 
 <ResponseField name="-print" type="flag">
@@ -202,4 +202,4 @@ Meridian and the agent don't read these names. Remove them from your configs.
 | Variable | Why |
 | --- | --- |
 | `MERIDIAN_PROXY_STATE` | The agent doesn't read kamal-proxy's state file. |
-| `OIDC_*` | Meridian has no OpenID Connect sign-in. People sign in with email and password. |
+| `OIDC_*` | Meridian has no OpenID Connect sign-in. You sign in with email and password. |

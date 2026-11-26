@@ -1,11 +1,9 @@
 <% content_for :title, @project.name %>
 <%= page_header @project.name, meta: link_to(@project.repo_full_name, @project.repo_url, class: "mono txt-small link") do %>
-  <% if current_user.admin? %>
-    <%= button_to "Sync now", project_sync_path(@project), method: :post, class: "btn" %>
-    <%= button_to "Add CI workflow", project_workflow_path(@project), method: :post, class: "btn",
-          form: { data: { turbo_confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} .github/workflows/meridian-deploy.yml?" } } %>
-    <%= link_to "Edit", edit_project_path(@project), class: "btn btn--plain" %>
-  <% end %>
+  <%= button_to "Sync now", project_sync_path(@project), method: :post, class: "btn" %>
+  <%= button_to "Add CI workflow", project_workflow_path(@project), method: :post, class: "btn",
+        form: { data: { turbo_confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} .github/workflows/meridian-deploy.yml?" } } %>
+  <%= link_to "Edit", edit_project_path(@project), class: "btn btn--plain" %>
 <% end %>
 
 <div class="grid-2">
@@ -20,7 +18,7 @@
           <dt>Synced</dt>
           <dd><%= safe_join([ (@project.last_synced_sha ? link_to(@project.last_synced_sha.first(7), @project.git.commit_url(@project.last_synced_sha), class: "mono") : "never"), time_ago(@project.synced_at) ], " · ") %></dd>
           <dt>Changes</dt>
-          <dd><%= @project.direct_commits? ? "Admins may commit directly" : "Pull requests" %></dd>
+          <dd><%= @project.direct_commits? ? "Direct commits" : "Pull requests" %></dd>
         </dl>
       </div>
     </div>

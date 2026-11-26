@@ -47,7 +47,7 @@ With the config path `deploy/*.yml`, Meridian sees four apps and one accessories
 | Configs that match the project's config paths | On every sync | When **New app** creates one, and when **Edit connectors** changes an edge config |
 | `<config>.<destination>.yml` | On every sync | When **New app** creates an app with a destination |
 | `<config>[.<destination>].version` | Its content and history, whenever it changed | On every deploy and rollback, and when **New app** creates an app |
-| `.github/workflows/meridian-deploy.yml` | Only to replace it | When an admin presses **Add CI workflow** |
+| `.github/workflows/meridian-deploy.yml` | Only to replace it | When you press **Add CI workflow** |
 
 ## Config paths
 
@@ -129,7 +129,7 @@ For `KEY:ALIAS`, Meridian takes `ALIAS`, the name the secret has in the environm
 
 ## Commits
 
-Every commit Meridian makes for a person ends in a `Meridian-Actor:` line, called a trailer. It holds their name and email address.
+Every commit Meridian makes for you ends in a `Meridian-Actor:` line, called a trailer. It holds your name and email address.
 
 <CodeGroup>
 ```text Deploy
@@ -164,7 +164,7 @@ By default, Meridian opens a pull request for these three changes:
 
 `<hex>` is six random hexadecimal characters. Meridian creates the branch from the newest commit on the project's branch. It writes each file as its own commit, with the title and the `Meridian-Actor:` trailer as the message. Then it opens the pull request against the project's branch.
 
-When the project has **Direct commits** on, Meridian commits an admin's change straight to the project's branch, one commit per file. Deploys and rollbacks are always direct commits.
+When the project has **Direct commits** on, Meridian commits your change straight to the project's branch, one commit per file. Deploys and rollbacks are always direct commits.
 
 ## What Meridian never reads
 

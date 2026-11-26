@@ -7,7 +7,7 @@ icon: "square-plus"
 
 The **New app** form turns a few answers into a [Kamal](/reference/glossary#kamal) [config](/reference/glossary#config), the file that says what an app is and where it runs. Meridian checks it and opens a pull request on your [infra repository](/reference/glossary#infra-repository). Nothing runs until you merge. Then CI deploys the first version.
 
-You need the admin role. The form is at **Apps** → **New app**, or **New app** on the board. See [Roles](/concepts/roles).
+The form is at **Apps** → **New app**, or **New app** on the board.
 
 ## Fill in the form
 
@@ -53,7 +53,7 @@ The proposal page says `shop is ready for review`, with **Open pull request #12*
 - **Files**: every file Meridian wrote, in full.
 - **Dockerfile for acme/shop**: the guidance for the kind.
 
-If the project lets admins commit directly, Meridian commits the files to the default branch instead. The page then says `shop is committed`, with **View commit**. See [Projects](/guides/projects#direct-commits).
+If the project allows direct commits, Meridian commits the files to the default branch instead. The page then says `shop is committed`, with **View commit**. See [Projects](/guides/projects#direct-commits).
 
 <Warning>
 A direct commit deploys the first version straight away. On such a project, do the steps in [Before you merge](#before-you-merge) before you click **Open pull request**.

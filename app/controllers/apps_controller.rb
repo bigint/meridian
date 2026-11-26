@@ -1,6 +1,4 @@
 class AppsController < ApplicationController
-  require_admin only: %i[ new create ]
-
   def index
     @apps = App.includes(:project).ordered
     @apps = @apps.where("service LIKE ? ESCAPE '\\'", "%#{App.sanitize_sql_like(params[:q].to_s)}%") if params[:q].present?

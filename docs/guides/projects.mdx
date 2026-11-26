@@ -7,12 +7,11 @@ icon: "folder-git-2"
 
 A [project](/reference/glossary#project) is one [infra repository](/reference/glossary#infra-repository) added to Meridian. That is the Git repository that holds your Kamal configs. Add one, and the board shows every app in it.
 
-Meridian reads the configs, and commits deploys, rollbacks and new apps back to the repository. It changes nothing else there. Everyone can see **Projects**, but only admins can change one.
+Meridian reads the configs, and commits deploys, rollbacks and new apps back to the repository. It changes nothing else there.
 
 ## Before you start
 
 - GitHub access: the GitHub App installed on the repository, or a token. See [Install](/install) and [GitHub App](/reference/github-app).
-- The admin role. See [Roles](/concepts/roles).
 
 ## Add a project
 
@@ -26,7 +25,7 @@ Meridian reads the configs, and commits deploys, rollbacks and new apps back to 
     - **Branch**: the branch Meridian reads and commits to, `main` by default.
     - **GitHub App installation ID**: the number at the end of the URL after you install the App. Leave it blank if Meridian uses a token.
     - **Config paths**: which files are Kamal configs. See [Choose config paths](#choose-config-paths).
-    - **Let admins commit changes directly instead of opening pull requests**: see [Direct commits](#direct-commits).
+    - **Commit changes directly instead of opening pull requests**: see [Direct commits](#direct-commits).
   </Step>
   <Step title="Save">
     Click **Create Project**. Meridian says `Project added. Syncing now.` and reads the repository in the background.
@@ -93,7 +92,7 @@ The full layout, with version files, is in [Infra repository](/reference/infra-r
 
 By default, Meridian proposes new apps, the CI workflow and tunnel connector changes as pull requests. Each goes on a branch named `meridian/<what>-<6 hex digits>`, such as `meridian/new-shop-3fa9c1`.
 
-Tick **Let admins commit changes directly instead of opening pull requests**, and an admin's change goes straight to the branch. The project's page then says **Admins may commit directly** under **Changes**. Activity records a direct commit as `project.committed`, and a pull request as `project.pull_request`.
+Tick **Commit changes directly instead of opening pull requests**, and your change goes straight to the branch. The project's page then says **Direct commits** under **Changes**. Activity records a direct commit as `project.committed`, and a pull request as `project.pull_request`.
 
 Deploys and rollbacks always commit straight to the branch, whatever this setting says. They change only version files.
 
@@ -103,8 +102,8 @@ Meridian reads a project again:
 
 - On every push to the branch, when GitHub sends the push [webhook](/reference/glossary#webhook).
 - Every 30 seconds, with or without webhooks. If nothing changed, this costs no GitHub rate limit.
-- When an admin clicks **Sync now**, even if the branch hasn't moved. Meridian says `Syncing acme/infra.`
-- When an admin saves a new repository, branch, installation ID or config paths.
+- When you click **Sync now**, even if the branch hasn't moved. Meridian says `Syncing acme/infra.`
+- When you save a new repository, branch, installation ID or config paths.
 
 Each sync reads only the files that changed, and parses the configs with Kamal. The project's page shows **Synced**, with the commit and the time.
 

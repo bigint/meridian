@@ -20,10 +20,6 @@ A Kamal accessory: a database, a cache or a tunnel connector that a config runs 
 
 The page that lists every event. That is each change Meridian made, and each time someone read logs or traffic. See [Activity events](/reference/activity-events).
 
-## Admin
-
-The role that can do everything: projects, new apps, secrets, agent tokens, settings and people. See [Roles](#roles).
-
 ## Agent
 
 A small program on each server that tells Meridian what is running there. It only reads, and it only connects out to Meridian. Its name is `meridian-agent`. See [Servers and agents](/concepts/servers-and-agents).
@@ -64,17 +60,13 @@ A `cloudflared` accessory that runs a Cloudflare Tunnel on one server. See [Clou
 
 To deploy, Meridian writes a version to an app's version file, and CI sees the commit and runs `kamal deploy`. A deploy is also the record of that rollout, with its CI status: `pending`, `queued`, `in_progress` or `completed`. See [Deploy](/guides/deploy).
 
-## Deployer
-
-The role that can also deploy, redeploy, roll back, and read logs and traffic. See [Roles](#roles).
-
 ## Destination
 
 A variant of a config, such as `staging` or `production`, kept in a file like `config/deploy.staging.yml`. Kamal reads it with `-d <destination>`, and each destination is its own app. See [Apps and destinations](/concepts/apps-and-destinations).
 
 ## Direct commits
 
-A project setting. When it is on, Meridian commits an admin's changes to the branch instead of opening pull requests.
+A project setting. When it is on, Meridian commits your changes to the branch instead of opening pull requests.
 
 ## Drift
 
@@ -138,7 +130,7 @@ The page that shows servers on a world map. Servers close together share one pla
 
 ## Meridian-Actor
 
-A line at the end of every commit Meridian makes for a person. It names who asked for the change. See [Infra repository](/reference/infra-repository#commits).
+A line at the end of every commit Meridian makes for you. It names who asked for the change. See [Infra repository](/reference/infra-repository#commits).
 
 ## Needs attention
 
@@ -176,9 +168,9 @@ The `region` label. The board groups servers by it when there are more than 30 s
 
 A commit that changed an app's version file. Meridian names it by the version it wrote. With no version file, a release is a commit to the config, named by its short commit ID (SHA). See [Versions and releases](/concepts/versions-and-releases).
 
-## Roles
+## Role
 
-The three roles are viewer, deployer and admin. Viewers look, deployers also deploy and roll back, admins do everything. Kamal uses "role" too, for a group of servers in a config such as `web` or `job`. See [Roles](/concepts/roles).
+Kamal's name for a group of servers in a config, such as `web` or `job`. Meridian gives each role on a server its own drift state, and the cell shows the worst one. Meridian has no user roles: its one user can do everything. See [Drift](/concepts/drift#roles-and-the-worst-state).
 
 ## Roll back
 
@@ -198,7 +190,7 @@ A config's `service:` value, the name Kamal gives its containers.
 
 ## Setup code
 
-The code `/first_run` asks for before it creates the first admin. Find it in Meridian's log, or print it with `bin/rails meridian:setup_code`.
+The code `/first_run` asks for before it creates your account. Find it in Meridian's log, or print it with `bin/rails meridian:setup_code`.
 
 ## Silent
 
@@ -214,7 +206,7 @@ The repository an app is built from, named by the `meridian.source` label. The a
 
 ## Sync
 
-Meridian reading a project's configs and version files from Git. It runs on each push, every 30 seconds, and when an admin presses **Sync now**.
+Meridian reading a project's configs and version files from Git. It runs on each push, every 30 seconds, and when you press **Sync now**.
 
 ## Tail lease
 
@@ -235,10 +227,6 @@ The name of the build to run, such as `v42` or a commit SHA. It is a Docker imag
 ## Version file
 
 A one-line file next to a config, such as `config/deploy.version`, that holds the version to run. Meridian deploys by changing it. Its name is `<config>[.<destination>].version`. See [Infra repository](/reference/infra-repository).
-
-## Viewer
-
-The default role. Viewers see everything except logs and traffic, and change nothing. See [Roles](#roles).
 
 ## Watch lease
 

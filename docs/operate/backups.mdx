@@ -4,18 +4,18 @@ description: "Which of Meridian's files to back up, how to stream them to S3 wit
 icon: "database"
 ---
 
-Meridian keeps its data in SQLite files under `/rails/storage`, in the `meridian_storage` Docker volume. Git already holds your configs, versions and their history. So a backup protects what only Meridian knows: people, agent tokens and the activity trail.
+Meridian keeps its data in SQLite files under `/rails/storage`, in the `meridian_storage` Docker volume. Git already holds your configs, versions and their history. So a backup protects what only Meridian knows: your account, agent tokens and the activity trail.
 
 ## What to back up
 
 | File | Holds | Back up |
 | --- | --- | --- |
-| `production.sqlite3` | People, sessions, projects, apps, releases, deploys, servers, agent tokens, secret names, settings and Activity | Yes |
+| `production.sqlite3` | Your account, sessions, projects, apps, releases, deploys, servers, agent tokens, secret names, settings and Activity | Yes |
 | `production_queue.sqlite3` | Solid Queue: queued, scheduled and failed jobs | Optional. Recurring jobs are set up again on boot. |
 | `production_cache.sqlite3` | Solid Cache: cached GitHub files, and which live streams are open | No. Meridian refills it. |
 | `production_cable.sqlite3` | Solid Cable: messages from the last minute | No |
 
-Without a backup, losing the volume loses people, agent tokens and Activity. Add the projects again, and they sync from Git. Give the agents new tokens, and they report again.
+Without a backup, losing the volume loses your account, agent tokens and Activity. Add the projects again, and they sync from Git. Give the agents new tokens, and they report again.
 
 ## Stream changes with Litestream
 

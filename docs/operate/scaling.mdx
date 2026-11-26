@@ -13,7 +13,7 @@ Meridian is built to handle 500 servers and 200 apps in one container on one sma
 | Snapshots | About 2,000 a minute, four per server | The request validates, queues a job and answers `202` in milliseconds. The job writes only what changed. Finished jobs are deleted, not kept. |
 | Board refreshes | One per changed region | A region refreshes at most once a second, however many snapshots change it, and the last change always gets through. A snapshot that changes nothing refreshes nothing. |
 | GitHub polling | Two requests per project every 30 seconds | Requests carry ETags. A repository where nothing changed answers `304`, which costs no rate limit. |
-| Live stats | Only for pages that are open | Nothing streams until someone opens a server's page, and it stops within 30 seconds of the last viewer leaving. |
+| Live stats | Only for pages that are open | Nothing streams until someone opens a server's page, and it stops within 30 seconds of the last such page closing. |
 
 The board shows 25 rows a page, and groups servers by region above 30 servers.
 

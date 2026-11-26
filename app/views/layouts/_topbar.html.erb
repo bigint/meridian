@@ -26,7 +26,6 @@
           <p class="txt-strong truncate"><%= current_user.display_name %></p>
           <p class="txt-small txt-muted truncate"><%= current_user.email_address %></p>
         </div>
-        <%= badge current_user.role.capitalize, tone: (:accent if current_user.admin?), class: "ml-auto" %>
       </div>
       <div class="menu__section" data-controller="theme" role="group" aria-labelledby="theme-label">
         <p id="theme-label" class="menu__label">Theme</p>

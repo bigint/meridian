@@ -7,15 +7,6 @@ icon: "activity"
 
 A server's page shows its CPU, memory, load and disk once a second while you look at it. A logs page shows a container's log lines, or an app's lines from every server, as they are written. Both come from the [agent](/reference/glossary#agent) on each server, flow only while a page is open, and are never stored.
 
-## Who can see what
-
-| Page | Who |
-| --- | --- |
-| Live stats on a server's page | Everyone who can sign in |
-| A container's logs, an app's logs | Deployers and admins |
-
-Logs can hold secrets, so viewers can't open them. Viewers don't see the **Logs** buttons, and the logs pages answer them with `You don't have permission to do that.`. See [Roles](/concepts/roles).
-
 ## Live stats
 
 Open a server from **Servers**, the board, or the map. Its page has two live parts, **Host** and **Containers**.
@@ -147,7 +138,7 @@ The agent keeps one WebSocket open to Meridian's `/cable`. It connects out to Me
 
 Meridian passes stats and log lines on to the open pages and keeps them nowhere else. They go through the cable database, which keeps each message for about a minute. Leave the page, and the lines are gone.
 
-Meridian does store the fact that someone looked. Each time someone opens a logs page, Activity records `logs.viewed`, with who, and which container or app. See [Activity](/guides/activity).
+Meridian does store the fact that you looked. Each time you open a logs page, Activity records `logs.viewed`, with who, and which container or app. See [Activity](/guides/activity).
 
 ## Related
 

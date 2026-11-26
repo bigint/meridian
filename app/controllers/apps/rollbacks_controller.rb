@@ -1,5 +1,4 @@
 class Apps::RollbacksController < ApplicationController
-  require_deployer
   rate_limit to: 10, within: 1.minute, only: :create
 
   def create

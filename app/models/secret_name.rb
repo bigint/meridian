@@ -26,7 +26,7 @@ class SecretName < ApplicationRecord
     end
 
     # A name sync recorded and nobody set goes with its last reference. One
-    # that was set, or that an admin added by hand, stays, referenced by nothing.
+    # that was set, or that was added by hand, stays, referenced by nothing.
     project.secret_names.where.not(name: references.keys).each do |secret|
       next unless secret.referenced?
       secret.last_set_at ? secret.update!(apps: []) : secret.delete

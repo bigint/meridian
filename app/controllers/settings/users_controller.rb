@@ -1,61 +1,16 @@
-class Settings::UsersController < AdminController
-  before_action :set_user, only: %i[ edit update destroy ]
-
-  def index
-    @users = User.order(:email_address)
-  end
-
-  def new
-    @user = User.new
-  end
-
-  def create
-    @user = User.new(user_params)
-    if @user.save
-      Event.record("user.created", subject: @user, summary: "Added #{@user.email_address} as #{@user.role}")
-      redirect_to settings_users_path, notice: "#{@user.email_address} can now sign in."
-    else
-      render :new, status: :unprocessable_entity
-    end
-  end
-
-  def edit
-  end
-
+# The one user's own name, email address and password, on the Settings page.
+class Settings::UsersController < ApplicationController
   def update
-    attributes = user_params
+    @user = User.find(current_user.id) # a failed save must not change who the layout shows
+    attributes = params.expect(user: [ :name, :email_address, :password ])
     attributes.delete(:password) if attributes[:password].blank?
-    if last_admin_demoted?(attributes)
-      redirect_to edit_settings_user_path(@user), alert: "There must always be one admin."
-    elsif @user.update(attributes)
+    if @user.update(attributes)
       @user.sessions.where.not(id: Current.session.id).destroy_all if attributes.key?(:password)
-      Event.record("user.updated", subject: @user, summary: "Updated #{@user.email_address} (#{@user.role})")
-      redirect_to settings_users_path, notice: "Saved."
+      Event.record("user.updated", subject: @user, summary: "Updated your account")
+      redirect_to settings_account_path, notice: "Account saved."
     else
-      render :edit, status: :unprocessable_entity
+      @account = Account.current
+      render "settings/accounts/show", status: :unprocessable_entity
     end
   end
-
-  def destroy
-    if @user == current_user
-      redirect_to settings_users_path, alert: "You can't remove yourself."
-    else
-      @user.destroy
-      Event.record("user.removed", summary: "Removed #{@user.email_address}")
-      redirect_to settings_users_path, notice: "Removed #{@user.email_address}."
-    end
-  end
-
-  private
-    def set_user
-      @user = User.find(params[:id])
-    end
-
-    def user_params
-      params.expect(user: [ :name, :email_address, :password, :role ])
-    end
-
-    def last_admin_demoted?(attributes)
-      @user.admin? && attributes[:role].present? && attributes[:role] != "admin" && User.admin.count == 1
-    end
 end

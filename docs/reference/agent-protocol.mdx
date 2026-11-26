@@ -204,7 +204,7 @@ For each lease, the agent keeps `until = max(until, now + min(seconds, 120))`. I
   {"type":"watch","seconds":30}
   ```
 
-  Someone has the server's page open. Each open page renews the lease every 10 seconds. Meridian sends at most one renewal per server every 5 seconds, however many people watch. A page that has been silent for 75 seconds, such as on a sleeping laptop, stops renewing.
+  Someone has the server's page open. Each open page renews the lease every 10 seconds. Meridian sends at most one renewal per server every 5 seconds, however many pages watch. A page that has been silent for 75 seconds, such as on a sleeping laptop, stops renewing.
 </ResponseField>
 
 <ResponseField name="tail" type="lease">
@@ -212,7 +212,7 @@ For each lease, the agent keeps `until = max(until, now + min(seconds, 120))`. I
   {"type":"tail","container":"<64-hex id>","seconds":30,"backlog":200}
   ```
 
-  A deployer is reading this container's logs, or an app's traffic through [kamal-proxy](/reference/glossary#kamal-proxy). A new reader asks for `backlog: 200` recent lines. Renewals come every 10 seconds, with `backlog: 0`. The agent accepts a backlog of up to 1,000.
+  Someone is reading this container's logs, or an app's traffic through [kamal-proxy](/reference/glossary#kamal-proxy). A new reader asks for `backlog: 200` recent lines. Renewals come every 10 seconds, with `backlog: 0`. The agent accepts a backlog of up to 1,000.
 </ResponseField>
 
 When an agent subscribes, Meridian sends it any watch lease still running. It also sends a `tail` with `backlog: 200` for each container someone is still reading. Without this, the agent would miss leases sent while it was away. The agent ignores messages of any other type.
@@ -295,7 +295,7 @@ Meridian keeps only the keys above, and for stats only finite numbers of zero or
 
 - Environment variables, commands, entrypoints, mounts or binds. The agent decodes only the fields on this page, and throws away the rest of Docker's answer as it reads it. A test checks this against sample data full of secrets.
 - Anything about containers that aren't Kamal's.
-- Logs, unless it runs with `MERIDIAN_LOGS=1` and a deployer is reading them. The agent writes them to no file and keeps none.
+- Logs, unless it runs with `MERIDIAN_LOGS=1` and someone is reading them. The agent writes them to no file and keeps none.
 - Docker API calls through `HTTP_PROXY`, even when one is set to reach Meridian.
 
 The agent calls only these Docker endpoints, and starts, stops and changes nothing:

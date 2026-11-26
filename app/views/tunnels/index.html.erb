@@ -23,7 +23,7 @@
       </h2>
       <div class="flex items-center gap-s">
         <%= link_to "Steps", tunnels_setup_path(project: tunnel.project.id), class: "btn btn--plain" %>
-        <% if current_user.admin? && tunnel.configs.one? %>
+        <% if tunnel.configs.one? %>
           <%= link_to "Edit connectors", edit_tunnels_connectors_path(project: tunnel.project.id, secret: tunnel.secret_name), class: "btn" %>
         <% end %>
       </div>

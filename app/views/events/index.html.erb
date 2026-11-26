@@ -1,10 +1,9 @@
 <% content_for :title, "Activity" %>
 <%= page_header "Activity", meta: "Everything Meridian did, and who asked for it." %>
 
-<%= disclosure "Filters", open: params[:action_name].present? || params[:actor].present? do %>
+<%= disclosure "Filters", open: params[:action_name].present? do %>
   <%= form_with url: events_path, method: :get, class: "filters" do |form| %>
     <div class="field"><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy" %></div>
-    <div class="field"><%= form.label :actor, "Who" %><%= form.select :actor, @actors.map { [ it.display_name, it.id ] }, { include_blank: "Anyone", selected: params[:actor] } %></div>
     <%= form.submit "Apply", name: nil, class: "btn" %>
   <% end %>
 <% end %>

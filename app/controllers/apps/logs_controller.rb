@@ -2,8 +2,6 @@
 class Apps::LogsController < ApplicationController
   MAX_PLACEMENTS = LogsChannel::MAX_PLACEMENTS
 
-  require_deployer
-
   def show
     @app = App.find(params[:app_id])
     @placements = @app.placements.includes(:server).running_first.limit(MAX_PLACEMENTS).to_a

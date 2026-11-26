@@ -31,7 +31,7 @@
           <p class="field__hint">Globs, comma separated. <code>config/deploy.staging.yml</code> is read as the <code>staging</code> destination of <code>config/deploy.yml</code>.</p>
           <%= field_errors(project, :config_globs) %>
         </div>
-        <label class="check"><%= form.check_box :direct_commits %> <span>Let admins commit changes directly instead of opening pull requests</span></label>
+        <label class="check"><%= form.check_box :direct_commits %> <span>Commit changes directly instead of opening pull requests</span></label>
       </div>
     </div>
   </div>

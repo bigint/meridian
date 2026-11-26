@@ -1,5 +1,4 @@
 class Apps::RedeploysController < ApplicationController
-  require_deployer
   rate_limit to: 5, within: 1.minute
 
   def create

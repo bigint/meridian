@@ -1,4 +1,4 @@
-# Creates the first admin. Only reachable while there are no users, and only
+# Creates the one user. Only reachable while there are no users, and only
 # with the setup code from the server's log (User.setup_code).
 class FirstRunsController < ApplicationController
   layout "auth"
@@ -11,7 +11,7 @@ class FirstRunsController < ApplicationController
   end
 
   def create
-    @user = User.new(params.expect(user: [ :name, :email_address, :password ]).merge(role: "admin"))
+    @user = User.new(params.expect(user: [ :name, :email_address, :password ]))
     if !ActiveSupport::SecurityUtils.secure_compare(params[:setup_code].to_s.strip.downcase, User.setup_code)
       @user.errors.add(:setup_code, "doesn't match the one in Meridian's log")
       render :show, status: :unprocessable_entity

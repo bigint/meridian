@@ -1,8 +1,0 @@
-<% content_for :title, "Edit #{@user.display_name}" %>
-<%= page_header @user.display_name, meta: @user.email_address do %>
-  <% unless @user == current_user %>
-    <%= button_to "Remove", settings_user_path(@user), method: :delete, class: "btn btn--danger",
-          form: { data: { turbo_confirm: "Remove #{@user.email_address}?" } } %>
-  <% end %>
-<% end %>
-<%= render "form", user: @user %>

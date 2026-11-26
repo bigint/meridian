@@ -48,7 +48,7 @@ Rails.application.routes.draw do
   namespace :settings do
     root "accounts#show"
     resource :account, only: %i[ show update ]
-    resources :users, except: :show
+    resource :user, only: :update
   end
 
   mount MissionControl::Jobs::Engine, at: "/jobs"

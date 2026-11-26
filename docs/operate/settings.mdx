@@ -8,9 +8,7 @@ Meridian stores settings in two places: the **Settings** page, for the whole ins
 
 ## The Settings page
 
-Only admins can open **Settings** (`/settings`). It has two tabs. **General** is described here. On **People**, admins add and remove people. See [People](/guides/people).
-
-Click **Save** on **General**, and Activity records `settings.updated`.
+**Settings** (`/settings`) is one page. **Workspace** and **Where Meridian runs** save together with **Save**, and Activity records `settings.updated`. **Your account** has its own **Save account** button.
 
 ### Workspace
 
@@ -34,6 +32,24 @@ Where Meridian itself sits on the map. The map centres its flows on this place: 
   From -180 to 180.
 </ResponseField>
 
+### Your account
+
+Your own sign-in details. Meridian has one account, the one you made at first run.
+
+<ResponseField name="Name" type="text">
+  Your name. Activity and the `Meridian-Actor:` trailer on Meridian's commits use it. When blank, they use your email address.
+</ResponseField>
+
+<ResponseField name="Email" type="email" required>
+  The address you sign in with.
+</ResponseField>
+
+<ResponseField name="New password" type="password">
+  From 12 to 72 characters. Leave it blank to keep the current one. A new password signs you out of every other session, and keeps you signed in here.
+</ResponseField>
+
+Click **Save account**, and Activity records `user.updated` as **Updated your account**.
+
 ### Connections
 
 The **Connections** card shows what Meridian read from its environment variables. Meridian doesn't store it. To change it, change the variables.
@@ -46,7 +62,7 @@ The **Connections** card shows what Meridian read from its environment variables
 
 ## Project settings
 
-Each [project](/reference/glossary#project) is one infra repository. Admins add one under **Projects → Add project**, and change it with **Edit** on the project's page. See [Projects](/guides/projects).
+Each [project](/reference/glossary#project) is one infra repository. Add one under **Projects → Add project**, and change it with **Edit** on the project's page. See [Projects](/guides/projects).
 
 <ResponseField name="Name" type="text" required>
   The project's name in Meridian.
@@ -69,7 +85,7 @@ Each [project](/reference/glossary#project) is one infra repository. Admins add 
 </ResponseField>
 
 <ResponseField name="Direct commits" type="checkbox" default="off">
-  **Let admins commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys and rollbacks are always commits.
+  **Commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys and rollbacks are always commits.
 </ResponseField>
 
 A new repository, branch, installation ID or config paths syncs the project as soon as you save. Other changes wait for the next push, or for the check Meridian makes every 30 seconds.

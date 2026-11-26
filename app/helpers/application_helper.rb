@@ -37,16 +37,15 @@ module ApplicationHelper
   end
 
   # A page's title, a line of context, and its actions (the block).
-  def page_header(title, meta: nil, tabs: nil, &actions)
+  def page_header(title, meta: nil, &actions)
     tag.header class: "page-header" do
-      row = tag.div(class: "page-header__row") do
+      tag.div(class: "page-header__row") do
         safe_join([
           tag.h1(title, class: "page-header__title"),
           (tag.span(meta, class: "page-header__meta") if meta),
           (tag.div(capture(&actions), class: "page-header__actions") if actions)
         ].compact)
       end
-      tabs ? row + tabs : row
     end
   end
 
@@ -105,13 +104,6 @@ module ApplicationHelper
     text = state ? Drift::SYMBOLS[state] : initials(name.to_s)
     data = state ? { state: state } : { tone: Zlib.crc32(name.to_s) % 5 }
     tag.span text, class: [ "avatar", ("avatar--small" if small) ], data: data, aria: { hidden: true }
-  end
-
-  # Sub-pages: [ label, url, current ] items.
-  def tabs(label, items)
-    tag.nav class: "tabs", aria: { label: label } do
-      safe_join(items.map { |text, url, current| link_to text, url, aria: { current: (current ? "page" : nil) } })
-    end
   end
 
   # Views of the same thing: [ label, url, current ] items.

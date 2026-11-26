@@ -9,12 +9,10 @@
 <header class="page-header">
   <div class="page-header__row">
     <h1 class="page-header__title"><%= @app.name %></h1>
-    <% if current_user.can_deploy? %>
-      <div class="page-header__actions">
-        <%= link_to app_traffic_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :traffic %>Traffic<% end %>
-        <%= link_to app_log_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>Logs<% end %>
-      </div>
-    <% end %>
+    <div class="page-header__actions">
+      <%= link_to app_traffic_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :traffic %>Traffic<% end %>
+      <%= link_to app_log_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>Logs<% end %>
+    </div>
   </div>
   <div class="flex flex-wrap items-center gap-s txt-muted">
     <%= badge @app.kind %>
@@ -89,7 +87,7 @@
               </div>
               <div class="row__trail">
                 <%= time_ago(release.committed_at) %>
-                <% if index.zero? && @releases.size > 1 && current_user.can_deploy? && @app.versioned? && @app.deployable? %>
+                <% if index.zero? && @releases.size > 1 && @app.versioned? && @app.deployable? %>
                   <%= button_to "Roll back", app_rollbacks_path(@app, release_id: release.id), class: "btn btn--small btn--danger",
                         form: { data: { turbo_confirm: "Revert #{release.short_sha} so the version file goes back to its previous value? CI deploys the result." } } %>
                 <% end %>

@@ -1,8 +1,6 @@
 <% content_for :title, "Projects" %>
 <%= page_header "Projects", meta: "A project is one Git repository that holds Kamal configs." do %>
-  <% if current_user.admin? %>
-    <%= link_to new_project_path, class: "btn btn--primary" do %><%= icon :plus %> Add project<% end %>
-  <% end %>
+  <%= link_to new_project_path, class: "btn btn--primary" do %><%= icon :plus %> Add project<% end %>
 <% end %>
 
 <div class="table-wrap">

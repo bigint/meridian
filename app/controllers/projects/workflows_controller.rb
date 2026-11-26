@@ -1,5 +1,5 @@
 # Adds the CI workflow that runs Kamal to the infra repository.
-class Projects::WorkflowsController < AdminController
+class Projects::WorkflowsController < ApplicationController
   def create
     project = Project.find(params[:project_id])
     proposal = project.propose_workflow(actor: current_user)

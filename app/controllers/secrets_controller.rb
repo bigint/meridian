@@ -1,5 +1,4 @@
 class SecretsController < ApplicationController
-  require_admin only: %i[ create update ]
   rate_limit to: 20, within: 1.minute, only: %i[ create update ]
 
   def index

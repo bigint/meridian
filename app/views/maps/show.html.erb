@@ -44,7 +44,7 @@
 
     <% unless @map.hub %>
       <%= alert_box do %><p>
-        <% if current_user.admin? %><%= link_to "Set where Meridian runs", settings_account_path %><% else %>An admin can set where Meridian runs<% end %>
+        <%= link_to "Set where Meridian runs", settings_account_path %>
         to see agent reports and deploys flowing on the map.
       </p><% end %>
     <% end %>

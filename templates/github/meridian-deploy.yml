@@ -27,10 +27,6 @@ on:
         required: true
         default: deploy
 
-concurrency:
-  group: meridian-${{ github.ref }}-${{ inputs.config }}-${{ inputs.destination }}
-  cancel-in-progress: false
-
 jobs:
   plan:
     # Set the repository variable MERIDIAN_RUNS_ON to use your own runner
@@ -89,6 +85,12 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.plan.outputs.matrix) }}
     name: ${{ matrix.command }} ${{ matrix.config }} ${{ matrix.destination }}
+    # One Kamal run per app at a time, whether a push or a dispatch started it.
+    # Runs for different apps never wait on or cancel each other; a newer
+    # pending run for the same app replaces an older pending one.
+    concurrency:
+      group: meridian-${{ matrix.config }}-${{ matrix.destination }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
       - uses: ruby/setup-ruby@v1

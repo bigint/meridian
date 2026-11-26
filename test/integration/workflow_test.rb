@@ -54,6 +54,14 @@ class WorkflowTest < ActionDispatch::IntegrationTest
     assert_equal %w[ deploy/blog.yml deploy/web.yml ], matrix.map { it["config"] }.sort
   end
 
+  test "Kamal runs one at a time per app, and pushes for different apps never cancel each other" do
+    workflow = YAML.safe_load(@project.workflow_template)
+
+    assert_nil workflow["concurrency"], "a workflow-wide group lets a third push cancel the second, pending one"
+    assert_equal({ "group" => "meridian-${{ matrix.config }}-${{ matrix.destination }}", "cancel-in-progress" => false },
+      workflow.dig("jobs", "kamal", "concurrency"))
+  end
+
   test "viewers can't deploy" do
     sign_in_as users(:viewer)
     @project.sync

@@ -1,13 +1,17 @@
 ---
 title: "How Meridian works"
 sidebarTitle: "How it works"
-description: "Git says what should run, agents say what does run, and Meridian shows the difference. Every change it makes is a commit that CI deploys."
+description: "Git says what should run. An agent on each server says what does run. Meridian shows the difference, and every change it makes is a commit that GitHub Actions deploys."
 icon: "route"
 ---
 
-Meridian holds two pictures of your fleet and compares them. Git says what should run where. A small agent on each server says what does run there. The difference between the two is [drift](/concepts/drift), and the board is built from it.
+Meridian shows what runs on your servers and lets you change it. This page explains the whole model, then follows one deploy from start to finish.
 
-Meridian never acts on a server. To change what runs, it writes to Git, and your CI runs Kamal.
+## The idea
+
+Meridian compares two lists. Git says what should run on each server. A small program on each server, the [agent](/reference/glossary#agent), says what does run. The difference between the two lists is [drift](/reference/glossary#drift), and the board is built from it.
+
+Meridian never touches a server. To change what runs, it writes to Git. GitHub Actions sees the change and runs [Kamal](/reference/glossary#kamal), a tool that deploys apps as Docker containers to your own servers over SSH.
 
 ```mermaid
 flowchart LR
@@ -20,61 +24,56 @@ flowchart LR
   s --- a
 ```
 
-## What should run comes from Git
+## Words this page uses
 
-A [project](/guides/projects) is one infra repository. Meridian syncs it when one of these happens:
-
-- GitHub sends a `push` webhook for the default branch.
-- The reconcile job runs. It runs every 30 seconds for every project.
-- An admin presses **Sync now** on the project's page.
-
-A sync reads the repository through the GitHub API. It never clones it. It lists the tree at the head of the default branch and keeps the files that match the project's config paths, with their destination files and version files. Blobs are cached by SHA, so an unchanged file is never downloaded twice. Meridian asks for the branch head with the ETag of the last answer, so an unchanged repository costs no rate limit.
-
-Meridian then parses the configs with Kamal's own code, `Kamal::Configuration`, the same code `kamal deploy` runs. ERB, aliases, destinations, roles and accessories come out as Kamal sees them. ERB in a config is Ruby from your repository, so the parser runs as `bin/kamal-parse` in a separate process with an empty environment. It can't read Meridian's credentials.
-
-From the parsed configs, the sync records:
-
-| Record | One per |
+| Word | What it means |
 | --- | --- |
-| App | Config and destination. See [Apps and destinations](/concepts/apps-and-destinations). |
-| Server | Host that a config's roles name, until an agent claims it. See [Servers and agents](/concepts/servers-and-agents). |
-| Assignment | App, server and role that Git places together. |
-| Release | Commit that changed the app's version file, or its config when it has none. See [Versions and releases](/concepts/versions-and-releases). |
+| [Infra repository](/reference/glossary#infra-repository) | The Git repository that holds your Kamal configs. Meridian reads it and writes to it. Each one you add is a [project](/reference/glossary#project). |
+| [Config](/reference/glossary#config) | A Kamal file, such as `config/deploy.yml`, that says what an app is and which servers run it. |
+| [App](/reference/glossary#app) | One config plus one [destination](/reference/glossary#destination), such as `production`. |
+| [Version file](/reference/glossary#version-file) | A one-line file next to a config that holds the [version](/reference/glossary#version) to run, such as `v42`. Meridian deploys by changing it. |
+| [Release](/reference/glossary#release) | A commit that changed an app's version file. The newest release is what Git says should run. |
 
-A config that fails to parse shows its error with a file and line on the project's page. Its app stays as the last good parse left it. Only an app whose config is gone from Git is removed.
+## One deploy, start to finish
 
-## What does run comes from the agents
+Take one app, `shop · production`, in the infra repository `acme/infra`. It has a config, a destination file and a version file:
 
-Every 15 seconds, give or take 20%, each agent sends a snapshot to `/agent/snapshots`. A snapshot lists the containers that carry Kamal labels, with their state, health and version. Meridian answers `202` and records the snapshot in a background job. The server's placements are upserted, the ones that went away are deleted, and the server's last-seen time moves on.
+<Tree>
+  <Tree.Folder name="config" defaultOpen>
+    <Tree.File name="deploy.yml" />
+    <Tree.File name="deploy.production.yml" />
+    <Tree.File name="deploy.production.version" />
+  </Tree.Folder>
+</Tree>
 
-The agent only makes outbound requests. It reads Docker through a socket proxy that allows only `GET` requests under `/containers`: listing and inspecting them, and their stats and logs while someone watches. Meridian never connects to a server, and it holds no SSH key.
+The version file holds `v41`, and the server `web-1` runs `v41`, so the board shows **in sync**. You want to ship `v42`, an image your app's CI has already built.
 
-The agent also keeps a WebSocket open to `/cable`. Meridian uses it for live CPU and memory figures, container logs and request traffic, and only while someone has that page open. See [Live stats and logs](/guides/live-stats-and-logs).
+<Steps>
+  <Step title="You press Deploy">
+    On the app's page, you type `v42` in **Ship a version** and press **Deploy**.
+  </Step>
+  <Step title="Meridian commits the version">
+    Meridian writes `v42` into `config/deploy.production.version`, in one commit on the default branch:
 
-## Drift is the difference
+    ```text
+    deploy(shop-production): v42
 
-Drift is computed each time a page reads it. It is never stored. For every app on every server, Meridian compares the versions the agent reports with the newest release in Git, and gives the cell one of six states: in sync, drifted, missing, stray, stale or unknown. [Drift](/concepts/drift) has the exact rules.
-
-Pages update themselves. When a snapshot changes what a page shows, Meridian refreshes open boards for that server's region, at most about once a second.
-
-## Changes go to Git, never to servers
-
-Every change Meridian makes lands in your infra repository or in GitHub's settings for it:
-
-| Action | What Meridian writes |
-| --- | --- |
-| Deploy | A commit that puts the version in the app's version file, on the default branch. |
-| Roll back | A commit that puts back the version file's previous value. |
-| Redeploy | A `workflow_dispatch` of the deploy workflow, for the version already in the file. |
-| New app, CI workflow, tunnel connectors | A pull request on a `meridian/…` branch, or a direct commit when the project allows it and an admin acts. |
-| Preview | A destination file `<config>.pr-<n>.yml` and a `workflow_dispatch`. |
-| Secret value | An encrypted GitHub Actions secret on the repository. Meridian keeps the name only. |
-
-A commit that a person asked for carries a `Meridian-Actor:` trailer with their name and email. Preview commits never carry one, even when a person destroys the preview. Every action lands in [Activity](/guides/activity).
-
-CI does the deploying. The workflow that Meridian adds, `.github/workflows/meridian-deploy.yml`, runs on any push that changes a `*.version` file and calls `kamal deploy` once for each config and destination that changed. Kamal connects to your servers over SSH from the runner, exactly as it would from your laptop. See [CI workflow](/reference/ci-workflow).
-
-## A deploy, end to end
+    Meridian-Actor: Ada Lovelace <ada@example.com>
+    ```
+  </Step>
+  <Step title="Git now says v42">
+    GitHub sends Meridian a [webhook](/reference/glossary#webhook), a message that says the branch changed. Meridian records release `v42`. The server still runs `v41`, so the cell turns **drifted**.
+  </Step>
+  <Step title="GitHub Actions runs Kamal">
+    The [CI workflow](/reference/glossary#ci-workflow), `.github/workflows/meridian-deploy.yml`, sees that a version file changed. It runs `kamal deploy -c config/deploy.yml -d production --version v42 --skip-push`. Kamal connects to `web-1` over SSH, as it would from your laptop.
+  </Step>
+  <Step title="Meridian follows the run">
+    Meridian shows the run's status under **Current deploy** on the app's page: queued, in progress, then completed.
+  </Step>
+  <Step title="The agent sees v42">
+    The agent on `web-1` reports that `shop` runs `v42`. Git and the server agree, so the cell turns **in sync**.
+  </Step>
+</Steps>
 
 ```mermaid
 sequenceDiagram
@@ -86,7 +85,7 @@ sequenceDiagram
   participant S as Server
   participant A as Agent
   You->>M: Deploy v42
-  M->>G: Commit config/deploy.version = v42
+  M->>G: Commit config/deploy.production.version = v42
   G-->>M: push webhook
   M->>G: Read the tree, record release v42
   G->>CI: Push changed *.version
@@ -96,20 +95,55 @@ sequenceDiagram
   M-->>You: Cells turn in sync
 ```
 
-The deploy's status comes from the workflow's runs. Meridian matches a run to an app by its commit SHA, through `workflow_run` webhooks and by polling the branch's runs every 30 seconds. Progress on each server comes from the agents. A server is done when its agent reports the new version running.
+A rollback works the same way. Meridian commits the previous version, and CI deploys it. See [Versions and releases](/concepts/versions-and-releases).
 
-## Webhooks are optional
+## Where "should run" comes from
 
-Webhooks make Meridian react within a second or two. Without them, the reconcile job finds the same pushes and workflow runs within 30 seconds. Pull request previews are the exception. They start from a `pull_request` webhook and need one.
+Meridian reads each infra repository through the GitHub API. This read is a sync. It runs every 30 seconds, when GitHub sends a `push` webhook, and when an admin presses **Sync now**.
+
+Meridian reads each config with Kamal's own code, so it sees what `kamal deploy` would see. A config that fails to parse shows its file and line on the project's page. Its app keeps the last good parse. See [Apps and destinations](/concepts/apps-and-destinations).
+
+## Where "does run" comes from
+
+By default, each agent sends Meridian a snapshot every 15 seconds. A snapshot lists the containers that Kamal started, with their state, health and version. The agent only reads, and it only connects out. Meridian holds no SSH key. See [Servers and agents](/concepts/servers-and-agents).
+
+## Drift is the difference
+
+For every app on every server, Meridian compares the agent's report with the newest release in Git. Each cell gets one of six states: in sync, drifted, missing, stray, stale or unknown. Open pages update themselves. [Drift](/concepts/drift) has the exact rules.
+
+## Every change goes to Git
+
+| You do | Meridian writes |
+| --- | --- |
+| Deploy | A commit that puts the version in the app's version file, on the default branch. |
+| Roll back | A commit that puts back the version file's previous value. |
+| Redeploy | A request to run the deploy workflow again, for the version already in the file. |
+| New app, CI workflow, tunnel connectors | A pull request on a `meridian/…` branch, or a direct commit when the project allows it and an admin acts. |
+| Preview | A destination file `<config>.pr-<n>.yml`, and a request to run the deploy workflow. |
+| Secret value | An encrypted GitHub Actions secret on the repository. Meridian keeps the name only. |
+
+A commit that a person asked for names them in a `Meridian-Actor:` line. Preview commits never carry one. Every action shows in [Activity](/guides/activity).
+
+Webhooks are optional. With them, Meridian reacts within a second or two. Without them, it finds the same changes within 30 seconds. [Previews](/guides/previews) are the exception. A [preview](/reference/glossary#preview) starts from a `pull_request` webhook, so it needs one.
 
 ## What Meridian never does
 
 - It never opens an SSH connection, and it never runs Kamal itself.
 - It never stores, logs or shows a secret value.
-- It never reads `.kamal/secrets` files, which may hold literal values.
-- It never changes a server. The agent's Docker access is read-only.
+- It never reads `.kamal/secrets` files, because they can hold real secret values.
+- It never changes a server.
 
-Uninstall Meridian and your infra repository still holds every config, version and deploy commit. You lose only what Meridian keeps itself: the activity log, people, agent tokens and settings.
+If you uninstall Meridian, Git still holds every config, version and deploy. You lose only the activity log, people, agent tokens and settings.
+
+<Accordion title="How this works under the hood">
+  A sync never clones the repository. It lists the files at the head of the default branch and keeps the ones that match the project's config paths. It downloads each file once and caches it by its Git SHA, the ID Git gives each file's contents. It also asks GitHub whether the branch changed since the last answer, so an unchanged repository costs no API quota.
+
+  Configs can hold ERB, which is Ruby code from your repository. So the parser, `bin/kamal-parse`, runs as a separate process with an empty environment. It can't read Meridian's credentials.
+
+  An agent's snapshot goes to `/agent/snapshots`. Meridian answers `202` and records it in a background job. The agent spaces its snapshots 15 seconds apart, give or take 20%. It reads Docker through a proxy that allows only `GET` requests under `/containers`. Live stats, logs and requests travel over a WebSocket to `/cable`, only while someone has the page open.
+
+  A deploy's status comes from the deploy workflow's runs. Meridian matches a run to an app by its commit SHA. It hears about runs from `workflow_run` webhooks, and it also checks the branch's runs every 30 seconds. When a snapshot changes what a page shows, Meridian refreshes open boards for that server's region, at most about once a second.
+</Accordion>
 
 ## Related
 

@@ -1,10 +1,14 @@
 ---
 title: "Quickstart"
-description: "Run Meridian on your machine with Docker, seed a demo fleet of 500 servers and 200 apps, and find your way around in two minutes."
+description: "Run Meridian on your machine with Docker, add a demo fleet of 500 servers and 200 apps, and look around in two minutes."
 icon: "rocket"
 ---
 
-In two minutes you will have Meridian running in Docker, with a demo fleet that has real drift on it. Nothing connects to GitHub or to your servers. You need Docker.
+Run Meridian on your own machine in two minutes, with a demo fleet to look at. Nothing connects to GitHub or to your servers.
+
+## Before you start
+
+You need [Docker](https://docs.docker.com/get-docker/) and `openssl`.
 
 <Steps>
   <Step title="Start Meridian">
@@ -16,11 +20,11 @@ In two minutes you will have Meridian running in Docker, with a demo fleet that 
       ghcr.io/bigint/meridian:v0.1.0
     ```
 
-    The `meridian` volume holds the SQLite databases. `MERIDIAN_URL` is the address you open Meridian at. A plain `http://` URL turns off the HTTPS redirect, which you want on your own machine.
+    The `meridian` volume holds Meridian's SQLite databases. `MERIDIAN_URL` is the address you open Meridian at. A plain `http://` address turns off the redirect to HTTPS, which you want on your own machine.
   </Step>
 
   <Step title="Create the first admin">
-    Open [localhost:3000](http://localhost:3000). Meridian shows **Welcome to Meridian** and asks for a **Setup code**. Opening the page writes the code to the container's log:
+    Open [localhost:3000](http://localhost:3000). Meridian shows **Welcome to Meridian** and asks for a **Setup code**. Opening the page writes the code to the container's log. Read it:
 
     ```bash
     docker logs meridian 2>&1 | grep "setup code"
@@ -30,14 +34,14 @@ In two minutes you will have Meridian running in Docker, with a demo fleet that 
     [5f1c2e3a-8d4b-4f6e-9a7c-2b1d0e3f4a5b] Meridian setup code: 3e1f0c9a8b7d6e5f4a3b
     ```
 
-    Paste it in, add your name, an email and a password of at least 12 characters, and press **Create admin**. Meridian signs you in and opens **Projects**.
+    Paste the code in. Add your name, an email and a password of at least 12 characters, and press **Create admin**. Meridian signs you in and opens **Projects**.
 
     <Tip>
     `docker exec meridian bin/rails meridian:setup_code` prints the same code.
     </Tip>
   </Step>
 
-  <Step title="Seed a demo fleet">
+  <Step title="Add a demo fleet">
     ```bash
     docker exec meridian bin/rails meridian:demo
     ```
@@ -46,40 +50,40 @@ In two minutes you will have Meridian running in Docker, with a demo fleet that 
     Seeded Demo fleet: 500 servers, 200 apps. Open the board to look around.
     ```
 
-    The demo adds a project called **Demo fleet** with 200 apps on 500 servers in eight regions, from `ams` to `tor`. Each app has three releases, `v10` to `v12`. Most servers run `v12`. Some run `v11` or nothing, a few apps run where Git doesn't put them, and a few servers have quiet agents. Every name is under `example.com`.
+    You now have a project called **Demo fleet**, with 200 apps on 500 servers in eight regions, from `ams` to `tor`. Each app has three releases, `v10` to `v12`. Most servers run `v12`. About 6% of app placements run `v11`, and about 3% run nothing. About 3% of apps also run on one server where Git doesn't put them. About 3% of servers have quiet agents, and 2% have no agent. Every name is under `example.com`.
 
-    For a smaller fleet, set `SERVERS` and `APPS`:
+    For a smaller fleet, set `SERVERS` and `APPS`. Running the task again replaces the demo fleet.
 
     ```bash
     docker exec -e SERVERS=40 -e APPS=12 meridian bin/rails meridian:demo
     ```
-
-    Running the task again replaces the demo fleet.
   </Step>
 
   <Step title="Look around">
     Open **Board** in the sidebar, and try these in order:
 
-    1. **Needs attention** lists what is wrong, worst first, in plain sentences. Each item has a button, such as **Open atlas-0**, that takes you to the app or server.
-    2. Under **Every app on every server**, press a state chip such as **Drifted** to show only those cells. Press it again to show all.
-    3. Click an app's name in the grid. The inspector opens on the right with its servers, its last three releases and a **Ship a version** box.
-    4. Switch **Apps × servers** to **Servers × apps** to turn the grid around. With more than 30 servers, or servers in more than one region, the grid groups them by region.
-    5. Open **Map**. Each dot is a place, coloured by the worst state there, with lines between places that run the same apps. Click a dot to see its servers on the right.
-    6. Type `atlas` in the search box at the top and press <kbd>Enter</kbd> to jump to the first match.
+    1. **Needs attention** lists what is wrong, worst first. Each item has a button, such as **Open atlas-0**, that opens the app or server.
+    2. Under **Every app on every server**, press **Drifted** to show only drifted cells. Press it again to show all of them.
+    3. Click an app's name in the grid. The inspector opens on the right, with the app's servers, its last three releases and a **Ship a version** box.
+    4. Switch **Apps × servers** to **Servers × apps** to turn the grid around.
+    5. Open **Map**. Each dot is a place, coloured by the worst state there. Lines join places that run the same apps. Click a dot to see its servers.
+    6. Type `atlas` in the search box at the top and press <kbd>Enter</kbd> to open the first match.
 
-    The [tour](/tour) covers every page.
+    The [tour](/tour) covers every screen.
   </Step>
 </Steps>
 
 ## What the demo can't do
 
-The demo fleet has no agents and no GitHub behind it, so a few things behave differently from a real install:
+The demo has no real agents and no GitHub behind it:
 
-- About a minute after you seed it, every server that has reported turns **stale**. Its agents were never real, and Meridian calls a server stale once its agent has been silent for 45 seconds. Run `meridian:demo` again to bring the drift back.
-- **Deploy**, **Redeploy** and **Roll back** fail, because they go through GitHub to the demo's repository, `example/fleet`, which doesn't exist.
+- About a minute after you add it, every server that has reported turns **stale**. Meridian marks a server stale when its agent has been silent for 45 seconds. Run `meridian:demo` again to bring the drift back.
+- **Deploy**, **Redeploy** and **Roll back** fail. They go through GitHub to the demo's repository, `example/fleet`, which doesn't exist.
 - **Settings** shows GitHub as **Not connected**.
 
 ## Clean up
+
+This removes the container and its data:
 
 ```bash
 docker rm -f meridian
@@ -93,6 +97,6 @@ docker volume rm meridian
     Connect GitHub, deploy Meridian with Kamal and add your infra repository.
   </Card>
   <Card title="How Meridian works" icon="route" href="/concepts/how-it-works">
-    Git, agents and drift, in one page.
+    Git, agents and drift, with one deploy from start to finish.
   </Card>
 </Columns>

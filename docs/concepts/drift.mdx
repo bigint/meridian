@@ -6,20 +6,33 @@ icon: "split"
 
 import DriftStates from "/snippets/drift-states.mdx";
 
-Drift is the difference between what Git says should run and what an agent reports running. Meridian works it out for every app on every server, each time a page asks. It is never stored, so it can't go out of date.
+Drift is the difference between what Git says should run and what the agent on a server sees running. This page lists the six states a board cell can be in, and the exact rule that picks one.
+
+## The idea
+
+For every app on every server, Meridian compares the app's newest [release](/reference/glossary#release) in Git with the versions the [agent](/reference/glossary#agent) reports. The agent is a small read-only program on each server. Meridian works out the state each time a page asks, so it is never out of date.
 
 <DriftStates />
 
+## Examples
+
+Take the app `shop`. Its version file says the newest release is `v42`.
+
+| Git assigns | The agent reports | State |
+| --- | --- | --- |
+| `web` | `web` running `v42` | In sync |
+| `web` | `web` running `v41` | Drifted |
+| `web` | `web` running `v41` and `v42` | Drifted, during a rolling deploy |
+| `web` and `job` | `web` running `v42`, no `job` | Missing, for the `job` role |
+| nothing | `web` running `v42` | Stray |
+| `web` | its last report came 2 minutes ago | Stale |
+| `web` | never reported | Unknown |
+
+If `shop` had no version file, the first three rows would be **unknown**, because there is nothing to compare with. The other rows keep their state.
+
 ## The rule
 
-For one app, one server and one role, Meridian knows four things:
-
-- whether Git assigns that role of the app to the server,
-- the versions of that role's running containers, as the server's agent last reported them,
-- the app's newest release, when the app has a version file,
-- when the server's agent last reported.
-
-It checks them in this order, and the first test that matches gives the state:
+For one app, one server and one role, Meridian asks these questions in order. The first match gives the state.
 
 <Steps>
   <Step title="Has the server's agent ever reported?">
@@ -42,15 +55,24 @@ It checks them in this order, and the first test that matches gives the state:
   </Step>
 </Steps>
 
-The code is `Drift.state` in `app/models/drift.rb`. Only containers in the `running` state count. A container that exited, is restarting or is paused counts as nothing running.
+Only containers in the `running` state count. A container that exited, is restarting or is paused counts as nothing running.
 
-A container belongs to an app when its Kamal labels `service` and `destination` match the app's. A container whose service matches no app in Meridian, such as an app from a repository you haven't added, is not on the board.
+A container belongs to an app when its Kamal labels `service` and `destination` match the app's. A container that matches no app in Meridian, such as one from a repository you haven't added, is not on the board.
+
+<Accordion title="How this works under the hood">
+  The code is `Drift.state` in `app/models/drift.rb`. It takes four inputs:
+
+  - Whether Git assigns the role to the server.
+  - The versions of that role's running containers, from the last snapshot.
+  - The app's newest release.
+  - When the server's agent last reported.
+</Accordion>
 
 ## Roles and the worst state
 
-An app often runs several roles on one server, such as `web` and `job`. Each role gets a state of its own, and the cell shows the worst of them. A stopped `job` container is never hidden behind a running `web` one.
+An app often runs several roles on one server, such as `web` and `job`. Each role gets its own state, and the cell shows the worst one. So a stopped `job` container never hides behind a running `web` one.
 
-From worst to best, the order is:
+From worst to best:
 
 1. Missing
 2. Drifted
@@ -61,31 +83,15 @@ From worst to best, the order is:
 
 The map uses the same order for each place, and the **Needs attention** list sorts by it.
 
-## Examples
-
-Take the app `shop` with a version file whose newest release is `v42`.
-
-| Git assigns | The agent reports | State |
-| --- | --- | --- |
-| `web` | `web` running `v42` | In sync |
-| `web` | `web` running `v41` | Drifted |
-| `web` | `web` running `v41` and `v42` | Drifted, during a rolling deploy |
-| `web` and `job` | `web` running `v42`, no `job` | Missing, for the `job` role |
-| nothing | `web` running `v42` | Stray |
-| `web` | its last report came 2 minutes ago | Stale |
-| `web` | never reported | Unknown |
-
-The same server running `shop` without a version file is **unknown** in the first three rows. Without a newest release there is nothing to compare. The missing, stray, stale and never-reported rows keep their state.
-
 ## Stale timing
 
-An agent is quiet when its last snapshot is older than three of its intervals, and never less than 45 seconds:
+An agent is quiet when its last snapshot is older than three of its intervals. It is never less than 45 seconds:
 
 ```text
 stale after = max(3 × interval, 45 seconds)
 ```
 
-Each snapshot says the agent's interval, `MERIDIAN_INTERVAL`, before jitter. Meridian assumes 15 seconds for an agent that doesn't send it.
+The interval is the agent's `MERIDIAN_INTERVAL`, which each snapshot reports. Meridian assumes 15 seconds for an agent that doesn't send it.
 
 | `MERIDIAN_INTERVAL` | Stale after |
 | --- | --- |
@@ -94,27 +100,23 @@ Each snapshot says the agent's interval, `MERIDIAN_INTERVAL`, before jitter. Mer
 | `30s` | 90 seconds |
 | `1m` | 3 minutes |
 
-The agent moves each interval up to 20% either way, as jitter. Three intervals leave room for the jitter and one lost snapshot, so a single late report doesn't flag a server.
+A stale cell is not a fault in the app. It says only that Meridian can't see the server right now. The server's page keeps the last snapshot's containers until the agent reports again.
 
-A quiet agent sends no snapshots, so nothing would redraw its cells. Once a minute, Meridian refreshes open pages for every quiet server, so a cell turns stale within about a minute of crossing the line. The first snapshot after a silence redraws at once.
+<Accordion title="Edge cases">
+  The agent moves each interval up to 20% earlier or later. Three intervals leave room for that and one lost snapshot, so a single late report doesn't flag a server.
 
-A stale cell is not a fault in the app. It says only that Meridian can't see the server right now. The last snapshot's containers stay on the server's page until the agent reports again.
+  A quiet agent sends nothing, so nothing would redraw its cells. Once a minute, Meridian refreshes open pages for every quiet server. A cell turns stale within about a minute of crossing the line. The first snapshot after a silence redraws at once.
+</Accordion>
 
 ## What drift doesn't tell you
 
-- **Whether the app works.** In sync means the right version is running. The containers' health checks show in the **Health** column on the app's page.
-- **Whether Git is right.** Meridian compares against the newest release in Git. A commit that Meridian hasn't synced yet shows up within 30 seconds, or at once with webhooks.
+- **Whether the app works.** In sync means the right version runs. The **Health** column on the app's page shows the containers' health checks.
+- **Whether Git is right.** Meridian compares with the newest release it has read from Git. A new commit shows up within 30 seconds, or at once with webhooks.
 - **Anything about containers without Kamal labels.** The agent reports only containers that Kamal started, plus `kamal-proxy`.
 
 ## Needs attention
 
-The board's **Needs attention** list turns drift into sentences, worst first:
-
-- One item for each missing, drifted or stray cell, such as **shop** on **web-1** runs `v41`, not `v42` from Git.
-- One item for each quiet server, not one for each app on it.
-- One item for all of them, such as **5 agents** have gone quiet, when more than three servers are quiet.
-
-The board shows the first four items, and the rest under a **more things need attention** disclosure. The number next to **Board** in the sidebar counts this list. It refreshes at most every 15 seconds.
+The board's **Needs attention** list turns missing, drifted, stray and stale cells into sentences, worst first. One quiet server is one item, however many apps run on it. The number next to **Board** in the sidebar counts this list, and refreshes at most every 15 seconds. See [Board and map](/guides/board-and-map).
 
 ## Related
 

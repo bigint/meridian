@@ -1,25 +1,33 @@
 ---
 title: "People and roles"
 sidebarTitle: "Roles"
-description: "Viewers read, deployers also ship, and admins run Meridian. How people sign in, how the first admin is created, and what each role can do."
+description: "Viewers look, deployers also deploy and roll back, and admins do everything. How people sign in, how you create the first admin, and what each role can do."
 icon: "shield"
 ---
 
 import Roles from "/snippets/roles.mdx";
 
-Everyone who signs in to Meridian has one of three roles. A **viewer** sees everything except live logs and traffic. A **deployer** can also deploy, roll back, and read live logs and traffic. An **admin** does everything else, from adding projects to managing people. A new person is a viewer unless an admin picks another role.
+Everyone who signs in to Meridian has one of three [roles](/reference/glossary#roles). The role decides what that person can change.
+
+## The three roles
+
+- A **viewer** sees everything except live logs and traffic.
+- A **deployer** can also deploy, roll back, and read live logs and traffic.
+- An **admin** can do everything else, from adding projects to managing people.
+
+A new person is a viewer unless an admin picks another role.
 
 <Roles />
 
-Reading is not restricted by role, except for Settings and the jobs dashboard at `/jobs`, which only admins open. Viewers see every app, server, preview, tunnel, agent, secret name and activity entry. Roles limit what a person can change, plus live logs and traffic, which can hold secrets.
+Every role can read every app, server, preview, tunnel, agent, secret name and activity entry. Only admins can open **Settings** and the jobs dashboard at `/jobs`. Live logs and traffic need a deployer or admin, because they can hold secrets.
 
-A button that a person's role doesn't allow is hidden. A request made anyway is refused with **You don't have permission to do that.** Requests that don't ask for a page get `403 Forbidden`.
+Meridian hides each button that your role doesn't allow. If you send the request anyway, Meridian shows **You don't have permission to do that.** A request for something other than a page gets `403 Forbidden`.
 
 ## The first admin
 
-A fresh Meridian has no people. Every page sends you to the welcome page, `/first_run`, which creates the first admin. It asks for a **Setup code** as well as a name, email and password.
+A fresh Meridian has no people. Every page sends you to the welcome page, `/first_run`, which creates the first admin. It asks for a **Setup code**, a name, an email and a password.
 
-The setup code proves that you run the server. It is 20 hexadecimal characters, derived from `SECRET_KEY_BASE`, so Meridian stores it nowhere. Get it in one of two ways:
+The setup code proves that you run the server. It is 20 hexadecimal characters, worked out from `SECRET_KEY_BASE`, so Meridian stores it nowhere. Meridian writes the code to its log each time someone opens the welcome page. So open the page first, then read the code with one of these commands:
 
 <CodeGroup>
 
@@ -37,37 +45,29 @@ docker exec meridian bin/rails meridian:setup_code
 
 </CodeGroup>
 
-Meridian writes the code to its log each time someone opens the welcome page. Open the page first, then read the log.
-
-The welcome page works only while no person exists. After the first admin, it sends everyone to sign in. The first admin lands on **Projects**, ready to add the infra repository.
+The welcome page works only while no person exists. After that, it sends everyone to sign in. The first admin lands on **Projects**, ready to add the infra repository.
 
 <Note>
-The code changes when `SECRET_KEY_BASE` changes. Changing `SECRET_KEY_BASE` also signs everyone out, because session cookies are signed with it.
+The code changes when `SECRET_KEY_BASE` changes. A new `SECRET_KEY_BASE` also signs everyone out, because Meridian signs session cookies with it.
 </Note>
 
-## Adding people
+## Adding people and signing in
 
-Admins add people in **Settings**, under **People**, with **Add person**. Give a name, an email, a password of at least 12 characters, and a role. The person can sign in at once. Meridian sends no email and has no invitations, so share the password with them privately.
+Admins add people in **Settings**, under **People**, with **Add person**. Meridian sends no email and has no single sign-on, so share each new password with its person privately. [Manage people](/guides/people) has the steps.
 
-Meridian has no single sign-on. Each person signs in with an email and a password.
-
-To change someone's role, name, email or password, an admin presses **Edit** next to them. Three rules keep an install usable:
-
-- Meridian always has one admin. The last admin can't be made a deployer or viewer.
+- A password is 12 to 72 characters long.
+- Meridian always has at least one admin. The last admin can't become a deployer or viewer.
 - An admin can't remove their own account.
 - A new password signs that person out of every other session.
+- A role change takes effect at once. Meridian closes the person's open live connections, so an open page can't keep streaming what the old role allowed.
 
-A role change takes effect at once. Meridian closes the person's open live connections, so a page they have open can't keep streaming what their old role allowed.
+People sign in at `/session/new` with their email and password. Meridian allows 10 tries from one IP address in 3 minutes, then shows `Try again later.`. A session lasts until the person signs out from the account menu, or an admin changes their password or removes them.
 
-## Signing in
+<Accordion title="How this works under the hood">
+  The session cookie is signed, `HttpOnly` and `SameSite=Lax`. Behind HTTPS it is also `Secure`.
 
-People sign in at `/session/new` with their email and password. A password is 12 to 72 characters long. Meridian allows 10 tries from one IP address in 3 minutes, then asks it to try again later.
-
-A session lasts until the person signs out from the account menu in the top bar, or until an admin changes their password. The cookie is signed, `HttpOnly` and `SameSite=Lax`. Behind HTTPS it is also `Secure`.
-
-## Machines are not people
-
-Agents and GitHub don't sign in. Agents send a bearer token to `/agent/snapshots` and `/cable`. GitHub signs each webhook with the webhook secret. Neither has a role, and neither can open a page. See [Endpoints](/reference/endpoints).
+  Agents and GitHub don't sign in, and neither has a role or can open a page. Agents send a bearer token to `/agent/snapshots` and `/cable`. GitHub signs each [webhook](/reference/glossary#webhook) with the webhook secret. See [Endpoints](/reference/endpoints).
+</Accordion>
 
 ## Related
 

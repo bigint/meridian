@@ -1,86 +1,94 @@
 ---
 title: "Servers and agents"
-description: "How Meridian knows a machine: placeholder servers from Git, identity from the agent's machine id, hostname matching between the two, and labels."
+description: "How Meridian knows a machine: servers named in Git, the agent's machine id, how Meridian matches the two, tokens and labels."
 icon: "server"
 ---
 
-A server in Meridian is one machine. Two sources name it, and they rarely use the same name:
+A server in Meridian is one machine. This page explains how Meridian matches the server named in Git with the agent that runs on it.
+
+## The idea
+
+Two sources name each server, and they rarely use the same name:
 
 - **Git** names it by the host that Kamal connects to over SSH, such as `web-1.internal.example.com` or `10.0.0.5`.
-- **The agent** names it by its machine id, `/etc/machine-id`, and reports the machine's own hostname, such as `web-1`.
+- **The [agent](/reference/glossary#agent)**, the small read-only program on each server, names it by its machine id from `/etc/machine-id`. It also reports the machine's hostname, such as `web-1`.
 
-Meridian joins the two into one server row. This page explains how.
+Meridian joins the two into one server by matching the agent's hostname with Git's host.
 
-## Placeholder servers from Git
+## Examples
 
-When a sync finds a host in a config's `servers`, Meridian looks for a server with that host. It creates one when none exists, named after the host. This placeholder has no machine id and has never reported, so every app that Git assigns to it shows as **unknown** on the board.
+| Git's host | The agent reports | Result |
+| --- | --- | --- |
+| `web-1.internal.example.com` | `web-1.internal.example.com` | Matched, same name |
+| `web-1.internal.example.com` | `web-1` | Matched, same first part |
+| `web-1.eu.example.com` and `web-1.us.example.com` | `web-1` | A new server, because two match |
+| `10.0.0.5` | `web-1` | A new server. Set `MERIDIAN_HOSTNAME=10.0.0.5`. |
 
-Before it creates a placeholder, Meridian checks whether an agent already reported from that machine under another name. A server made by an agent, with no apps assigned yet, is taken over when the first DNS label of its name matches the host's and exactly one such server exists. Meridian then renames it to Git's host.
+<Tip>
+If your configs list servers by IP address, set `MERIDIAN_HOSTNAME` on each agent to the address Kamal uses. Meridian never matches an IP address by its first part.
+</Tip>
+
+## Servers from Git
+
+A sync creates a server for each host in a config's `servers`, named after the host. Until an agent reports from it, its apps show as **unknown** on the board.
 
 ## Identity is the machine id
 
-A server's identity is the machine id that its agent sends. The agent reads it from `/host/etc/machine-id`, the host's file mounted into the container, then from `/etc/machine-id`. `MERIDIAN_MACHINE_ID` overrides both. The agent refuses to start without one.
+The agent reads the machine id from `/host/etc/machine-id`, the host's file mounted into the container, then from `/etc/machine-id`. `MERIDIAN_MACHINE_ID` overrides both. The agent refuses to start without one.
 
 The hostname comes from `MERIDIAN_HOSTNAME`, then `/host/etc/hostname`, then the container's own hostname. It must be a DNS name or an IP address.
 
-## How an agent claims a server
+## How an agent finds its server
 
 The first snapshot from a new machine id finds its server in this order:
 
 <Steps>
   <Step title="The token's server">
-    A per-server token is bound to the first server it reported for, and its snapshots land there.
+    A per-server token belongs to the first server it reported for, and its snapshots land there.
   </Step>
   <Step title="A server with the same machine id">
     The machine has reported before, perhaps with another token.
   </Step>
-  <Step title="An unclaimed server whose host is the reported hostname">
+  <Step title="An unclaimed server whose name is the reported hostname">
     Unclaimed means no agent has reported for it yet. The server's hostname or name must equal the reported hostname exactly.
   </Step>
   <Step title="A silent server that Git places at the reported hostname">
-    Its old agent has been silent for 10 minutes, so the machine was rebuilt. See [a rebuilt machine](#a-rebuilt-machine).
+    Its old agent has been silent for 10 minutes, so the machine was rebuilt. See the edge cases below.
   </Step>
   <Step title="An unclaimed server with the same first DNS label">
-    The agent reports `web-1`, and Git says `web-1.internal.example.com`. This counts only when exactly one unclaimed server matches, and never for IP addresses.
+    The first label is the part before the first dot. The agent reports `web-1`, and Git says `web-1.internal.example.com`. This counts only when exactly one unclaimed server matches, and never for IP addresses.
   </Step>
   <Step title="A new server">
-    Named after the reported hostname. Git may claim it later, as described in [placeholder servers](#placeholder-servers-from-git).
+    Named after the reported hostname. Git can claim it later.
   </Step>
 </Steps>
 
-| Git's host | The agent reports | Result |
-| --- | --- | --- |
-| `web-1.internal.example.com` | `web-1.internal.example.com` | Claimed, exact match |
-| `web-1.internal.example.com` | `web-1` | Claimed, first label |
-| `web-1.eu.example.com` and `web-1.us.example.com` | `web-1` | A new server, because two match |
-| `10.0.0.5` | `web-1` | A new server. Set `MERIDIAN_HOSTNAME=10.0.0.5`. |
+<Accordion title="Edge cases">
+  **An agent reports before Git names its server.** Meridian creates a server for the agent. Later, a sync finds the host in Git. Meridian looks for agent-made servers with no apps yet and the same first DNS label. If exactly one exists, Meridian takes it over and renames it to Git's host.
 
-<Tip>
-If your configs list servers by IP address, set `MERIDIAN_HOSTNAME` on each agent to the address Kamal uses. Meridian never matches an IP address by its first label.
-</Tip>
+  **A machine is rebuilt.** It gets a new machine id. Meridian hands it the old server when all three of these hold:
 
-### A rebuilt machine
+  - Git places the server.
+  - The server's hostname or name is exactly the hostname the new agent reports. A first DNS label is not enough.
+  - The old agent has been silent for 10 minutes, or for its stale limit when that is longer.
 
-A rebuilt machine gets a new machine id. Meridian hands it the old server when three things hold:
+  Until then, a new machine on a fleet token reports as a server of its own, and Git's server shows as stale. After that, the next snapshot moves the new machine onto Git's server and deletes its own. A per-server token bound to the old server gets a `422` until then, and then takes the server over.
 
-- Git places the server.
-- The server's hostname or name is exactly the hostname the new agent reports. A first DNS label is not enough.
-- The old agent has been silent for 10 minutes, or for its stale limit when that is longer.
-
-Until then, a new machine on a fleet token reports as a server of its own, and Git's server shows as stale. Once the old agent has been silent long enough, the next snapshot moves the new machine onto Git's server and deletes its own. A per-server token bound to the old server works the same way. It gets a `422` while the old server could still be alive, then takes it over.
-
-A shorter silence, or a server that Git doesn't place, is never taken over, so two live machines can't swap identities.
+  A shorter silence, or a server that Git doesn't place, is never taken over. So two live machines can't swap identities.
+</Accordion>
 
 ## Tokens
 
-Every agent needs a token, which an admin creates on the [Agents](/guides/agent) page. Meridian stores only its SHA-256 digest.
+Every agent needs a token, which an admin creates on the [Agents](/guides/agent) page. Meridian stores only a SHA-256 hash of it, never the token itself.
 
-| Token | Identity | Revoke it, and |
+| Token | Identity | If you revoke it |
 | --- | --- | --- |
 | Per-server | Bound to the first server that reports with it. Another machine using it gets a `422`, unless that server has been silent for 10 minutes. | Only that server stops reporting. |
 | Fleet, shared by many servers | Each snapshot's machine id. | Every server that uses it stops reporting. |
 
-A per-server token is safer, because a leaked token reports for one machine only. A fleet token is easier to roll out to many servers through one Kamal config. Each token may send 120 snapshots a minute. For a fleet token, the limit counts each machine separately, with a ceiling of 12,000 a minute for the whole token.
+A per-server token is safer, because a leaked one reports for one machine only. A fleet token is easier to roll out through one Kamal config.
+
+Each token can send at most 120 snapshots a minute. For a fleet token, the limit counts each machine on its own, up to 12,000 a minute for the whole token.
 
 ## Labels
 
@@ -94,7 +102,7 @@ accessories:
         MERIDIAN_LABELS: region=sgp,provider=hetzner,role=web,city=Singapore
 ```
 
-Labels come only from the agent. Each snapshot replaces the server's labels, so a label removed from `MERIDIAN_LABELS` goes at the next snapshot. Meridian keeps up to 32 labels, with keys up to 64 characters and values up to 128.
+Each snapshot replaces the server's labels, so a label you remove goes at the next snapshot. Meridian keeps up to 32 labels, with keys up to 64 characters and values up to 128.
 
 A few keys mean something to Meridian:
 
@@ -106,24 +114,24 @@ A few keys mean something to Meridian:
 | `city` | The place name on the map. Without it, the most common `region` names the place. |
 | `lat`, `lng` | The server's position on the map. `latitude`, `longitude` and `lon` also work. |
 
-Any other label shows on the server's page. **New app** accepts a label selector such as `role=web,region=sgp` to pick every matching server.
+Other labels show on the server's page. **New app** takes a label selector, such as `role=web,region=sgp`, to pick every matching server.
 
 An admin can also set a server's position with **Save location** on its page. A position in the agent's labels replaces it at the next snapshot.
 
 ## What an agent reports
 
-Each snapshot holds the machine id, hostname, agent version, interval and labels, and one entry per container that Kamal started:
+Each snapshot holds the machine id, hostname, agent version, interval and labels. It also holds one entry for each container that Kamal started:
 
-- the container's name, image, service, role and destination labels,
-- its version, read from the container name the way Kamal does,
-- its state, health and start time,
-- its kind: an app, an accessory, or `kamal-proxy`.
+- The container's name and image, and its service, role and destination labels.
+- Its version, read from the container name the way Kamal does.
+- Its state, health and start time.
+- Its kind: an app, an accessory, or `kamal-proxy`.
 
-Nothing else leaves the server in a snapshot. Environment variables, commands and mounts are never sent. Live stats, logs and traffic travel separately, and only while someone watches. See [Agent protocol](/reference/agent-protocol).
+Nothing else leaves the server in a snapshot: no environment variables, commands or mounts. Live stats, logs and traffic travel separately, only while someone watches. See [Agent protocol](/reference/agent-protocol).
 
 ## Quiet agents
 
-Meridian calls a server stale when its agent has been silent for three of its intervals, and never less than 45 seconds. [Drift](/concepts/drift#stale-timing) has the details. The **Silent agents** list on the Agents page shows every quiet server, followed by the servers that no agent has ever reported from. On the Servers page, **Only silent agents** filters to the quiet ones.
+A server turns stale after three silent intervals, 45 seconds at least. See [Drift](/concepts/drift#stale-timing). The **Silent agents** list on the Agents page shows every quiet server, then the servers no agent has ever reported from. On the Servers page, **Only silent agents** shows only the quiet ones.
 
 ## Related
 

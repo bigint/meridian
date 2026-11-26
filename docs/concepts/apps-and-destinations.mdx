@@ -1,18 +1,20 @@
 ---
 title: "Apps and destinations"
-description: "An app in Meridian is one Kamal config with one destination. How Meridian finds configs in your infra repository and what it reads from each."
+description: "An app in Meridian is one Kamal config with one destination. How Meridian finds your configs in Git, and what it reads from each one."
 icon: "boxes"
 ---
 
-An app in Meridian is one Kamal config together with one destination. That is exactly what one `kamal deploy -c <config> -d <destination>` deploys, so each app has one version, one release history and one row on the board.
+An [app](/reference/glossary#app) in Meridian is one Kamal config plus one destination. This page shows how Meridian finds your configs in Git and turns them into apps.
 
-Pages name an app by its service, then its destination: `shop · production`. An app without a destination is named by its service alone.
+## The idea
 
-## How Meridian finds configs
+A [config](/reference/glossary#config) is a Kamal file, such as `config/deploy.yml`, that says what an app is and which servers run it. A [destination](/reference/glossary#destination) is a variant of it, such as `production`, kept in a file like `config/deploy.production.yml`.
 
-Each [project](/guides/projects) has **Config paths**, a comma-separated list of globs. The default is `config/deploy*.yml`. Meridian matches every file in the repository against them, with `*` stopping at `/` and `**/` crossing directories. Only `.yml` and `.yaml` files count.
+An app is what one `kamal deploy -c <config> -d <destination>` deploys. So each app has one version and one row on the board. Its name is its service, then its destination: `shop · production`. A config with no destinations is one app, named by its service.
 
-A matched file named `<base>.<name>.yml` is a destination file when `<base>.yml` or `<base>.yaml` also matches. Kamal loads it on top of the base config when you pass `-d <name>`. Every other matched file is a base config.
+## An example
+
+This [infra repository](/reference/glossary#infra-repository) has two configs, for the services `shop` and `blog`:
 
 <Tree>
   <Tree.Folder name="config" defaultOpen>
@@ -26,7 +28,7 @@ A matched file named `<base>.<name>.yml` is a destination file when `<base>.yml`
   </Tree.Folder>
 </Tree>
 
-`config/deploy.yml` sets `service: shop` and `config/deploy-blog.yml` sets `service: blog`. With the default glob, this repository holds three apps:
+Meridian finds three apps:
 
 | App | Config | Destination | Version file |
 | --- | --- | --- | --- |
@@ -34,23 +36,35 @@ A matched file named `<base>.<name>.yml` is a destination file when `<base>.yml`
 | `shop · staging` | `config/deploy.yml` | `staging` | `config/deploy.staging.version` |
 | `blog` | `config/deploy-blog.yml` | none | `config/deploy-blog.version` |
 
-`config/deploy-blog.yml` is a base config, because its name has no `.<name>` part before `.yml`.
+There is no plain `shop` app. A config with destination files is never an app by itself.
 
 <Warning>
 `config/deploy.blog.yml` would be the `blog` destination of `config/deploy.yml`, not an app of its own, because `kamal deploy -c config/deploy.yml -d blog` loads it. Name separate apps with a `-`, as **New app** does.
 </Warning>
 
-A base config with destination files is never an app by itself. The repository above has no plain `shop` app, because `kamal deploy -c config/deploy.yml` without `-d` is not what you run for it. A base config with no destination files is one app.
+## How Meridian finds configs
 
-<Note>
-Preview overlays, `<base>.pr-<n>.yml`, are never read as configs or destinations. Meridian writes them for [previews](/guides/previews) and tracks them separately.
-</Note>
+Each [project](/guides/projects) has **Config paths**, a comma-separated list of file patterns. The default is `config/deploy*.yml`. Only `.yml` and `.yaml` files count.
 
-Another layout puts one config per app in a folder. Set the config paths to `kamal/*.yml`, and `kamal/shop.yml` and `kamal/shop.staging.yml` become the app `shop · staging`.
+A matched file named `<base>.<name>.yml` is a destination file when `<base>.yml` or `<base>.yaml` also matches. Every other matched file is a base config.
+
+With `kamal/*.yml`, the files `kamal/shop.yml` and `kamal/shop.staging.yml` become the app `shop · staging`.
+
+<Accordion title="Edge cases">
+  In a pattern, `*` stops at `/`, and `**/` crosses folders.
+
+  Meridian reads an app's release history again only when its config, destination file or version file changed.
+
+  To place a parse error, Meridian takes the key path that Kamal reports, such as `servers/web/hosts`, and finds that key's line in the YAML.
+
+  Preview files, `<base>.pr-<n>.yml`, are never read as configs or destinations. Meridian writes them for [previews](/guides/previews) and tracks them separately.
+
+  **New app** writes a config to the project's first config path with exactly one `*` in it. It puts the service name in place of the `*`. With `config/deploy*.yml`, the service `shop` gets `config/deploy-shop.yml`. With `kamal/*.yml`, it gets `kamal/shop.yml`. A path with `**/` counts as the same path without it. See [Add a new app](/guides/new-app).
+</Accordion>
 
 ## What Meridian reads from a config
 
-Meridian parses each config and destination with Kamal itself. It keeps these values:
+Meridian parses each config and destination with Kamal itself, and keeps these values:
 
 | Value | From |
 | --- | --- |
@@ -67,7 +81,7 @@ Meridian never asks Kamal for a secret's value. Only the names reach the [Secret
 
 ## Kind and source repository
 
-Two Docker labels in the config tell Meridian what an app is and where its code lives. They stay in Git, next to everything else about the app.
+Two labels in the config say what an app is and where its code lives:
 
 ```yaml config/deploy.yml
 service: shop
@@ -78,27 +92,20 @@ labels:
   meridian.source: acme/shop
 ```
 
-`meridian.kind` is one of `static`, `node`, `rails`, `other` or `accessories`, [below](#configs-that-only-run-accessories). A config without the label, or with any other value, is `other`. **New app** writes the label for you.
+- `meridian.kind` is `static`, `node`, `rails`, `other` or `accessories`. With no label, or any other value, the kind is `other`. **New app** writes the label for you.
+- `meridian.source` is the GitHub repository with the app's code and Dockerfile, as `owner/name`. [Previews](/guides/previews) follow pull requests there. Without it, an app gets no previews.
 
-`meridian.source` is the GitHub repository that holds the app's code and Dockerfile, as `owner/name`. [Previews](/guides/previews) follow pull requests in that repository. Without the label, an app gets no previews.
-
-Take a label out of the config, and the next sync clears it in Meridian too.
+If you remove a label from the config, the next sync clears it in Meridian too.
 
 ## Configs that only run accessories
 
-A config labelled `meridian.kind: accessories` runs only accessories, such as the `cloudflared` connectors of a [Cloudflare Tunnel](/guides/cloudflare-tunnel). Kamal never deploys an app from it. Meridian leaves it off the board and the map, and refuses to deploy, redeploy or roll it back. Start its accessories with `kamal accessory boot all -c <config>`.
+A config labelled `meridian.kind: accessories` runs only accessories, such as the `cloudflared` connectors of a [Cloudflare Tunnel](/guides/cloudflare-tunnel). Meridian leaves it off the board and the map. It refuses to deploy, redeploy or roll it back. Start its accessories with `kamal accessory boot all -c <config>`.
 
 ## When a config changes or breaks
 
-Every sync compares the files behind each app by blob SHA. Meridian reads the release history again only for an app whose config, destination file or version file changed.
+If a config fails to parse, its app keeps the last good parse, with its deploys, releases and previews. The project's page shows the error with its file and line.
 
-A config that fails to parse keeps its app as the last good parse left it, with its deploys, releases and previews. The project's page lists the error with its file and line. Kamal reports a key path such as `servers/web/hosts`, and Meridian finds that key's line in the YAML.
-
-When a config is deleted from Git, its app goes at the next sync, with its deploys and releases. Meridian deletes its open previews' overlay files too. CI can't remove their containers without the config, so the activity log names the containers to remove by hand. See [previews](/guides/previews).
-
-## Where New app writes a config
-
-**New app** writes the config to the project's first config path with exactly one `*` in it, with the service name in place of the `*`. With `config/deploy*.yml`, the service `shop` gets `config/deploy-shop.yml`. With `kamal/*.yml`, it gets `kamal/shop.yml`. A path with `**/` counts as the same path without it. See [Add a new app](/guides/new-app).
+If you delete a config, its app goes at the next sync, with its deploys and releases. Meridian also deletes the files of its open previews. CI can't remove those containers without the config, so the activity log names the containers to remove by hand.
 
 ## Related
 

@@ -1,64 +1,69 @@
 ---
 title: "Install Meridian"
 sidebarTitle: "Install"
-description: "Connect Meridian to GitHub, deploy it with Kamal, add your infra repository and put the agent on your servers. About 15 minutes."
+description: "Connect Meridian to GitHub, deploy it with Kamal, add your infra repository and put the agent on your servers. It takes about 15 minutes."
 icon: "download"
 ---
 
 import GitHubAppPermissions from "/snippets/github-app-permissions.mdx";
 
-This guide takes Meridian from nothing to a board that shows every app on every server. To look around first without connecting anything, follow the [quickstart](/quickstart).
+This guide takes you from nothing to a board that shows every app on every server. To look around first without connecting anything, follow the [quickstart](/quickstart).
 
-Meridian is one container with SQLite inside it. It deploys itself with Kamal, from its own `config/deploy.yml`.
+Meridian is one container with SQLite inside it. You deploy it with [Kamal](/reference/glossary#kamal), a tool that deploys apps as Docker containers to your own servers over SSH.
 
 ## Before you start
 
 You need:
 
 - A server for Meridian that Kamal can reach over SSH, and that can reach `api.github.com` over HTTPS.
-- A DNS name for Meridian, such as `meridian.example.com`, pointing at that server. kamal-proxy gets a Let's Encrypt certificate for it, so ports 80 and 443 must be open.
+- A DNS name for Meridian, such as `meridian.example.com`, pointing at that server. [kamal-proxy](/reference/glossary#kamal-proxy), Kamal's web proxy, gets a Let's Encrypt certificate for it. So ports 80 and 443 must be open.
 - [Kamal](https://kamal-deploy.org) 2 on your machine. Meridian is tested with Kamal 2.12.0.
 - A GitHub account or organisation where you can create a GitHub App, or a personal access token.
-- An infra repository that holds your Kamal configs.
-
-Meridian never connects to your app servers, so it needs no SSH key for them. CI does the deploying.
+- An [infra repository](/reference/glossary#infra-repository), the Git repository that holds your Kamal configs.
 
 <Steps>
   <Step title="Connect Meridian to GitHub">
-    Meridian reads your configs, commits deploys and sets secrets through GitHub's API. Pick how it signs in.
+    Meridian uses GitHub's API to read your configs, commit deploys and set secrets. Pick how it signs in to GitHub.
 
     <Tabs>
       <Tab title="GitHub App">
-        A GitHub App reaches only the repositories you install it on. Use it for anything shared.
+        A GitHub App reaches only the repositories you install it on. Use it for any install that other people share.
 
         1. Open **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. For an organisation, open the organisation's **Settings**, then **Developer settings**, **GitHub Apps**.
         2. Set **Homepage URL** to your Meridian URL, such as `https://meridian.example.com`.
         3. Set **Webhook URL** to `https://meridian.example.com/webhooks/github`.
-        4. Set **Webhook secret** to a long random string, such as the output of `openssl rand -hex 32`. Keep it. It becomes `GITHUB_APP_WEBHOOK_SECRET`.
+        4. Set **Webhook secret** to a long random string, such as the output of `openssl rand -hex 32`. Keep it for step 3, as `GITHUB_APP_WEBHOOK_SECRET`.
         5. Give the App these repository permissions:
 
         <GitHubAppPermissions />
 
         6. Create the App and note its **App ID**.
         7. Under **Private keys**, press **Generate a private key**. GitHub downloads a `.pem` file.
-        8. Press **Install App**. Pick the infra repository, and the source repository of every app that should get [previews](/guides/previews).
-        9. Note the installation ID. It is the number at the end of the page's URL after you install, such as `https://github.com/settings/installations/12345678`.
+        8. Press **Install App**. Pick the infra repository. Also pick the code repository of every app that should get [previews](/guides/previews).
+        9. Note the installation ID. After you install, it is the number at the end of the page's URL, such as `12345678` in `https://github.com/settings/installations/12345678`.
 
         You now have four values: the App ID, the private key, the webhook secret and the installation ID.
       </Tab>
       <Tab title="Personal access token">
-        A token acts as the person who made it, on every repository they can reach. It suits a homelab or a trial. Meridian uses the App when both are set.
+        A token acts as the person who made it, on every repository they can reach. Use it for a homelab or a trial. If you set both, Meridian uses the App.
 
         1. In GitHub, open **Settings**, **Developer settings**, **Personal access tokens**.
-        2. Create a fine-grained token for the infra repository and every source repository that should get previews. Give it the same repository permissions as the App: **Contents**, **Pull requests**, **Actions**, **Secrets** and **Workflows** with read and write, and **Metadata** with read. A classic token with the `repo` and `workflow` scopes also works.
+        2. Create a fine-grained token for the infra repository and every code repository that should get previews. Give it the same repository permissions as the App:
+           - **Contents**, **Pull requests**, **Actions**, **Secrets** and **Workflows**: read and write.
+           - **Metadata**: read.
 
-        3. Webhooks are optional with a token. Without them, Meridian checks GitHub every 30 seconds, but [previews](/guides/previews) need them. To add them, open each repository's **Settings**, **Webhooks**, **Add webhook**:
-           - **Payload URL**: `https://meridian.example.com/webhooks/github`
-           - **Content type**: `application/json`
-           - **Secret**: a long random string. It becomes `GITHUB_APP_WEBHOOK_SECRET`.
-           - **Events**: **Pushes**, **Pull requests** and **Workflow runs**.
+           A classic token with the `repo` and `workflow` scopes also works.
 
-        You now have the token, and the webhook secret if you added webhooks. Leave the installation ID blank later.
+        3. Webhooks are optional with a token. Without them, Meridian checks GitHub every 30 seconds. [Previews](/guides/previews) need them, though. To add them, open each repository's **Settings**, **Webhooks**, **Add webhook**, and fill in the form:
+
+           | Field | Value |
+           | --- | --- |
+           | **Payload URL** | `https://meridian.example.com/webhooks/github` |
+           | **Content type** | `application/json` |
+           | **Secret** | A long random string. It becomes `GITHUB_APP_WEBHOOK_SECRET`. |
+           | **Events** | **Pushes**, **Pull requests** and **Workflow runs** |
+
+        You now have the token, and the webhook secret if you added webhooks. Leave the installation ID blank in step 6.
       </Tab>
     </Tabs>
   </Step>
@@ -71,7 +76,7 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
     cd meridian
     ```
 
-    `config/deploy.yml` has five numbered placeholders. These are the lines around them, with the placeholders highlighted:
+    `config/deploy.yml` has five numbered placeholders to fill in. Here they are, highlighted:
 
     ```yaml config/deploy.yml {2,6,9,14,20}
     service: meridian
@@ -110,7 +115,7 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
     | 4 | `env.clear.MERIDIAN_URL` | `https://` followed by `proxy.host`. Meridian answers only to this host. |
     | 5 | `image` | Leave it to run the published image. Set your own registry and repository only if you build the image yourself. |
 
-    With a personal access token instead of an App, change the secret list:
+    If you use a personal access token instead of an App, change the secret list:
 
     ```yaml config/deploy.yml
       secret:
@@ -119,11 +124,11 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
         - GITHUB_APP_WEBHOOK_SECRET   # only if you added webhooks
     ```
 
-    The file also keeps Meridian's SQLite databases on the `meridian_storage` volume, and defines two aliases, `kamal console` and `kamal logs`.
+    The rest of the file keeps Meridian's SQLite databases on the `meridian_storage` volume. It also adds two commands, `kamal console` and `kamal logs`.
   </Step>
 
   <Step title="Provide the secrets">
-    Kamal reads Meridian's secrets from `.kamal/secrets`, which reads them from your environment. The file holds no values, so never put one in it.
+    Kamal reads Meridian's secrets from `.kamal/secrets`. That file reads each one from your shell's environment. Never put a real value in the file itself.
 
     <Tabs>
       <Tab title="GitHub App">
@@ -135,7 +140,7 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
         GITHUB_APP_WEBHOOK_SECRET=$MERIDIAN_GITHUB_APP_WEBHOOK_SECRET
         ```
 
-        Export the values in your shell, or read them from a password manager:
+        Set the values in your shell, or read them from a password manager:
 
         ```bash
         export KAMAL_REGISTRY_PASSWORD=...        # a token that can pull from the registry
@@ -165,21 +170,21 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
     </Tabs>
 
     <Warning>
-    Keep `SECRET_KEY_BASE` safe and stable. It signs session cookies and produces the setup code. A new value signs everyone out.
+    Keep `SECRET_KEY_BASE` safe, and never change it. Meridian signs session cookies with it and makes the setup code from it. A new value signs everyone out.
     </Warning>
   </Step>
 
   <Step title="Deploy Meridian">
     <Tabs>
       <Tab title="Published image">
-        Pull the release's image instead of building one:
+        Use the published image instead of building one:
 
         ```bash
         kamal setup --skip-push --version v0.1.0
         ```
       </Tab>
       <Tab title="Your own build">
-        With your registry in placeholders 3 and 5, Kamal builds the checkout, pushes it and deploys it:
+        With your registry in placeholders 3 and 5, Kamal builds your checkout, pushes the image and deploys it:
 
         ```bash
         kamal setup
@@ -187,28 +192,28 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
       </Tab>
     </Tabs>
 
-    `kamal setup` installs Docker on the host if needed, starts kamal-proxy and boots Meridian. On first boot, Meridian creates its databases. Check that it answers:
+    `kamal setup` installs Docker on the host if it is missing, starts kamal-proxy and starts Meridian. On first start, Meridian creates its databases. Check that it answers:
 
     ```bash
     curl https://meridian.example.com/up
     ```
 
-    A `200` means Meridian is up.
+    A `200` response means Meridian is up.
   </Step>
 
   <Step title="Create the first admin">
-    Open `https://meridian.example.com`. Meridian shows **Welcome to Meridian** and asks for a **Setup code**, which proves that you run the server. Opening the page writes the code to Meridian's log. Read it with either command:
+    Open `https://meridian.example.com`. Meridian shows **Welcome to Meridian** and asks for a **Setup code**. The code proves that you run the server. Opening the page writes it to Meridian's log. Read it with either command:
 
     ```bash
     kamal app logs | grep "setup code"
     kamal app exec 'bin/rails meridian:setup_code'
     ```
 
-    Enter the code, your name, email and a password of at least 12 characters, then press **Create admin**. Meridian signs you in and opens **Projects**. See [roles](/concepts/roles) for adding more people.
+    Enter the code, your name, your email and a password of at least 12 characters. Press **Create admin**. Meridian signs you in and opens **Projects**. To add more people later, see [roles](/concepts/roles).
   </Step>
 
   <Step title="Add your infra repository">
-    On **Projects**, press **Add project** and fill in the form:
+    Each infra repository you add is a [project](/reference/glossary#project). On **Projects**, press **Add project** and fill in the form:
 
     | Field | Value |
     | --- | --- |
@@ -216,15 +221,15 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
     | **Repository** | The infra repository as `owner/name`, such as `acme/infra`. |
     | **Branch** | The branch that holds what should run. The default is `main`. |
     | **GitHub App installation ID** | The number from step 1. Leave it blank with a token. |
-    | **Config paths** | Globs for your Kamal configs, comma-separated. The default is `config/deploy*.yml`. Use `kamal/*.yml` for one config per app in a `kamal/` folder. |
+    | **Config paths** | File patterns for your Kamal configs, comma-separated. The default is `config/deploy*.yml`. Use `kamal/*.yml` for one config per app in a `kamal/` folder. |
 
-    Leave **Let admins commit changes directly instead of opening pull requests** off unless you want new apps and the CI workflow committed straight to the branch.
+    Leave **Let admins commit changes directly instead of opening pull requests** off. Turn it on only if you want new apps and the CI workflow committed straight to the branch.
 
-    Save, and Meridian syncs. Every config and destination becomes an app on the board. A config that fails to parse shows under **Parse errors** with its file and line. See [apps and destinations](/concepts/apps-and-destinations).
+    Save, and Meridian reads the repository. Each config and [destination](/reference/glossary#destination) becomes an [app](/reference/glossary#app) on the board. A config that fails to parse shows under **Parse errors**, with its file and line. See [apps and destinations](/concepts/apps-and-destinations).
   </Step>
 
   <Step title="Add the CI workflow">
-    On the project's page, press **Add CI workflow**. Meridian opens a pull request that adds `.github/workflows/meridian-deploy.yml`. The workflow runs `kamal deploy` whenever a version file changes.
+    On the project's page, press **Add CI workflow**. Meridian opens a pull request that adds the [CI workflow](/reference/glossary#ci-workflow), `.github/workflows/meridian-deploy.yml`. It runs `kamal deploy` each time a [version file](/reference/glossary#version-file) changes.
 
     Before you merge it, add these repository secrets to the infra repository, on Meridian's [Secrets](/guides/secrets) page or in GitHub:
 
@@ -232,41 +237,44 @@ Meridian never connects to your app servers, so it needs no SSH key for them. CI
     - `KAMAL_REGISTRY_PASSWORD`, a token that can pull your app images.
     - Every secret your configs list under `env.secret`.
 
-    The workflow exports every repository secret as an environment variable, so your infra repository's `.kamal/secrets` reads each one as `$NAME`:
+    The workflow turns every repository secret into an environment variable. So your infra repository's `.kamal/secrets` reads each one as `$NAME`:
 
     ```bash .kamal/secrets
     KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
     DATABASE_URL=$DATABASE_URL
     ```
 
-    The workflow runs on `ubuntu-latest`. If GitHub's runners can't reach your servers over SSH, set the repository variable `MERIDIAN_RUNS_ON` to a self-hosted runner's label. See [CI workflow](/reference/ci-workflow).
+    The workflow runs on `ubuntu-latest`. If GitHub's machines can't reach your servers over SSH, set the repository variable `MERIDIAN_RUNS_ON` to the label of your own runner. See [CI workflow](/reference/ci-workflow).
   </Step>
 
   <Step title="Put the agent on your servers">
-    Until an agent reports, the board knows only what Git says, and every cell shows as unknown. Open **Agents** in Meridian. It shows the two accessories to add to a Kamal config that reaches every host, with your Meridian URL filled in.
+    The [agent](/reference/glossary#agent) is a small read-only program on each server that tells Meridian what runs there. Until an agent reports, every cell on the board shows as **unknown**.
+
+    Open **Agents** in Meridian. It shows two Kamal accessories, with your Meridian URL filled in. Add them to a Kamal config that reaches every host.
 
     1. Give the token a **Label**, such as `web-1`, press **Create token** and copy it. Meridian shows it once.
-    2. Put it in that config's `.kamal/secrets` as `MERIDIAN_TOKEN`. In the accessories, replace `SERVICE` with the config's service, and `REGION` and `PROVIDER` with your own labels.
-    3. Create the agent's network once on every host:
+    2. Put the token in that config's `.kamal/secrets` as `MERIDIAN_TOKEN`.
+    3. In the accessories, replace `SERVICE` with the config's service. Replace `REGION` and `PROVIDER` with your own labels.
+    4. Create the agent's Docker network once on every host:
 
        ```bash
        kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
        ```
 
-    4. Boot the accessories:
+    5. Start the accessories:
 
        ```bash
        kamal accessory boot meridian_docker
        kamal accessory boot meridian_agent
        ```
 
-    Within 15 seconds the server's cells change from unknown to their real state. [Install the agent](/guides/agent) covers tokens, labels and every setting.
+    Within 15 seconds, the server's cells change from **unknown** to their real state. [Install the agent](/guides/agent) covers tokens, labels and every setting.
   </Step>
 </Steps>
 
 ## Check the install
 
-Open **Settings** as an admin. The **Connections** card shows how Meridian talks to GitHub:
+Open **Settings** as an admin. The **Connections** card shows how Meridian reaches GitHub:
 
 | Connection | Expect |
 | --- | --- |
@@ -274,7 +282,7 @@ Open **Settings** as an admin. The **Connections** card shows how Meridian talks
 | Webhooks | **On**. **Off** means `GITHUB_APP_WEBHOOK_SECRET` is unset, and Meridian checks GitHub every 30 seconds instead. |
 | Kamal | The Kamal version Meridian parses configs with, `2.12.0` |
 
-The board's **Getting started** list ticks itself off as you go: a project connected, an agent reporting, a first deploy. It disappears when all three are done.
+The board's **Getting started** list ticks off three steps as you go. They are a project connected, an agent reporting and a first deploy. The list goes away when all three are done.
 
 ## Next
 

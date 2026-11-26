@@ -1,29 +1,37 @@
 ---
 title: "A tour of Meridian"
 sidebarTitle: "Tour"
-description: "Every screen in Meridian, what it shows and what you can do there: the board, the map, apps, servers, activity, previews and the pages that manage them."
+description: "Each screen in Meridian, what it shows and what you can do there: the board, the map, apps, servers, activity, previews and the screens that set Meridian up."
 icon: "compass"
 ---
 
 import { Screenshot } from "/snippets/a-screenshot.mdx";
 
-This page walks through Meridian one screen at a time, in the order of the sidebar. The sidebar holds the screens you watch at the top, and under **Manage** the screens that set Meridian up. Admins also see **Settings** and **Jobs** at the bottom.
+This page shows each screen in Meridian, in the order of the sidebar. Each section says what the screen shows, what you can do there, and which page covers it in full.
 
-The board, the map, the app and server pages and **Previews** update themselves. When an agent reports a change or a deploy moves on, they redraw in place, without losing your scroll position.
+The sidebar has the screens you watch at the top. Under **Manage** are the screens that set Meridian up. Admins also see **Settings** and **Jobs** at the bottom.
 
-Viewers see every screen except **Settings** and **Jobs**. Buttons that a person's role doesn't allow are hidden. See [roles](/concepts/roles).
+The board, the map, the app and server pages and **Previews** update themselves. When an agent reports a change or a deploy moves on, they redraw in place and keep your scroll position.
+
+Viewers see every screen except **Settings** and **Jobs**. Meridian hides each button that your role doesn't allow. See [roles](/concepts/roles).
 
 ## Board
 
-The board, at `/`, answers one question: does every server run what Git says? The header counts the apps and servers, and says **all matching Git** when every cell is in sync.
+The board, at `/`, answers one question: does every server run what Git says? The header counts the apps and servers. It says **all matching Git** when every cell is in sync.
 
 <Screenshot name="board" alt="The board: Getting started, Needs attention, and the grid of every app on every server, with the inspector open on the right" />
 
-Admins see **New app** at the top right. On a new install, **Getting started** lists three steps and ticks each one off as it happens: connect your infra repository, put the agent on your servers, deploy something. It goes away when all three are done.
+Admins see **New app** at the top right. On a new install, **Getting started** lists three steps and ticks each one off:
+
+1. Connect your infra repository.
+2. Put the agent on your servers.
+3. Deploy something.
+
+The list goes away when all three are done.
 
 ### Needs attention
 
-**Needs attention** lists what a person should look at, worst first, as plain sentences:
+**Needs attention** lists what to look at, worst first, as plain sentences:
 
 | State | Sentence | Button |
 | --- | --- | --- |
@@ -32,32 +40,24 @@ Admins see **New app** at the top right. On a new install, **Getting started** l
 | Stray | **shop** is running on **web-9**, but Git doesn't put it there. | **Open shop** |
 | Stale | **web-1**'s agent has gone quiet. | **Open server** |
 
-A second line says what the state probably means, such as **A deploy may still be rolling out, or it stopped part-way.** A quiet server is one item, however many apps run on it. When more than three servers are quiet, they become one item, **5 agents have gone quiet**, with **See agents**. The board shows four items, and the rest under **more things need attention**. The number next to **Board** in the sidebar counts the whole list.
+A second line gives the likely cause, such as **A deploy may still be rolling out, or it stopped part-way.** The board shows four items. The rest are under a disclosure such as **3 more things need attention**. The number next to **Board** in the sidebar counts the whole list.
 
 ### Every app on every server
 
-The grid shows each app against each server it runs on or should run on. Each cell shows the version the server runs, marked by its [drift state](/concepts/drift). Hover over a cell to see the app, the server, the state and the running version. The **Git** column shows each app's newest release.
+The grid shows each app against each server it runs on, or should run on. Each cell shows the version that runs there, marked by its [drift](/reference/glossary#drift) state. Drift is the difference between what Git says should run and what the server's agent sees. The **Git** column shows each app's newest release. Hover over a cell to see the app, the server, the state and the version.
 
 Above the grid:
 
-- **The state chips** count the cells in each state. Press one, such as **Drifted**, to show only those cells. Press it again, or **All**, to show every cell.
-- **Apps × servers** and **Servers × apps** turn the grid around, so servers become the rows.
-- **Filters** narrow the grid by **App**, **Project**, **Region**, **Provider** and **Role**, and pick **Group by**. **Automatic** groups by region above 30 servers, or when servers use more than one region. **Nothing** turns grouping off.
+- **The state chips** count the cells in each state. Press **Drifted** to show only drifted cells. Press it again, or **All**, to show every cell.
+- **Apps × servers** and **Servers × apps** turn the grid around.
+- **Filters** narrow the grid by **App**, **Project**, **Region**, **Provider** and **Role**, and set **Group by**.
 - **What do these mean?** explains each state.
 
-The grid shows 25 rows a page. Every filter, the page and the open app live in the URL, such as `/?state=drifted&region=sgp`, so you can share a view as a link.
+The grid shows 25 rows a page. The filters, the page and the open app are all in the URL, such as `/?state=drifted&region=sgp`. So you can share a view as a link. See [board and map](/guides/board-and-map).
 
 ### The inspector
 
-Click an app's name in the grid, and the inspector opens on the right, at `/?inspect=<app id>`. It shows:
-
-- the app's kind and project, and how many servers run its newest release, such as **2 of 3 servers run v12**,
-- **Ship a version**, for deployers: type a version and press **Deploy**,
-- **Servers**, each with the version it runs and its place,
-- **Recent releases**, the last three,
-- **Redeploy** and **Roll back** for deployers, and **Open app page**.
-
-See [deploy and roll back](/guides/deploy).
+Click an app's name in the grid to open the inspector on the right. It shows the app's servers and its last three releases, with a line such as **2 of 3 servers run v12**. Deployers can type a version in **Ship a version** and press **Deploy**, or press **Redeploy** or **Roll back**. **Open app page** opens the full page. See [deploy and roll back](/guides/deploy).
 
 ## Search
 
@@ -65,43 +65,38 @@ The search box at the top of every page finds apps, servers and projects as you 
 
 <Screenshot name="search" alt="Search results for a partial name: apps, servers and projects, best match first" />
 
-It shows the eight best matches. A name that starts with what you typed comes first, then shorter names. Press <kbd>Enter</kbd> to open the first match, or <kbd>Esc</kbd> to clear the box.
+It shows the eight best matches. Names that start with what you typed come first, then shorter names. Press <kbd>Enter</kbd> to open the first match, or <kbd>Esc</kbd> to clear the box.
 
 ## Map
 
-The map, at `/map`, puts every located server on a world map. Servers within 60 km of each other share one dot, a place, coloured by the worst state among its cells. A line joins two places that run the same app, thicker when they share more apps.
+The map, at `/map`, puts every server that has a location on a world map. Servers within 60 km of each other share one dot, called a place. Each dot takes the colour of the worst state there. A line joins two places that run the same app, and gets thicker the more apps they share.
 
 <Screenshot name="map" alt="The world map: places as coloured dots, lines between places that share apps, and the selected place's servers on the right" />
 
-When an admin sets **Where Meridian runs** in [Settings](/operate/settings), the map also draws Meridian itself, with agent reports flowing in and deploys flowing out.
-
-- **The chips** above the map count the places in each state that needs attention, and the places with a deploy under way. With two to eight apps, a row of app chips filters the map to one app.
-- **Filters** narrow the map by **App**, **Project**, **Region**, **Provider** and **Role**.
-- **Click a place** to see its servers, what each one runs, and the other places that share its apps.
-- **Places** lists every place, worst first, with its region, its cells and whether its agents report.
+Click a place to see its servers, what each one runs, and the other places that share its apps. **Places** lists every place, worst first. The chips and **Filters** work as on the board.
 
 A server needs a location to appear. Its agent can send `lat` and `lng` labels, or an admin can set one on the server's page. The map lists the servers that have none. See [board and map](/guides/board-and-map).
 
 ## Apps
 
-**Apps**, at `/apps`, lists every Kamal config in your infra repositories, one row per destination. Each row shows the app, its project, its kind, its hostnames, its config file and its latest release. **Search apps** filters the list.
+**Apps**, at `/apps`, lists every [app](/reference/glossary#app): one row for each Kamal config and [destination](/reference/glossary#destination). Each row shows the app, its project, its kind, its hostnames, its config file and its latest release. **Search apps** filters the list.
 
 ### New app
 
-Admins press **New app** on the board to add an app. Meridian writes a Kamal config from a template, checks it with Kamal, and opens a pull request on the infra repository. The form asks for:
+Admins press **New app** on the board to add an app. Meridian writes a Kamal config from a form, checks it with Kamal, and opens a pull request on the infra repository. The form asks for:
 
 | Field | What it sets |
 | --- | --- |
 | **Infra repository** | The project the config goes to. |
 | **Name** | The Kamal service. |
-| **Source repository** | Where the app's code and Dockerfile live, as `owner/name`. Previews watch its pull requests. |
+| **Source repository** | Where the app's code and Dockerfile live, as `owner/name`. Previews follow its pull requests. |
 | **Kind** | **Static** (nginx, port 80), **Node** (Next.js, port 3000), **Rails** (port 80) or **Other** (port 3000). |
 | **Hostname** | The domain that kamal-proxy serves the app on. |
 | **Servers** | The servers to run on, or **every server with these labels**, such as `role=web,region=sgp`. |
 | **Destination** | Optional. Writes a base config plus a destination file. |
 | **Port**, **Registry**, **First version** | The app port, the registry host, and the image tag to deploy once the pull request is merged. |
 
-Press **Open pull request**. The next page lists the files, what is **Still to do by hand**, and Dockerfile guidance for the kind. The app appears on the board once the pull request is merged. See [add a new app](/guides/new-app).
+Press **Open pull request**. The next page lists the files, what is **Still to do by hand**, and Dockerfile advice for the kind. The app shows on the board once you merge the pull request. See [add a new app](/guides/new-app).
 
 ## App page
 
@@ -109,17 +104,19 @@ The app's page, at `/apps/<id>`, has everything about one app. The header shows 
 
 <Screenshot name="app" alt="An app's page: servers with their versions and health, releases with Roll back, and Ship a version on the right" />
 
-- **Traffic** and **Logs**, for deployers, open the app's live request lines and container logs. See [traffic](/guides/traffic) and [live stats and logs](/guides/live-stats-and-logs).
-- **Servers** lists each server with the version it runs, its state, its roles, its health and its place.
-- **Accessories** lists the config's accessories, such as a database, with their image, server, state and start time.
-- **Releases** lists the last 20 releases from the Git history of the version file. The newest has **Roll back**.
-- **Configuration** shows the config file, the image, the roles, the version file, the source repository and the secret names.
-
-On the right, **Ship a version** takes a version and commits it with **Deploy**. Its box suggests past releases. **Redeploy** runs the deploy workflow again for the current version. **Current deploy** shows the last deploy: its CI status, who started it, its commit, a link to the CI run, and each server's progress as its agent reports the new version.
+| Section | What it shows |
+| --- | --- |
+| **Traffic** and **Logs** | For deployers. The app's live requests and container logs. See [traffic](/guides/traffic) and [live stats and logs](/guides/live-stats-and-logs). |
+| **Servers** | Each server, with the version it runs, its state, roles, health and place. |
+| **Accessories** | The config's accessories, such as a database, with their image, server, state and start time. |
+| **Releases** | The last 20 releases from the version file's Git history. The newest has **Roll back**. |
+| **Configuration** | The config file, image, roles, version file, source repository and secret names. |
+| **Ship a version** | A version box and **Deploy**, with past releases as suggestions. **Redeploy** runs the deploy workflow again for the current version. |
+| **Current deploy** | The last deploy's CI status, who started it, its commit and a link to the CI run. Each server shows its progress as its agent reports the new version. |
 
 ## Servers
 
-**Servers**, at `/servers`, lists every machine that Git names or an agent reports from. Each row shows the server, its hostname, its place, its labels, its agent version and when it was last seen. A quiet server is marked **silent**. **Search servers** filters by name or hostname, and **Only silent agents** shows only quiet servers.
+**Servers**, at `/servers`, lists every machine that Git names or an agent reports from. Each row shows the server, its hostname, place, labels, agent version and when it was last seen. A quiet server is marked **silent**. **Search servers** filters by name or hostname. **Only silent agents** shows only quiet servers.
 
 ## Server page
 
@@ -127,80 +124,84 @@ A server's page, at `/servers/<id>`, shows one machine. The header says **Report
 
 <Screenshot name="server" alt="A server's page: live host tiles, the apps on it, and every container with live CPU, memory and network" />
 
-- **Host** shows live CPU, memory, load and disk, with a sparkline each, while the page is open. These need the agent's `/proc` mount.
-- **Apps** lists each app here with the version it runs, its state and its roles.
-- **Containers** lists every container that Kamal started, with its version, state, health, live CPU, memory and network, and start time. Deployers get a **Logs** button on each row.
-- **Machine** shows the hostname, the agent version, when it was last seen, its location and its projects.
-- **Labels** shows what the agent sent in `MERIDIAN_LABELS`, apart from the place labels `city`, `region`, `lat` and `lng`.
-- **Location on the map**, for admins, sets a **Latitude** and **Longitude** with **Save location**.
+| Section | What it shows |
+| --- | --- |
+| **Host** | Live CPU, memory, load and disk while the page is open. These need the agent's `/proc` mount. |
+| **Apps** | Each app here, with the version it runs, its state and its roles. |
+| **Containers** | Each container that Kamal started, with its version, state, health, live CPU, memory and network, and start time. Deployers get a **Logs** button on each row. |
+| **Machine** | The hostname, agent version, last seen time, location and projects. |
+| **Labels** | What the agent sent in `MERIDIAN_LABELS`, except `city`, `region`, `lat` and `lng`. |
+| **Location on the map** | For admins. Set a **Latitude** and **Longitude**, then press **Save location**. |
 
 See [servers and agents](/concepts/servers-and-agents).
 
 ## Activity
 
-**Activity**, at `/events`, is the audit log: everything Meridian did, and who asked for it. Entries are grouped by day, newest first, 50 to a page.
+**Activity**, at `/events`, is the audit log. It lists each change Meridian made and each look at logs or traffic, with who did it. Entries are grouped by day, newest first, 50 to a page.
 
 <Screenshot name="activity" alt="The activity log: deploys, rollbacks and syncs grouped by day, each with who did it and its commit" />
 
-Each entry shows a sentence, such as **Deployed shop · production to v42**, the person, the action name such as `app.deploy`, the commit and a link to the pull request where there is one. Under **Filters**, **Action starts with** takes a prefix such as `app.` or `preview.`, and **Who** picks a person. See [activity events](/reference/activity-events) for every action name.
+Each entry shows a sentence, such as **Deployed shop · production to v42**. It also shows the person, the action name such as `app.deploy`, and the commit. A link to the pull request shows where there is one.
+
+Under **Filters**, **Action starts with** takes a start such as `app.` or `preview.`, and **Who** picks a person. See [activity events](/reference/activity-events) for every action name.
 
 ## Previews
 
-**Previews**, at `/previews`, lists the running preview of each open pull request. Each row shows the app, the pull request with its head commit, the preview's URL, its state and when it expires. States are **Deploying**, **Active**, **Failed** and **Removing**. Deployers can press **Destroy** to remove one now.
+**Previews**, at `/previews`, lists the [preview](/reference/glossary#preview) of each open pull request. A preview is a temporary copy of an app for one pull request. Each row shows the app, the pull request with its latest commit, the preview's URL, its state and when it expires.
 
-**Recently removed** lists the last ten previews that went away, and when. See [previews](/guides/previews).
+The states are **Deploying**, **Active**, **Failed** and **Removing**. Deployers can press **Destroy** to remove a preview now. **Recently removed** lists the last ten previews that went away. See [previews](/guides/previews).
 
 ## Projects
 
-**Projects**, at `/projects`, lists your infra repositories, each with its app count, its last sync and its problems. Admins add one with **Add project**.
+**Projects**, at `/projects`, lists your infra repositories. Each one shows its app count, its last sync and its problems. Admins add one with **Add project**.
 
-A project's page has:
+A project's page has these parts:
 
-- **Sync now**, to read Git at once instead of within 30 seconds,
-- **Add CI workflow**, to open a pull request with `.github/workflows/meridian-deploy.yml`,
-- **Edit**, for the repository, branch, installation ID and config paths, and **Remove project** at the top of the edit page,
-- **Repository**, with the branch, the config paths, the last sync and whether changes arrive as pull requests or direct commits,
-- **Parse errors**, each with its file and line,
-- **Configs found**, every app with its config, destination, server count and hostnames.
+- **Sync now** reads Git at once, instead of within 30 seconds.
+- **Add CI workflow** opens a pull request with `.github/workflows/meridian-deploy.yml`.
+- **Edit** changes the repository, branch, installation ID and config paths. **Remove project** is at the top of the edit page.
+- **Repository** shows the branch, the config paths and the last sync. It also says whether changes arrive as pull requests or direct commits.
+- **Parse errors** lists each error with its file and line.
+- **Configs found** lists every app with its config, destination, server count and hostnames.
 
 Removing a project removes it from Meridian only. Nothing in Git changes. See [projects](/guides/projects).
 
 ## Agents
 
-**Agents**, at `/agents`, is where servers get connected. **Install** shows the two Kamal accessories to add, with your Meridian URL filled in. **Connect a server** lists the steps.
+**Agents**, at `/agents`, is where you connect servers. **Install** shows the two Kamal accessories to add, with your Meridian URL filled in. **Connect a server** lists the steps.
 
-Admins create a token with **Create token**. Give it a **Label**, and tick **Fleet token, shared by many servers** for a token that many servers share. Meridian shows the token once. **Tokens** lists every token with its server and when it was last used. **Revoke** cuts it off.
+Admins create a token with **Create token**. Give it a **Label**. Tick **Fleet token, shared by many servers** for one token that many servers share. Meridian shows the token once. **Tokens** lists each token with its server and when it was last used, and **Revoke** cuts one off.
 
-**Silent agents** lists every server whose agent has gone quiet, then the servers that no agent has ever reported from. See [install the agent](/guides/agent).
+**Silent agents** lists each server whose agent has gone quiet. Then it lists the servers that no agent has ever reported from. See [install the agent](/guides/agent).
 
 ## Tunnels
 
-**Tunnels**, at `/tunnels`, shows each Cloudflare Tunnel that your configs run. Each tunnel shows its token secret and whether Meridian set it, how many connectors run, the apps it serves, and anything that needs fixing.
+**Tunnels**, at `/tunnels`, shows each Cloudflare Tunnel that your configs run. Each one shows its token secret and whether Meridian set it, how many connectors run, the apps it serves, and what needs fixing.
 
-**Set up a tunnel** walks through the steps in order: in Cloudflare, in Git, on the servers, and back in Cloudflare for the routes. Admins can press **Edit connectors** to choose the servers that run a connector, which Meridian proposes as a change to the config. Meridian never calls Cloudflare's API. See [Cloudflare Tunnel](/guides/cloudflare-tunnel).
+**Set up a tunnel** lists the steps in order: in Cloudflare, in Git, on the servers, then the routes in Cloudflare. Admins press **Edit connectors** to choose the servers that run a connector. Meridian proposes that as a change to the config. Meridian never calls Cloudflare's API. See [Cloudflare Tunnel](/guides/cloudflare-tunnel).
 
 ## Secrets
 
-**Secrets**, at `/secrets`, lists the secret names each project's configs use, from `env.secret` and `registry.password`. Each row shows the apps that use the name and when it was last set from Meridian.
+**Secrets**, at `/secrets`, lists the secret names that each project's configs use, from `env.secret` and `registry.password`. Each row shows the apps that use the name, and when someone last set it from Meridian.
 
-Admins type a value under **Set or rotate**. Meridian encrypts it for the repository's GitHub Actions secrets and keeps nothing. **Add another name** adds a name that no config uses yet, with an optional value. See [secrets](/guides/secrets).
+Admins type a value under **Set or rotate**. Meridian encrypts it into the repository's GitHub Actions secrets and keeps nothing. **Add another name** adds a name that no config uses yet, with an optional value. See [secrets](/guides/secrets).
 
 ## Settings
 
-**Settings**, at `/settings`, is for admins. It has two tabs.
+**Settings**, at `/settings`, is for admins. It has two tabs, **General** and **People**.
 
 **General** has three cards, saved together with **Save**:
 
-- **Workspace**: the **Name** of this Meridian.
-- **Previews**: the preview **Domain**, **Hostnames** in nested or flat form, the **Preview servers** label selector, and **Expire after (days)**.
-- **Where Meridian runs**: a **Place**, **Latitude** and **Longitude**, the centre of the map's flows.
+- **Workspace** sets the **Name** of this Meridian.
+- **Previews** sets the preview **Domain**, **Hostnames** in nested or flat form, the **Preview servers** label selector, and **Expire after (days)**.
+- **Where Meridian runs** sets a **Place**, **Latitude** and **Longitude**. The map draws Meridian there, with agent reports flowing in and deploys flowing out.
 
-Beside them, **Connections** shows how Meridian reaches GitHub, whether webhooks are on, and the Kamal version it parses configs with. These come from the environment and can't be changed here.
+Beside them, **Connections** shows how Meridian reaches GitHub, whether webhooks are on, and the Kamal version it reads configs with. These come from Meridian's environment, so you can't change them here.
 
-**People** lists everyone with their role. **Add person** adds someone with a password. **Edit** changes their details or role. See [settings](/operate/settings) and [people](/guides/people).
+**People** lists everyone with their role. **Add person** adds someone with a password, and **Edit** changes their details or role. See [settings](/operate/settings) and [people](/guides/people).
 
 **Jobs**, in the sidebar, opens the background jobs dashboard at `/jobs`.
 
 ## The account menu
 
-Your name at the top right opens the account menu. It shows your role, a **Theme** switch between **System**, **Light** and **Dark**, and **Sign out**. The theme is saved in the browser, not on your account. The sidebar's **Collapse sidebar** button shrinks it to a rail of icons.
+Your name at the top right opens the account menu. It shows your role, a **Theme** switch between **System**, **Light** and **Dark**, and **Sign out**. The browser saves the theme, not your account. The sidebar's **Collapse sidebar** button shrinks the sidebar to a row of icons.

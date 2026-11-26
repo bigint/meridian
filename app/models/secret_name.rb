@@ -11,15 +11,26 @@ class SecretName < ApplicationRecord
   validates :name, format: { with: FORMAT, message: "must be letters, digits and underscores, not starting with GITHUB_" }, uniqueness: { scope: :project_id }
 
   def self.record(project)
-    references = project.apps.each_with_object(Hash.new { |h, k| h[k] = [] }) do |app, names|
-      app.secret_names.each { names[it] << app.name }
+    # Reloaded: a second sync of the same project in one job would otherwise
+    # read the apps the first one left in memory.
+    references = project.apps.reload.each_with_object(Hash.new { |h, k| h[k] = [] }) do |app, names|
+      app.secret_names.each { names[normalize_value_for(:name, it)] << app.name }
     end
+    # GitHub can't store some names (GITHUB_TOKEN is its own). A config that
+    # uses one must not stop every sync of the project.
+    references.select! { |name, _| name.match?(FORMAT) }
 
     references.each do |name, apps|
       record = project.secret_names.find_or_initialize_by(name: name)
-      record.update!(apps: apps.sort) if record.new_record? || record.apps != apps.sort
+      record.update!(apps: apps.uniq.sort) if record.new_record? || record.apps != apps.uniq.sort
     end
-    project.secret_names.where.not(name: references.keys).where(last_set_at: nil).delete_all
+
+    # A name sync recorded and nobody set goes with its last reference. One
+    # that was set, or that an admin added by hand, stays, referenced by nothing.
+    project.secret_names.where.not(name: references.keys).each do |secret|
+      next unless secret.referenced?
+      secret.last_set_at ? secret.update!(apps: []) : secret.delete
+    end
   end
 
   def set(value, actor:)

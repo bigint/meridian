@@ -62,6 +62,34 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal %w[ DATABASE_URL KAMAL_REGISTRY_PASSWORD SINGAPORE_REPLICA_URL ], @project.apps.sole.secret_names
   end
 
+  test "a secret name GitHub can't store is left out, and the rest of the sync goes on" do
+    files = infra_files.merge("deploy/ghcr.yml" => <<~YAML)
+      service: ghcr
+      image: example/ghcr
+      servers: [ web-9.example.com ]
+      env: { secret: [ GITHUB_TOKEN, SMTP_PASSWORD ] }
+      registry: { server: ghcr.io, username: example, password: [ KAMAL_REGISTRY_PASSWORD ] }
+      builder: { arch: amd64 }
+    YAML
+    stub_github_files(@project, files, head: "f" * 40)
+
+    assert @project.sync
+    assert @project.apps.exists?(service: "ghcr")
+    assert_equal [ "ghcr" ], @project.secret_names.find_by!(name: "SMTP_PASSWORD").apps
+    assert_not @project.secret_names.exists?(name: "GITHUB_TOKEN")
+  end
+
+  test "a second sync in the same job records the secret names of what it just synced" do
+    @project.sync
+    files = infra_files.merge("deploy/api.yml" => infra_files["deploy/api.yml"].sub("    - DATABASE_URL\n", "    - DATABASE_URL\n    - NEW_SECRET\n"))
+    stub_github_files(@project, files, head: "b" * 40)
+    stub_github_runs(@project, [ { id: 1, path: ".github/workflows/meridian-deploy.yml", head_sha: "b" * 40, head_branch: "main", event: "push", status: "queued", display_title: "x", html_url: "u", updated_at: Time.current.iso8601 } ])
+
+    @project.poll_workflow_runs
+    assert_equal "b" * 40, @project.reload.last_synced_sha
+    assert_equal [ "api" ], @project.secret_names.find_by!(name: "NEW_SECRET").apps
+  end
+
   test "parse errors carry file and line" do
     @project.sync
 

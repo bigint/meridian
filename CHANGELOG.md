@@ -30,6 +30,9 @@
 - A config that fails to parse keeps its app. Sync used to destroy it, with its deploy history, releases and previews (leaving those preview containers running with nothing to remove them), and unlinked its containers, so the board showed its containers as stray until the typo was fixed and the app came back with a new id.
 - An app whose config is gone from Git has its previews removed (`command=remove`) before Meridian forgets it, and a leftover `<config>.pr-<n>.yml` is never read as a config of its own, which showed as a parse error forever.
 - Sync reads everything it needs from GitHub before it opens its database transaction. Commit history and version files were fetched inside it, so a first sync of many apps held SQLite's only write lock for minutes and snapshots and sign-ins failed meanwhile.
+- A config that references a secret GitHub can't store, such as `GITHUB_TOKEN`, no longer stops the project syncing. The name failed validation, which rolled every sync back, so nothing in the repository changed in Meridian again and no error showed.
+- A secret name added by hand on the Secrets page without a value survives the next sync, which deleted it. A name that was set and that no config references any more says so, instead of listing the apps that used to.
+- Secret names are recorded from the apps a sync just wrote. When a push landed during a sync job, its second sync read the first one's apps from memory and missed new names until the next push.
 
 ## v0.1.0 (2026-11-26)
 

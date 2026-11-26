@@ -22,6 +22,27 @@ class SecretsTest < ActionDispatch::IntegrationTest
     assert_equal [ "web · production", "web · staging" ], @project.secret_names.find_by!(name: "RAILS_MASTER_KEY").apps
   end
 
+  test "a name added by hand without a value outlives the next sync" do
+    sign_in_as users(:admin)
+    post secrets_path, params: { project_id: @project.id, secret_name: { name: "CERTIFICATE_PEM" } }
+    assert_redirected_to secrets_path(anchor: "project-#{@project.id}")
+
+    stub_github_repo(@project, head: "b" * 40)
+    assert @project.sync
+    assert_equal [], @project.secret_names.find_by!(name: "CERTIFICATE_PEM").apps
+  end
+
+  test "a name that was set and is no longer referenced says so" do
+    secret = @project.secret_names.find_by!(name: "API_TOKEN_PRODUCTION")
+    secret.update!(last_set_at: Time.current)
+    files = Dir.glob("**/*", File::FNM_DOTMATCH, base: GitHubHelper::INFRA).select { File.file?(GitHubHelper::INFRA.join(it)) }.reject { it == "deploy/api.yml" }
+    stub_github_files(@project, files.index_with { File.read(GitHubHelper::INFRA.join(it)) }, head: "b" * 40)
+
+    @project.sync
+    assert_not secret.reload.referenced?
+    assert_not @project.secret_names.exists?(name: "DATABASE_URL"), "a name nobody set goes with its last reference"
+  end
+
   test "secret_names has no column that could hold a value" do
     assert_equal %w[ apps created_at id last_set_at last_set_by_id name project_id updated_at ], SecretName.column_names.sort
   end

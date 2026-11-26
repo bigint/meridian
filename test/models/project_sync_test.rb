@@ -182,6 +182,20 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal 7, blog.latest_release.version.length
   end
 
+  test "the newest release is the one that landed last, not the one written last" do
+    stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v43\n" ], [ "b" * 40, "v42\n" ] ] })
+    # v43 was written on a branch yesterday and rebased onto main after v42.
+    stub_request(:get, %r{/repos/example/infra/commits\?}).with(query: hash_including("path" => "deploy/web.production.version")).to_return_json(body: [
+      { sha: "c" * 40, commit: { message: "deploy: v43", author: { name: "Ada", date: 1.day.ago.iso8601 }, committer: { name: "GitHub", date: 1.minute.ago.iso8601 } } },
+      { sha: "b" * 40, commit: { message: "deploy: v42", author: { name: "Bob", date: 1.hour.ago.iso8601 }, committer: { name: "Bob", date: 1.hour.ago.iso8601 } } }
+    ])
+    @project.sync
+
+    web = @project.apps.find_by!(service: "web", destination: "production")
+    assert_equal "v43", web.latest_release.version
+    assert_equal [ [ web.id, "v43" ] ], Release.latest_per_app.where(app: web).pluck(:app_id, :version)
+  end
+
   test "an unchanged head is not synced again" do
     @project.sync
     assert_not @project.sync

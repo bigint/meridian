@@ -60,8 +60,12 @@ class GitHost::GitHub
 
   def commits(path:, ref: project.default_branch, limit: 20)
     request do
+      # The committer date says when a commit landed on the branch, as the
+      # API orders them. The author date says when it was written, which a
+      # rebased or merged pull request carries over from days before.
       client.commits(repo, ref, path: path, per_page: limit).map do |commit|
-        GitHost::Commit.new(sha: commit.sha, author: commit.commit.author.name, committed_at: commit.commit.author.date, message: commit.commit.message)
+        landed = commit.commit.committer&.date || commit.commit.author.date
+        GitHost::Commit.new(sha: commit.sha, author: commit.commit.author.name, committed_at: landed, message: commit.commit.message)
       end
     end
   end

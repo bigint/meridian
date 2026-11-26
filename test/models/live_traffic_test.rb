@@ -16,10 +16,12 @@ class LiveTrafficTest < ActiveSupport::TestCase
     @proxy = place(@server, PROXY, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
   end
 
+  # A preview deploys under its own service, "shop-pr-12" (Preview#overlay), as
+  # destination pr-12, so Kamal names it shop-pr-12-web-pr-12.
   test "an app's services are Kamal's container prefixes, previews included" do
     @shop.previews.create!(pr_number: 12, destination: "pr-12", hostname: "pr-12.shop.example.com", overlay_path: "deploy/shop.pr-12.yml", expires_at: 1.day.from_now)
 
-    assert_equal Set.new(%w[ shop-web-production shop-web-pr-12 ]), LiveTraffic.services(@shop)
+    assert_equal Set.new(%w[ shop-web-production shop-pr-12-web-pr-12 ]), LiveTraffic.services(@shop)
     assert_equal Set.new(%w[ blog-web ]), LiveTraffic.services(@blog)
   end
 
@@ -28,6 +30,21 @@ class LiveTrafficTest < ActiveSupport::TestCase
     place(elsewhere, "e" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
 
     assert_equal [ @proxy ], LiveTraffic.proxies(@shop)
+  end
+
+  test "a preview's requests reach the app's readers, from the server the preview runs on" do
+    @shop.previews.create!(pr_number: 12, destination: "pr-12", hostname: "pr-12.shop.example.com", overlay_path: "deploy/shop.pr-12.yml", expires_at: 1.day.from_now)
+    previews = server_named("preview-1.example.com")
+    place(previews, "e" * 64, name: "shop-pr-12-web-pr-12-v1", service: "shop-pr-12", destination: "pr-12")
+    preview_proxy = place(previews, "d" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+
+    assert_equal [ @proxy, preview_proxy ], LiveTraffic.proxies(@shop)
+
+    LiveTraffic.watch(@shop, LiveTraffic.proxies(@shop))
+    line = request("shop-pr-12-web-pr-12", "/")
+    assert_broadcast_on TrafficChannel.broadcasting_for(@shop), { "container" => "d" * 64, "source" => preview_proxy.id, "lines" => [ line ] } do
+      LiveTraffic.relay(previews, preview_proxy, { "container" => "d" * 64, "lines" => [ line ] })
+    end
   end
 
   test "a watched app gets its own requests, and nothing else kamal-proxy logged" do

@@ -15,6 +15,7 @@ class AgentChannel < ApplicationCable::Channel
 
     remaining = LiveStats.lease_remaining(@server)
     transmit({ type: "watch", seconds: remaining }) if remaining.positive?
+    LiveLogs.open_tails(@server).each { transmit it }
   end
 
   def stats(data)

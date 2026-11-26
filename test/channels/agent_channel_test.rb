@@ -72,6 +72,16 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     assert_equal [ { "type" => "watch", "seconds" => LiveStats::LEASE.to_i } ], transmissions
   end
 
+  test "a container someone is still reading is tailed again, with history, when its agent reconnects" do
+    read = place(@server, WEB)
+    place(@server, "b" * 64, name: "nobody-reads-this")
+    LiveLogs.tail(read, backlog: LiveLogs::BACKLOG)
+
+    subscribe machine_id: "m-web-1"
+
+    assert_equal [ { "type" => "tail", "container" => WEB, "seconds" => LiveLogs::LEASE.to_i, "backlog" => LiveLogs::BACKLOG } ], transmissions
+  end
+
   test "no lease, no watch message" do
     subscribe machine_id: "m-web-1"
 

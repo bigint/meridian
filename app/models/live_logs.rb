@@ -46,8 +46,25 @@ module LiveLogs
       return unless Rails.cache.write(key, true, unless_exist: true, expires_in: RENEW_EVERY)
     end
 
+    Rails.cache.write(lease_key(placement.id), LEASE.from_now.to_f, expires_in: LEASE)
     AgentChannel.broadcast_to(placement.server, { type: "tail", container: placement.container_id, seconds: LEASE.to_i, backlog: backlog })
   end
+
+  # For an agent that just (re)connected: a tail, with history, for each of
+  # its server's containers someone is still reading. A tail sent while the
+  # agent was away was lost, and renewals ask only for new lines. Browsers
+  # skip lines they already hold, so a repeated history is harmless.
+  def open_tails(server)
+    containers = server.placements.pluck(:id, :container_id).to_h
+    leases = Rails.cache.read_multi(*containers.keys.map { lease_key(it) })
+    containers.filter_map do |id, container|
+      remaining = leases[lease_key(id)].to_f - Time.current.to_f
+      { type: "tail", container: container, seconds: remaining.ceil, backlog: BACKLOG } if remaining.positive?
+    end
+  end
+
+  def lease_key(placement_id) = [ "live-tail-lease", placement_id ]
+  private_class_method :lease_key
 
   def line(raw)
     return unless raw.is_a?(Hash) && STREAMS.include?(raw["s"])

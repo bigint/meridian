@@ -26,7 +26,7 @@
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   meridian_agent:
-    image: ghcr.io/bigint/meridian-agent:v0.1.0
+    image: ghcr.io/bigint/meridian-agent:v0.1.1
     roles: [ web ]
     # Outbound to MERIDIAN_URL works from any network, as long as it is an
     # address the host itself can reach (not a container name on `kamal`).

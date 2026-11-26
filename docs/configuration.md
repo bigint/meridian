@@ -41,4 +41,4 @@ The defaults are sized for hundreds of servers on one small machine:
 
 - Snapshots are accepted in milliseconds and ingested by jobs.
 - The board is paginated, groups by region above 30 servers, and refreshes each group at most once a second.
-- For thousands of servers, run jobs separately (`SOLID_QUEUE_IN_PUMA=false` plus a `job` role), and raise `MERIDIAN_INTERVAL` on agents to 30s or more.
+- For thousands of servers, run jobs separately (`SOLID_QUEUE_IN_PUMA=false` plus a `job` role), and raise `MERIDIAN_INTERVAL` on agents to 30s or more. A server turns stale after three of its agent's intervals, and never sooner than 45 seconds.

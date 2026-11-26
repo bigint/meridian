@@ -21,7 +21,6 @@ class Board
   # Something a person should look at, in the order they should look at it.
   # A silent agent is one item for its server, not one per app on it.
   Attention = Data.define(:state, :app, :server, :count, :cell)
-  ATTENTION_ORDER = %w[ missing drifted stray stale ].freeze
 
   attr_reader :filters
 
@@ -54,7 +53,7 @@ class Board
       else
         quiet.map { |server, cells| Attention.new(state: "stale", app: nil, server: server, count: cells.size, cell: cells.first) }
       end
-      items.sort_by { [ ATTENTION_ORDER.index(it.state), it.app&.name.to_s, it.server&.name.to_s ] }
+      items.sort_by { [ Drift::ATTENTION_RANK.fetch(it.state), it.app&.name.to_s, it.server&.name.to_s ] }
     end
   end
 

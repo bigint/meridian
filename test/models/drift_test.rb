@@ -23,4 +23,9 @@ class DriftTest < ActiveSupport::TestCase
   test "worst state wins" do
     assert_equal "missing", Drift.worst(%w[ in_sync missing drifted ])
   end
+
+  test "worst ranks states in the board's attention order" do
+    assert_equal "stray", Drift.worst(%w[ stale stray ])
+    assert_equal Drift::ATTENTION, Drift::SEVERITY.first(Drift::ATTENTION.size)
+  end
 end

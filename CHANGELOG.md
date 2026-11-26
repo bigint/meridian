@@ -113,6 +113,7 @@
 - The agent drops and counts live log lines that come faster than one full batch (500 lines) per 250 ms, instead of falling ever further behind Docker without saying so. History still arrives whole.
 - A Logs or Traffic page's grant to stream lapses after 12 hours. A page still open then says "Stopped: reload the page to keep reading" instead of "Connecting…" forever.
 - A form that is sent and redirects back to the same page takes the server's values again (the version box empties after a deploy), while text typed during a live refresh is still kept.
+- The agent template on the Agents page boots its two accessories with one `kamal accessory boot` each, since the command takes one name, and says that `roles: [ web ]` boots them on web hosts only.
 
 ### Upgrading
 

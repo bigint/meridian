@@ -42,7 +42,7 @@ The payloads, leases and limits are in [Agent protocol](/reference/agent-protoco
     Then export `MERIDIAN_TOKEN` in the shell you run Kamal from, or read it from your password manager in that line.
   </Step>
   <Step title="Add the two accessories">
-    Copy the accessories from **Install** on the **Agents** page. It fills in your `MERIDIAN_URL`. The same text is in `templates/kamal/agent-accessories.yml`. Put them under `accessories:`, and replace `SERVICE` with the config's `service`, and `REGION` and `PROVIDER` with your labels.
+    Copy the accessories from **Install** on the **Agents** page. It fills in your `MERIDIAN_URL`. The same text is in `templates/kamal/agent-accessories.yml`. Put them under `accessories:`, and replace `SERVICE` with the config's `service`, and `REGION` and `PROVIDER` with your labels. `roles: [ web ]` boots them on the config's `web` hosts only: list every role whose servers should report, or name the servers with `hosts:`.
 
     ```yaml config/deploy.yml
     accessories:

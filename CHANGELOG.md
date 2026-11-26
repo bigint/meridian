@@ -121,6 +121,7 @@
 - The board's side panel (`/?inspect=<id>`) for an accessories-only config shows no Deploy form, Redeploy or Roll back, as its app page already doesn't. Each could only fail.
 - The agent's README gives its binary as about 7 MB and its image as about 3.5 MB compressed. It gave 3.5 MB alone, which read as the size of the binary.
 - A deploy by someone since removed says who it was in **Current deploy**, with `(removed)`, as Activity does. It said "By Git". Deploys keep the name of the person who asked for them, and existing ones take it from their person or from Activity.
+- With `GITHUB_API_URL` set for GitHub Enterprise, links to repositories, commits and files go to that server, such as `https://github.example.com` for `https://github.example.com/api/v3/`. They always went to `github.com`.
 
 ### Upgrading
 

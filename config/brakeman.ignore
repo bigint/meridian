@@ -32,7 +32,7 @@
       "cwe_id": [
         79
       ],
-      "note": "repo_full_name is validated against owner/name format, so repo_url is always https://github.com/<owner>/<name>."
+      "note": "repo_full_name is validated against owner/name format, so repo_url is always <GitHub's web URL, from GITHUB_API_URL>/<owner>/<name>."
     }
   ],
   "brakeman_version": "8.1.1"

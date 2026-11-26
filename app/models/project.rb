@@ -21,9 +21,7 @@ class Project < ApplicationRecord
     @git ||= GitHost.for(self)
   end
 
-  def repo_url
-    "https://github.com/#{repo_full_name}"
-  end
+  def repo_url = git.repo_url
 
   # Where a new config for this service goes: the first config glob with one
   # "*", which the service replaces ("deploy/**/*.yml" counts as

@@ -16,6 +16,15 @@ class GitHost::GitHub
     def private_key = setting(:private_key, "GITHUB_APP_PRIVATE_KEY")&.gsub("\\n", "\n")
     def webhook_secret = setting(:webhook_secret, "GITHUB_APP_WEBHOOK_SECRET")
     def api_endpoint = ENV.fetch("GITHUB_API_URL", "https://api.github.com/")
+
+    # Where people browse that API's repositories: api.github.com and
+    # api.<name>.ghe.com drop the "api.", and Enterprise Server drops /api/v3.
+    def web_url
+      uri = URI(api_endpoint)
+      uri.host = uri.host.delete_prefix("api.")
+      uri.path, uri.query, uri.fragment = "", nil, nil
+      uri.to_s
+    end
     def token = ENV["GITHUB_TOKEN"].presence || Rails.application.credentials.dig(:github, :token)
     def token_mode? = token.present? && !(app_id.present? && private_key.present?)
     def configured? = (app_id.present? && private_key.present?) || token.present?
@@ -122,7 +131,8 @@ class GitHost::GitHub
     end
   end
 
-  def commit_url(sha) = "https://github.com/#{repo}/commit/#{sha}"
+  def repo_url = "#{self.class.web_url}/#{repo}"
+  def commit_url(sha) = "#{repo_url}/commit/#{sha}"
 
   private
     def repo = project.repo_full_name

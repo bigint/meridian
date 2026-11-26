@@ -1,0 +1,5 @@
+<div class="flex flex-wrap items-center gap-3">
+  <% cells.each do |cell| %>
+    <span class="flex items-center gap-2"><%= render VersionCellComponent.new(cell: cell) %><span class="text-xs text-ink-muted"><%= Drift::LABELS[cell.state] %></span></span>
+  <% end %>
+</div>

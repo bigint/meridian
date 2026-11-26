@@ -14,7 +14,16 @@ class PagesTest < ActionDispatch::IntegrationTest
 
     assert_select "[data-board-grid] tbody th", text: "web · production"
     assert_select "[data-board-grid] thead th a[title=?]", "web-1.example.com", text: "web-1"
-    assert_select "[data-board-grid] [data-cell] [data-state]", count: 7
+    assert_select "[data-board-grid] [data-cell][data-state]", count: 7
+  end
+
+  test "the board's side panel inspects an app" do
+    app = @project.apps.find_by!(service: "web", destination: "production")
+
+    get root_path(inspect: app.id)
+    assert_select "turbo-frame#inspector[target=_top] [data-inspector] h2", text: "web · production"
+    assert_select "turbo-frame#inspector li [data-cell]", minimum: 1
+    assert_select "[data-board-grid] th a[data-turbo-frame=inspector][href*=?]", "inspect=#{app.id}"
   end
 
   test "board filters live in the URL" do
@@ -25,7 +34,7 @@ class PagesTest < ActionDispatch::IntegrationTest
 
   test "servers × apps toggle" do
     get root_path(view: "servers")
-    assert_select "[data-board-grid] tbody th", text: "web-1.example.com"
+    assert_select "[data-board-grid] tbody th a[title=?]", "web-1.example.com"
   end
 
   test "app, server and project pages render" do

@@ -1,9 +1,9 @@
-<section aria-labelledby="<%= @id %>" class="space-y-3">
+<section aria-labelledby="<%= @id %>" class="space-y-2.5">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <h2 id="<%= @id %>" class="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-      <%= @title %><% if @count %> <span class="ml-1 font-mono text-ink-faint"><%= @count %></span><% end %>
+    <h2 id="<%= @id %>" class="text-xs font-semibold text-ink">
+      <%= @title %><% if @count %> <span class="ml-1 font-mono font-normal text-ink-muted"><%= @count %></span><% end %>
     </h2>
-    <% if actions? %><div class="flex items-center gap-2"><%= actions %></div><% end %>
+    <% if actions? %><div class="flex flex-wrap items-center gap-2"><%= actions %></div><% end %>
   </div>
   <%= content %>
 </section>

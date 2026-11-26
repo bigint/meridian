@@ -13,25 +13,23 @@
   </head>
 
   <body class="min-h-svh">
-    <div class="lg:grid lg:min-h-svh lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <%# One sidebar: a popover drawer on phones, always shown from lg up. %>
+    <div class="lg:grid lg:min-h-svh lg:grid-cols-[4rem_minmax(0,1fr)]">
+      <%# One navigation: a popover drawer on phones, an icon rail from lg up. %>
       <aside id="sidebar" popover aria-label="Navigation"
-        class="fixed inset-y-0 left-0 z-40 h-svh w-72 max-w-[85vw] overflow-y-auto border-r border-line bg-surface backdrop:bg-black/40
+        class="fixed inset-y-0 left-0 z-40 h-svh w-64 max-w-[85vw] overflow-y-auto border-r border-line bg-surface backdrop:bg-black/40
                lg:sticky lg:top-0 lg:z-auto lg:block lg:w-auto lg:max-w-none">
         <%= render SidebarComponent.new(user: current_user, attention_count: attention_count) %>
       </aside>
 
-      <header class="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-canvas px-4 py-2 lg:hidden">
-        <%= link_to root_path, class: "flex items-center gap-2 font-semibold" do %><%= icon :logo, class: "size-5 text-accent" %> Meridian<% end %>
-        <button type="button" popovertarget="sidebar" class="rounded-md border border-line px-2.5 py-1 text-sm cursor-pointer">Menu</button>
-      </header>
-
-      <main id="main" class="<%= content_for?(:wide) ? "min-w-0 px-4 py-6 lg:px-8" : "mx-auto w-full min-w-0 max-w-6xl px-4 py-6 lg:px-8" %>">
-        <div class="space-y-6">
-          <%= render "shared/flash" %>
-          <%= yield %>
-        </div>
-      </main>
+      <div class="min-w-0">
+        <%= render TopbarComponent.new(user: current_user) %>
+        <main id="main" class="<%= content_for?(:wide) ? "min-w-0 px-4 py-5 lg:px-6" : "mx-auto w-full min-w-0 max-w-6xl px-4 py-5 lg:px-6" %>">
+          <div class="space-y-5">
+            <%= render "shared/flash" %>
+            <%= yield %>
+          </div>
+        </main>
+      </div>
     </div>
   </body>
 </html>

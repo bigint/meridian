@@ -1,4 +1,5 @@
 <% content_for :title, @app.name %>
+<% content_for :wide, true %>
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 <%= turbo_stream_from @app %>
@@ -16,15 +17,16 @@
   <% end %>
 <% end %>
 
-<%= render "apps/deploys", app: @app %>
-
+<div class="flex flex-wrap gap-5">
+<div class="min-w-0 flex-[999_1_560px] space-y-5">
 <%= render Ui::SectionComponent.new(title: "Servers", count: cells.size) do %>
   <%= render Ui::TableComponent.new(rows: cells, empty: "Not assigned to any server.") do |table| %>
+    <% table.with_column("Running") { |cell| render VersionCellComponent.new(cell: cell) } %>
     <% table.with_column("Server", header: true) { |cell| link_to cell.server.name, cell.server, class: "font-mono text-xs hover:text-accent" } %>
-    <% table.with_column("Roles") { |cell| cell.roles.join(", ") } %>
     <% table.with_column("State") { |cell| render Ui::StateComponent.new(cell.state) } %>
-    <% table.with_column("Running", mono: true) { |cell| cell.versions.map { it.first(12) }.join(", ").presence || "–" } %>
+    <% table.with_column("Roles") { |cell| cell.roles.join(", ") } %>
     <% table.with_column("Health") { |cell| cell.health == "unhealthy" ? render(Ui::BadgeComponent.new("unhealthy", tone: :bad)) : cell.health } %>
+    <% table.with_column("Place", nowrap: true) { |cell| place(cell.server) } %>
   <% end %>
 <% end %>
 
@@ -64,3 +66,11 @@
     <% list.with_item("Secrets") { @app.secret_names.join(", ").presence || "–" } %>
   <% end %>
 <% end %>
+</div>
+
+<aside aria-label="Deploy" class="min-w-0 flex-[1_1_320px] lg:max-w-sm">
+  <div class="space-y-5 rounded-lg border border-line bg-surface p-4 lg:sticky lg:top-16 lg:max-h-[calc(100svh-5rem)] lg:overflow-y-auto">
+    <%= render "apps/deploys", app: @app %>
+  </div>
+</aside>
+</div>

@@ -14,7 +14,16 @@ module ApplicationHelper
     tag.code(sha.to_s.first(7))
   end
 
-  def labels_list(labels)
-    safe_join(labels.sort.map { |key, value| render(Ui::BadgeComponent.new("#{key}=#{value}", mono: true)) }, " ")
+  # Labels other than the place ones, which have a column of their own.
+  PLACE_LABELS = %w[ city region lat lng ].freeze
+
+  def labels_list(labels, except: [])
+    safe_join(labels.except(*except).sort.map { |key, value| render(Ui::BadgeComponent.new("#{key}=#{value}", mono: true)) }, " ")
+  end
+
+  def place(server)
+    city, region = server.label("city"), server.label("region")
+    return tag.span("–", class: "text-ink-faint") unless city || region
+    safe_join([ city, (tag.span(region, class: "font-mono text-xs text-ink-muted") if region) ].compact, " ")
   end
 end

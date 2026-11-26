@@ -1,4 +1,5 @@
 <% content_for :title, @server.name %>
+<% content_for :wide, true %>
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 <% group = @board.groups.first %>
@@ -9,33 +10,21 @@
       <% if @server.stale? %><%= render Ui::StateComponent.new("stale") %> agent silent
       <% elsif !@server.reporting? %><%= render Ui::BadgeComponent.new("No agent yet") %>
       <% else %><%= render Ui::BadgeComponent.new("Reporting", tone: :ok) %><% end %>
-      <%= labels_list(@server.labels) %>
+      <span class="text-ink-muted"><%= place(@server) %></span>
     </div>
   <% end %>
 <% end %>
 
-<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-  <%= render Ui::SectionComponent.new(title: "Machine") do %>
-    <%= render Ui::CardComponent.new do %>
-      <%= render Ui::DescriptionListComponent.new do |list| %>
-        <% list.with_item("Hostname") { tag.code(@server.hostname) } %>
-        <% list.with_item("Agent") { @server.agent_version || "not installed" } %>
-        <% list.with_item("Last seen") { time_ago(@server.last_seen_at) } %>
-        <% list.with_item("Location") { @server.located? ? "#{@server.latitude}, #{@server.longitude}" : tag.span("not set", class: "text-ink-faint") } %>
-        <% list.with_item("Projects") { safe_join(@server.projects.map { link_to it.name, it, class: "text-accent hover:underline" }, ", ").presence || tag.span("none", class: "text-ink-faint") } %>
-      <% end %>
-    <% end %>
+<div class="flex flex-wrap gap-5">
+<div class="min-w-0 flex-[999_1_560px] space-y-5">
+<%= render Ui::SectionComponent.new(title: "Apps", count: group&.rows&.size || 0) do %>
+  <%= render Ui::TableComponent.new(rows: group ? group.rows : [], empty: "Nothing assigned here.") do |table| %>
+    <% table.with_column("Running") { |app| render VersionCellComponent.new(cell: group.cell(app, @server)) } %>
+    <% table.with_column("App", header: true) { |app| link_to app.name, app, class: "hover:text-accent" } %>
+    <% table.with_column("State") { |app| render Ui::StateComponent.new(group.cell(app, @server).state) } %>
+    <% table.with_column("Roles") { |app| group.cell(app, @server).roles.join(", ") } %>
   <% end %>
-
-  <%= render Ui::SectionComponent.new(title: "Apps", count: group&.rows&.size || 0) do %>
-    <%= render Ui::TableComponent.new(rows: group ? group.rows : [], empty: "Nothing assigned here.") do |table| %>
-      <% table.with_column("App", header: true) { |app| link_to app.name, app, class: "hover:text-accent" } %>
-      <% table.with_column("Roles") { |app| group.cell(app, @server).roles.join(", ") } %>
-      <% table.with_column("State") { |app| render Ui::StateComponent.new(group.cell(app, @server).state) } %>
-      <% table.with_column("Running", mono: true) { |app| group.cell(app, @server).versions.map { it.first(12) }.join(", ").presence || "–" } %>
-    <% end %>
-  <% end %>
-</div>
+<% end %>
 
 <%= render Ui::SectionComponent.new(title: "Containers", count: @placements.size) do %>
   <p class="text-xs text-ink-muted">Everything with Kamal labels, as the agent last reported it.</p>
@@ -50,8 +39,29 @@
   <% end %>
 <% end %>
 
+</div>
+
+<aside aria-label="Machine" class="min-w-0 flex-[1_1_320px] lg:max-w-sm">
+<div class="space-y-5 rounded-lg border border-line bg-surface p-4">
+  <%= render Ui::SectionComponent.new(title: "Machine") do %>
+    <div class="rounded-lg border border-line bg-canvas p-3">
+      <%= render Ui::DescriptionListComponent.new do |list| %>
+        <% list.with_item("Hostname") { tag.code(@server.hostname) } %>
+        <% list.with_item("Agent") { @server.agent_version || "not installed" } %>
+        <% list.with_item("Last seen") { time_ago(@server.last_seen_at) } %>
+        <% list.with_item("Location") { @server.located? ? "#{@server.latitude}, #{@server.longitude}" : tag.span("not set", class: "text-ink-faint") } %>
+        <% list.with_item("Projects") { safe_join(@server.projects.map { link_to it.name, it, class: "text-accent hover:underline" }, ", ").presence || tag.span("none", class: "text-ink-faint") } %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @server.labels.except(*ApplicationHelper::PLACE_LABELS).any? %>
+    <%= render Ui::SectionComponent.new(title: "Labels") do %>
+      <div class="flex flex-wrap gap-1.5"><%= labels_list(@server.labels, except: ApplicationHelper::PLACE_LABELS) %></div>
+    <% end %>
+  <% end %>
 <% if current_user.admin? %>
-  <%= render Ui::DisclosureComponent.new(summary: "Location on the map") do %>
+  <%= render Ui::SectionComponent.new(title: "Location on the map") do %>
     <%= form_with model: @server, class: "flex flex-wrap items-end gap-3" do |form| %>
       <div><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90, compact: true %></div>
       <div><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180, compact: true %></div>
@@ -60,3 +70,6 @@
     <p class="mt-2 text-xs text-ink-muted">An agent that reports <code>lat</code> and <code>lng</code> labels overrides this on its next snapshot.</p>
   <% end %>
 <% end %>
+</div>
+</aside>
+</div>

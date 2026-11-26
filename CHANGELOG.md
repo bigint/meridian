@@ -2,16 +2,17 @@
 
 ## Unreleased
 
-### Instrument interface
+### Inspector interface
 
-- A new look of Meridian's own: zinc neutrals, one teal accent, monospace for versions and hosts, compact tables, 6px corners, and light and dark themes. Still no shadows. See `docs/design.md`.
-- A left sidebar with the main places always in view and a search box that finds any app, server or project as you type. On phones it is a drawer behind a Menu button.
+- Meridian's own look, chosen from three mockups: zinc neutrals, one indigo accent, monospace for versions and hosts, dense tables, light and dark, and no shadows. See `docs/design.md`.
+- The board is one grid where every cell shows the version a server actually runs, tinted by drift state, with servers grouped under their region. Click an app to open it in a side panel: its servers, recent releases, a deploy form, Redeploy and Roll back, without leaving the board.
+- App and server pages use the same layout: content on the left, what you act on in a panel on the right.
+- An icon rail replaces the sidebar, with search and the account menu in a top bar. On phones the rail is a drawer behind a Menu button.
 - Built with Tailwind 4 (standalone binary, still no Node) and a ViewComponent library, `app/components/ui/`, browsable at `/lookbook` in development.
-- Install snippets and one-time tokens have a copy button.
-- The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should", with silent agents summarised in one line. The grid follows, with filters folded away.
-- A getting-started checklist on new installs, a one-line status on each app ("✓ Running v42 everywhere"), and Activity laid out day by day.
+- Install snippets and one-time tokens have a copy button. Servers list their place (city and region) in its own column.
+- The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should". A getting-started checklist appears on new installs, and each app has a one-line status ("✓ Running v42 everywhere").
 - `bin/rails meridian:demo` can be run again over an existing demo fleet.
-- Keyboard shortcuts are gone for now; everything is one click from the sidebar.
+- Keyboard shortcuts are gone for now.
 
 ### World map
 

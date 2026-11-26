@@ -1,4 +1,5 @@
-# The app's navigation: search, the places people go, and who is signed in.
+# The app's navigation. From lg up it is a rail of icons, each named for
+# screen readers and on hover; in the phone drawer the names show beside them.
 class SidebarComponent < ApplicationComponent
   def initialize(user:, attention_count: nil)
     @user, @attention_count = user, attention_count
@@ -20,10 +21,12 @@ class SidebarComponent < ApplicationComponent
       [
         [ "Projects", helpers.projects_path, :projects ],
         [ "Agents", helpers.agent_tokens_path, :agents ],
-        [ "Secrets", helpers.secrets_path, :secrets ],
-        ([ "Settings", helpers.settings_root_path, :settings ] if @user.admin?),
-        ([ "Jobs", "/jobs", :jobs ] if @user.admin?)
-      ].compact
+        [ "Secrets", helpers.secrets_path, :secrets ]
+      ]
+    end
+
+    def admin
+      @user.admin? ? [ [ "Settings", helpers.settings_root_path, :settings ], [ "Jobs", "/jobs", :jobs ] ] : []
     end
 
     def current?(path)
@@ -33,12 +36,15 @@ class SidebarComponent < ApplicationComponent
 
     def nav_link(name, path, icon, badge = nil)
       current = current?(path)
-      link_to path, aria: { current: (current ? "page" : nil) },
-        class: classes("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm", current ? "bg-raised font-medium text-ink" : "text-ink-muted hover:bg-raised hover:text-ink") do
+      count = badge.to_i
+      link_to path, title: name, aria: { current: (current ? "page" : nil) },
+        class: classes("relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm lg:size-10 lg:justify-center lg:p-0",
+          current ? "bg-accent-soft text-accent" : "text-ink-muted hover:bg-raised hover:text-ink") do
         safe_join([
-          helpers.icon(icon, class: classes("size-4 shrink-0", current ? "text-accent" : "text-ink-faint")),
-          tag.span(name, class: "flex-1"),
-          (render(Ui::BadgeComponent.new(badge.to_s, tone: :bad)) if badge.to_i.positive?)
+          helpers.icon(icon, class: "size-[18px] shrink-0"),
+          tag.span(name, class: "flex-1 lg:sr-only"),
+          (tag.span(count, class: "rounded-full bg-bad px-1.5 text-[10px] font-semibold leading-4 text-white lg:absolute lg:-right-1 lg:-top-1",
+            aria: { label: "#{helpers.pluralize(count, "thing")} need attention" }) if count.positive?)
         ].compact)
       end
     end

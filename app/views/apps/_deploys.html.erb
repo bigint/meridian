@@ -1,7 +1,6 @@
-<div class="grid gap-4 lg:grid-cols-2">
   <%= render Ui::SectionComponent.new(title: "Ship a version", id: "ship-heading") do %>
     <% if current_user.can_deploy? %>
-      <%= render Ui::CardComponent.new do %>
+      <div class="rounded-lg border border-line bg-canvas p-3">
         <%= form_with url: app_deploys_path(app), scope: :deploy, class: "space-y-3" do |form| %>
           <%= form.field :version, hint: safe_join([ "A past release or a new image tag. Meridian commits it to ", tag.code(app.version_file_path), ", and CI runs ", tag.code("kamal deploy"), "." ]) do %>
             <%= form.text_field :version, list: "versions-#{app.id}", required: true, pattern: "[\\w.+:@\\-]{1,128}", autocomplete: "off", placeholder: app.latest_release&.version %>
@@ -17,7 +16,7 @@
                   confirm: "Run the deploy workflow again for #{app.latest_release.version}? Use this after rotating a secret.") %>
           </div>
         <% end %>
-      <% end %>
+      </div>
     <% else %>
       <p class="text-ink-muted">Deployers and admins can deploy and roll back.</p>
     <% end %>
@@ -27,7 +26,6 @@
     <% if (deploy = app.current_deploy) %>
       <%= render DeployProgressComponent.new(deploy: deploy, app: app) %>
     <% else %>
-      <%= render Ui::EmptyStateComponent.new(title: "No deploys through Meridian yet", icon: :apps) %>
+      <p class="text-ink-muted">No deploys through Meridian yet.</p>
     <% end %>
   <% end %>
-</div>

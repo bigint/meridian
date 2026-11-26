@@ -36,7 +36,7 @@ class Board
   def group_by
     if filters[:group] == "none" then nil
     elsif LABELS.include?(filters[:group]) then filters[:group]
-    elsif servers.size > AUTO_GROUP_ABOVE then "region"
+    elsif servers.size > AUTO_GROUP_ABOVE || regions_in_use > 1 then "region"
     end
   end
 
@@ -126,6 +126,10 @@ class Board
   end
 
   private
+    def regions_in_use
+      @regions_in_use ||= servers.values.filter_map { it.label("region") }.uniq.size
+    end
+
     def group_name(server)
       server.label(group_by) if group_by
     end

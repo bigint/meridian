@@ -22,9 +22,9 @@ class JumpTest < ActionDispatch::IntegrationTest
     assert_select "#jump_results", text: /Nothing called “zzz”/
   end
 
-  test "every page carries the sidebar with search and the main places" do
+  test "every page carries the search box and the main places" do
     get root_path
-    assert_select "#sidebar form[action=?] input[type=search][name=q]", jump_path
+    assert_select "#topbar form[action=?] input[type=search][name=q]", jump_path
     assert_select "#sidebar nav[aria-label=Main] a", 6
     assert_select "#sidebar nav[aria-label=Main] a[aria-current=page]", text: /Board/
     assert_select "#sidebar nav a", text: /Map/

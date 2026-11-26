@@ -1,6 +1,8 @@
 # Design
 
-Meridian's interface is called **Instrument**. It should read like a well-made instrument panel: neutral, dense where density helps, precise about versions and hosts, and quiet everywhere else. One accent colour, no shadows, no decoration that carries no information.
+Meridian's interface is called **Inspector**: a dense grid of what runs where, and a side panel for the thing you picked. It should read like a well-made instrument panel: neutral, precise about versions and hosts, and quiet everywhere else. One accent colour, no shadows, no decoration that carries no information.
+
+The direction was chosen from three mockups on a design canvas (Console, Paper, Inspector).
 
 Browse every component, in every state, at [`/lookbook`](http://localhost:3000/lookbook) while `bin/dev` is running.
 
@@ -15,9 +17,11 @@ Browse every component, in every state, at [`/lookbook`](http://localhost:3000/l
 
 ## Layout
 
-- **Sidebar** (`SidebarComponent`): the logo, a search box that finds any app, server or project as you type (Enter opens the first match), the main places (Board, Map, Apps, Servers, Activity, Previews), a quieter **Manage** group (Projects, Agents, Secrets, and Settings and Jobs for admins), and the person with a sign-out button at the bottom.
-- **Phones:** the same sidebar is a native `popover` drawer behind a **Menu** button, so it needs no JavaScript.
-- **Main column:** a `PageHeaderComponent`, then the page. Pages are `max-w-6xl`; the Board and Map opt into full width with `content_for :wide`.
+- **Icon rail** (`SidebarComponent`): the main places (Board, Map, Apps, Servers, Activity, Previews), then Projects, Agents and Secrets, and Settings and Jobs for admins at the bottom. Each icon is named on hover and for screen readers; the Board icon carries the number of things that need attention.
+- **Top bar** (`TopbarComponent`): a search box that finds any app, server or project as you type (Enter opens the first match), and the account menu with sign out.
+- **Phones:** the rail is a native `popover` drawer behind a **Menu** button, with the names beside the icons, so it needs no JavaScript.
+- **Main column and side panel:** the Board, an app and a server put their content in a main column and what you act on in a panel on the right: the Board's panel inspects the app you click (`AppInspectorComponent`, in a Turbo Frame, so the grid stays put and the URL remembers it); an app's panel ships versions and shows the current deploy; a server's panel holds its facts, labels and location. On narrow screens the panel drops below.
+- Other pages are `max-w-6xl`; the Board, Map, apps and servers use full width with `content_for :wide`.
 - **Sign-in and first run** use a centred card (`layouts/auth.html.erb`).
 
 ## Tokens
@@ -29,10 +33,10 @@ Tailwind 4 reads its theme from CSS. `app/assets/tailwind/application.css` defin
 | `canvas`, `surface`, `raised` | Page background, quiet panels and table heads, hover and pressed states |
 | `ink`, `ink-muted`, `ink-faint` | Text, secondary text, placeholders and the least important details |
 | `line`, `line-strong` | Borders and dividers |
-| `accent`, `accent-strong`, `accent-soft`, `accent-ink` | Teal: primary buttons, focus rings, current navigation, links |
-| `ok`, `warn`, `bad`, `info`, `mute`, each with `-soft` | Drift states, health, alerts and badges |
+| `accent`, `accent-strong`, `accent-soft`, `accent-ink` | Indigo: primary buttons, focus rings, current navigation, the selected row, links |
+| `ok`, `warn`, `bad`, `info`, `mute`, each with `-soft` (and `-line` for borders) | Drift states, health, alerts and badges |
 
-Neutrals are zinc. Type is the system sans stack at 14px, with `ui-monospace` for technical values. Corners are 4px (`rounded-sm`), 6px (`rounded-md`, the default) and 8px (`rounded-lg`, for cards and tables). Numbers use tabular figures.
+Neutrals are zinc. Type is the system sans stack at 13px, with `ui-monospace` for technical values. Corners are 4px (`rounded-sm`), 6px (`rounded-md`, the default) and 8px (`rounded-lg`, for cards and tables). Numbers use tabular figures.
 
 The world map's SVG styles are the only hand-written component CSS, in an `@layer components` block in the same file, and they use the same tokens.
 
@@ -51,7 +55,7 @@ Generic components live in `app/components/ui/`. Each has a Lookbook preview in 
 | `Ui::TableComponent` | Data tables: columns declared once with alignment and monospace, and an empty message |
 | `Ui::ListComponent`, `Ui::ListItemComponent` | Rows with something leading, a title and subtitle, and something trailing |
 | `Ui::DescriptionListComponent` | Terms and values |
-| `Ui::StatComponent` | A number and its meaning; on the board, a filter link |
+| `Ui::StatComponent` | A count as a chip; on the board, a state filter you toggle |
 | `Ui::SegmentedControlComponent`, `Ui::TabsComponent` | Views of the same thing, and sub-pages |
 | `Ui::DisclosureComponent` | Something folded away until asked for |
 | `Ui::EmptyStateComponent` | What a page says when it is empty, and what to do next |
@@ -61,7 +65,9 @@ Generic components live in `app/components/ui/`. Each has a Lookbook preview in 
 | `Ui::StepsComponent` | The getting-started checklist |
 | `Ui::PaginationComponent` | Previous and next pages |
 
-Meridian-specific components sit directly in `app/components/`: `SidebarComponent`, `BoardGridComponent`, `AttentionItemComponent`, `AppStatusComponent`, `DeployProgressComponent` and `WorldMapComponent`.
+Meridian-specific components sit directly in `app/components/`: `SidebarComponent`, `TopbarComponent`, `BoardMatrixComponent`, `VersionCellComponent`, `AppInspectorComponent`, `AttentionItemComponent`, `AppStatusComponent`, `DeployProgressComponent` and `WorldMapComponent`.
+
+**The version cell** is the unit of the whole interface: one app on one server, showing the version actually running, tinted by its drift state (green: what Git says; amber with ≠: another version; red ✕: missing; dotted: stray; dashed: quiet agent or unknown). The state is also a word for screen readers and a different border, never colour alone. The board matrix puts servers under their region as column groups (`aps2-az1-node-01` reads as `az1-01` under `ap-south-2`).
 
 Forms need no per-form markup. `MeridianFormBuilder` is the default form builder: it styles every input, select, check box and submit button, and `form.field :name, hint: "…"` renders the label, input, hint and errors together. Pass `compact: true` for dense filter forms.
 
@@ -76,7 +82,7 @@ Forms need no per-form markup. `MeridianFormBuilder` is the default form builder
 ## From basic to advanced
 
 1. **Basic.** Open Meridian and read the sentences under Needs attention. Each links to the app or server it's about. If nothing needs attention, Meridian says so.
-2. **Regular.** Move between places with the sidebar or its search. Open an app to deploy or roll back. The summary numbers filter the grid by state.
+2. **Regular.** Move between places with the rail or the search box. Click an app in the grid to inspect it, deploy it or roll it back without leaving the board. The state chips filter the grid.
 3. **Advanced.** Open the filters (label, project, state, grouping), switch between apps × servers and servers × apps, and read the map for where things run and what is moving between them.
 
 Nothing is hidden from the basic path. It is only ordered, so the first thing on each page is the thing most people came for.

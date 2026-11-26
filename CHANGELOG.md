@@ -8,6 +8,7 @@
 - Deploys of different apps no longer cancel each other in CI. Every push run shared one concurrency group, so a third deploy made while one was running cancelled the second, waiting one. Kamal now runs one at a time per app, for pushes and redeploys alike.
 - Only the deploy workflow's runs move deploys along. A lint or test workflow running at the same commit used to overwrite a deploy's status and CI link, and could invent a deploy for an app whose config it touched.
 - A late or replayed `workflow_run` delivery no longer moves a finished deploy back to In progress, and an older run no longer takes a deploy over from a newer one, so a redeploy made at another app's deploy commit shows its own result.
+- Roll back checks with Git that the release it reverts is still the newest. Clicked before Meridian had synced a newer version (one deployed a moment earlier, say), it reverted the older release and silently replaced the newer version with the one before both. Rolling back the commit that created the version file now says there is nothing to go back to, instead of "GitHub refused the commit: 404".
 
 ## v0.1.0 (2026-11-26)
 

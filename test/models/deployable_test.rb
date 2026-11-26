@@ -51,6 +51,23 @@ class DeployableTest < ActiveSupport::TestCase
     assert_equal "rollback", deploy.kind
   end
 
+  test "rolling back a release Git has moved past is a conflict, not a revert of the newer change" do
+    newer = "d" * 40
+    stub_request(:get, %r{/repos/example/infra/commits\?}).to_return_json(body: [ { sha: newer, commit: { message: "deploy v43", author: { name: "Ada", date: Time.current.iso8601 } } } ])
+    writes = stub_github_writes(@project)
+
+    assert_raises(GitHost::Conflict) { @app.roll_back(@app.latest_release, actor: @actor) }
+    assert_empty writes
+  end
+
+  test "rolling back the commit that created the version file says there is nothing to go back to" do
+    stub_github_commit(@project, "c" * 40, parent: "0" * 40)
+    stub_request(:get, %r{/contents/deploy/web.production.version\?ref=0{40}}).to_return(status: 404, body: "{}", headers: { "Content-Type" => "application/json" })
+
+    error = assert_raises(ArgumentError) { @app.roll_back(@app.latest_release, actor: @actor) }
+    assert_match "didn't exist before cccccc", error.message
+  end
+
   test "only the newest release can be rolled back" do
     assert_raises(ArgumentError) { @app.roll_back(@app.releases.last, actor: @actor) }
   end

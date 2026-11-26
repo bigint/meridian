@@ -24,12 +24,19 @@ module App::Deployable
   end
 
   # Reverts the newest release: the version file goes back to what it held
-  # before that release's commit.
+  # before that release's commit. If Git has moved on since the last sync,
+  # the release isn't the newest any more and reverting it would discard the
+  # newer change, so that's a conflict.
   def roll_back(release, actor:)
     raise ArgumentError, "Only the newest release can be rolled back" unless release == latest_release
+    raise GitHost::Conflict, "#{version_file_path} changed after #{release.short_sha}" unless newest_release_sha == release.commit_sha
 
     parent = project.git.parent_sha(release.commit_sha)
-    previous = project.git.file(version_file_path, ref: parent).content.strip
+    previous = begin
+      project.git.file(version_file_path, ref: parent).content.strip
+    rescue GitHost::NotFound
+      raise ArgumentError, "Nothing to roll back to: #{version_file_path} didn't exist before #{release.short_sha}. Deploy a version instead."
+    end
     current = read_version_file
 
     commit = project.git.write_file(version_file_path, content: "#{previous}\n", sha: current&.sha,
@@ -54,6 +61,10 @@ module App::Deployable
       project.git.file(version_file_path)
     rescue GitHost::NotFound
       nil
+    end
+
+    def newest_release_sha
+      project.git.commits(path: version_file_path, limit: 1).first&.sha
     end
 
     def commit_message(verb, version, actor, body: nil)

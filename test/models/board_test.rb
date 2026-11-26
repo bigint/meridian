@@ -38,6 +38,13 @@ class BoardTest < ActiveSupport::TestCase
     assert board.groups.all? { |group| group.rows.all? { it.is_a?(App) } }
   end
 
+  test "a page past the last shows the last" do
+    versioned_app("shop")
+    assert_equal 1, Board.new(page: "1#{"0" * 30}").page
+    assert_equal [ "shop" ], Board.new(page: "1#{"0" * 30}").page_rows.map(&:service)
+    assert_equal 1, Board.new(page: "-3").page
+  end
+
   test "filters by label and state" do
     Meridian::Demo.new(servers: 40, apps: 30).call
 

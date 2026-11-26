@@ -36,7 +36,7 @@ class Board
 
   def view = VIEWS.include?(filters[:view]) ? filters[:view] : "apps"
   def state = (filters[:state] if Drift::STATES.include?(filters[:state]))
-  def page = [ filters[:page].to_i, 1 ].max
+  def page = filters[:page].to_i.clamp(1, pages)
 
   def group_by
     if filters[:group] == "none" then nil

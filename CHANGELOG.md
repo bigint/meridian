@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- A board page number past the last shows the last page. A very large one, such as `?page=100000000000000000000`, answered 500.
 - A map app chip shows that app only. The `web` chip also drew `webhooks` and any other app whose name contains `web`, and the chips listed accessories-only configs, such as a tunnel's `edge`, that the map never draws.
 - A container whose version the agent couldn't read shows on the board: running where Git doesn't put it, it was left out instead of shown as stray. A quiet server's cell no longer prints Git's version when its agent last reported nothing running there.
 - The Apps page reads every app's newest release in one query, instead of one query per app (200 at the target size).

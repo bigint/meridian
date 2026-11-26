@@ -1,6 +1,6 @@
 # Servers on a world map, from what Meridian already knows:
 #
-# - sites: located servers, grouped when they sit within a few kilometres;
+# - sites: located servers, grouped when they sit within 60 km (one metro area);
 # - links: two sites run the same app (thicker when they share more apps);
 # - flows: agents reporting to Meridian, and deploys going out from it.
 #
@@ -11,7 +11,8 @@ class WorldMap
   WIDTH = 1000.0
   NORTH, SOUTH = 84.0, -58.0
   HEIGHT = (WIDTH * (NORTH - SOUTH) / 360.0).round(1)
-  MERGE_WITHIN = 6.0 # map units; about 60 km at the equator
+  MERGE_WITHIN_KM = 60.0 # one metro area: Ashburn with Washington, not Amsterdam with Brussels
+  EARTH_RADIUS_KM = 6371.0
 
   Site = Data.define(:key, :x, :y, :servers, :cells) do
     def state = Drift.worst(cells.map(&:state)) || (servers.any?(&:reporting?) ? "in_sync" : "unknown")
@@ -47,6 +48,14 @@ class WorldMap
     [ x.round(1), y.round(1) ]
   end
 
+  # Great-circle distance between two located servers (haversine).
+  def self.distance_km(a, b)
+    lat1, lat2 = a.latitude * Math::PI / 180, b.latitude * Math::PI / 180
+    dlat, dlng = lat2 - lat1, (b.longitude - a.longitude) * Math::PI / 180
+    h = Math.sin(dlat / 2)**2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dlng / 2)**2
+    2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h.clamp(0, 1)))
+  end
+
   # A gentle arc between two points as an SVG path. Links bow towards the
   # pole and flows towards the equator, so the two never sit on each other.
   def self.arc(from, to, bend: 0.22)
@@ -71,7 +80,7 @@ class WorldMap
       groups = []
       board.servers.values.select(&:located?).sort_by(&:id).each do |server|
         point = self.class.project(server.latitude, server.longitude)
-        group = groups.find { |g| Math.hypot(g[:point][0] - point[0], g[:point][1] - point[1]) <= MERGE_WITHIN }
+        group = groups.find { |g| self.class.distance_km(g[:servers].first, server) <= MERGE_WITHIN_KM }
         group ? group[:servers] << server : groups << { point: point, servers: [ server ] }
       end
       groups.map do |group|

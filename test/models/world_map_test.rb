@@ -27,6 +27,17 @@ class WorldMapTest < ActiveSupport::TestCase
     assert_includes map.unlocated.map(&:name), "staging-1.example.com"
   end
 
+  test "only servers in one metro area share a place" do
+    Server.find_by!(name: "api-1.example.com").update!(latitude: 52.37, longitude: 4.90) # Amsterdam
+    Server.find_by!(name: "jobs-1.example.com").update!(latitude: 50.85, longitude: 4.35) # Brussels, 173 km away
+    Server.find_by!(name: "web-2.example.com").update!(latitude: 1.30, longitude: 103.85) # 6 km from web-1
+
+    places = WorldMap.new.sites.map { it.servers.map(&:name).sort }
+    assert_includes places, [ "api-1.example.com" ]
+    assert_includes places, [ "jobs-1.example.com" ]
+    assert_includes places, %w[ web-1.example.com web-2.example.com ]
+  end
+
   test "flows need Meridian's own location: agent reports in, deploys out" do
     assert_empty WorldMap.new.flows
 

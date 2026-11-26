@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- The map groups servers into one place only within 60 km, one metro area. The threshold was six map units, about 240 km, so Amsterdam and Brussels became one place named after one of them.
 - The board's header says "all matching Git" only when every cell was compared and is in sync. With no agent reporting yet, or apps without a version file, every cell was unknown and the header still said everything matched.
 - A board page number past the last shows the last page. A very large one, such as `?page=100000000000000000000`, answered 500.
 - A map app chip shows that app only. The `web` chip also drew `webhooks` and any other app whose name contains `web`, and the chips listed accessories-only configs, such as a tunnel's `edge`, that the map never draws.

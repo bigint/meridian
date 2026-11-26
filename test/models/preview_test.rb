@@ -136,6 +136,14 @@ class PreviewTest < ActiveSupport::TestCase
     assert_match "format('{0} {1} {2}', inputs.command, inputs.config, inputs.destination)", @project.workflow_template, "remove runs are still named remove <config> pr-<n>"
   end
 
+  test "a deploy GitHub has no workflow for fails instead of waiting for ever" do
+    stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 404, body: "{}", headers: { "Content-Type" => "application/json" })
+
+    error = assert_raises(GitHost::NotFound) { Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil) }
+    assert_match "no meridian-deploy.yml workflow on main", error.message
+    assert @app.previews.sole.failed?
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

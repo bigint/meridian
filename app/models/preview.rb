@@ -31,7 +31,12 @@ class Preview < ApplicationRecord
         preview.commit_overlay
       end
       preview.save!
-      preview.dispatch("deploy", version: head_sha)
+      begin
+        preview.dispatch("deploy", version: head_sha)
+      rescue GitHost::Error
+        preview.update!(state: "failed")
+        raise
+      end
       preview
     end
 

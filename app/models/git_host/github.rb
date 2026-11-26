@@ -114,8 +114,12 @@ class GitHost::GitHub
     end
   end
 
+  # Octokit answers a 404 (no such workflow on that branch yet) with false
+  # rather than an error, so nothing would run and nobody would know.
   def dispatch_workflow(workflow, inputs:, ref: project.default_branch)
-    request { client.workflow_dispatch(repo, workflow, ref, inputs: inputs) }
+    request do
+      client.workflow_dispatch(repo, workflow, ref, inputs: inputs) or raise GitHost::NotFound, "#{repo} has no #{workflow} workflow on #{ref}: add the CI workflow first"
+    end
   end
 
   def commit_url(sha) = "https://github.com/#{repo}/commit/#{sha}"

@@ -162,4 +162,13 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     def connector(server)
       { "name" => "cloudflared-#{server}", "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ "#{server}.example.com" ], "secrets" => [ "CLOUDFLARE_TUNNEL_TOKEN" ] }
     end
+
+  test "an array where a project id belongs is not an error" do
+    get tunnels_path(project: [ @project.id ])
+    assert_response :success
+
+    sign_in_as users(:admin)
+    get edit_tunnels_connectors_path(project: [ @project.id ], secret: "CLOUDFLARE_TUNNEL_TOKEN")
+    assert_response :not_found
+  end
 end

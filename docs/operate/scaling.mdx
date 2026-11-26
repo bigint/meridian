@@ -1,10 +1,10 @@
 ---
 title: "Scaling"
-description: "How far one Meridian container goes, what limits it, and the settings to change for larger fleets."
+description: "How many servers one Meridian container handles, what limits it, and what to change for more."
 icon: "gauge"
 ---
 
-Meridian is built for 500 servers and 200 apps on one small machine, in one container, with SQLite. Most installs never change a default.
+Meridian is built to handle 500 servers and 200 apps in one container on one small machine, with SQLite. The defaults are set for that size.
 
 ## What one container does
 
@@ -15,7 +15,7 @@ Meridian is built for 500 servers and 200 apps on one small machine, in one cont
 | GitHub polling | Two requests per project every 30 seconds | Requests carry ETags. A repository where nothing changed answers `304`, which costs no rate limit. |
 | Live stats | Only for pages that are open | Nothing streams until someone opens a server's page, and it stops within 30 seconds of the last viewer leaving. |
 
-The board paginates at 25 rows, and groups servers by region above 30 servers. Try it at size with the demo fleet:
+The board shows 25 rows a page, and groups servers by region above 30 servers. To try Meridian at that size, load the demo fleet:
 
 ```bash
 bin/rails meridian:demo SERVERS=500 APPS=200
@@ -23,22 +23,22 @@ bin/rails meridian:demo SERVERS=500 APPS=200
 
 ## What limits it
 
-**SQLite has one writer.** Every write waits its turn: snapshot jobs, syncs, sign-ins. Meridian keeps each write short. A sync reads everything it needs from GitHub before it opens its transaction, so a long first sync never holds the lock across API calls.
+**SQLite has one writer.** Every write waits its turn: snapshot jobs, syncs and sign-ins. Meridian keeps each write short. A sync reads everything it needs from GitHub before it starts writing. So a long first sync never blocks other writes while it waits on GitHub.
 
-**Jobs share Puma's CPU.** By default, Solid Queue runs inside Puma, so snapshot ingestion and page rendering share one process.
+**Jobs share the web server's CPU.** By default, the job queue, Solid Queue, runs inside the web server, Puma. So processing snapshots and rendering pages share one process.
 
-**Rate limits.** Each agent token may send 120 snapshots a minute. A fleet token counts each server on its own, up to 12,000 a minute for the whole token: 3,000 servers at the default interval.
+**Rate limits.** Each agent token can send 120 snapshots a minute. A fleet token gets 120 for each server, up to 12,000 a minute for the whole token. That is 3,000 servers at the default 15-second interval.
 
 ## Larger fleets
 
-Change these in order, and stop when the board keeps up.
+Make these changes in order. Stop as soon as the board keeps up.
 
 <Steps>
   <Step title="Slow the agents down">
-    Set `MERIDIAN_INTERVAL` to `30s` or more on each agent. That halves the snapshot load. A server turns stale after three of its agent's intervals, so a 30-second interval means 90 seconds of silence before a server shows stale.
+    Set `MERIDIAN_INTERVAL` to `30s` or more on each agent. That halves the snapshot load. A server turns stale after three intervals with no snapshot. So at `30s`, a server shows stale after 90 seconds of silence.
   </Step>
   <Step title="Run jobs in their own process">
-    Set `SOLID_QUEUE_IN_PUMA` to `false` and add a `job` role that runs `bin/jobs`. Keep it on the same host as `web`, because both use the SQLite files in the `meridian_storage` volume.
+    Set `SOLID_QUEUE_IN_PUMA` to `false`, and add a `job` role that runs `bin/jobs`. Keep it on the same host as `web`, because both use the SQLite files in the `meridian_storage` volume.
 
     ```yaml config/deploy.yml
     servers:
@@ -58,17 +58,17 @@ Change these in order, and stop when the board keeps up.
     Then run `kamal deploy`.
   </Step>
   <Step title="Add job workers">
-    Raise `JOB_CONCURRENCY` on the `job` role to run more worker processes. Each runs 3 threads. SQLite still has one writer, so more workers help only while jobs wait on reads or GitHub.
+    Raise `JOB_CONCURRENCY` on the `job` role to run more worker processes, with 3 threads each. SQLite still has one writer. So more workers help only while jobs wait on reads or on GitHub.
   </Step>
   <Step title="Give the host more CPU">
-    Meridian runs on one host by design. A bigger machine is the next step.
+    Meridian runs on one host by design, so the next step is a bigger machine.
   </Step>
 </Steps>
 
-`RAILS_MAX_THREADS` sets Puma's threads and the database pool. The default of 3 suits most installs. See [Environment variables](/reference/environment#server-tuning).
+`RAILS_MAX_THREADS` sets Puma's threads and the number of database connections, `3` by default. See [Environment variables](/reference/environment#server-tuning).
 
 ## Watch it
 
-- `/jobs` shows queue depth, failed jobs and recurring tasks. A growing `snapshots` queue means ingestion is falling behind.
-- The **Agents** page lists silent servers. Many at once, on agents that are running, point at Meridian, not the servers.
+- `/jobs` shows how many jobs wait in each queue, failed jobs, and recurring tasks. A growing `snapshots` queue means Meridian is falling behind on snapshots.
+- The **Agents** page lists silent servers. If many go silent at once while their agents run, the problem is Meridian, not the servers.
 - `kamal logs` shows each request and its time.

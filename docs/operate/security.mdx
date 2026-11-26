@@ -1,14 +1,31 @@
 ---
 title: "Security"
-description: "What Meridian can reach, what it keeps, how it protects each, and how to run it safely."
+description: "What Meridian can and can't do to your systems, what it stores, and how to run it safely."
 icon: "shield"
 ---
 
-## What Meridian can do
+Meridian changes your servers only through Git and your CI. This page says what it can reach, what it stores, and the steps that keep it safe.
 
-Through its GitHub App, Meridian writes to your infra repository and sets its Actions secrets. Your CI runs whatever that repository says, against your servers. **Anyone who controls Meridian can therefore deploy anything to your servers.** Treat Meridian like your CI system.
+## What Meridian can and can't do
 
-Meridian adds a second way to change the infra repository. It adds no new power: anyone with write access to that repository can already deploy, with or without Meridian.
+Meridian **can**:
+
+- Commit to your [infra repository](/reference/glossary#infra-repository) and open pull requests there, through its GitHub App.
+- Set the repository's GitHub Actions secrets.
+- Start the [CI workflow](/reference/glossary#ci-workflow), which runs [Kamal](/reference/glossary#kamal) against your servers.
+- Read what the [agents](/reference/glossary#agent) report about each server's Kamal containers.
+
+Meridian **can't**:
+
+- Connect to a server. It has no SSH keys, and agents connect out to it.
+- Run Kamal itself.
+- Read a secret's value back from GitHub.
+- Start, stop or change a container through an agent. Agents only read.
+- Deploy a pull request from a fork.
+
+Your CI runs whatever the infra repository says. So anyone who controls Meridian can deploy anything to your servers. Treat Meridian like your CI system.
+
+Meridian adds a second way to change the infra repository, but no new power. Anyone with write access to that repository can already deploy, with or without Meridian.
 
 ## What Meridian keeps
 
@@ -22,7 +39,7 @@ Meridian adds a second way to change the infra repository. It adds no new power:
 | Sessions | A signed, permanent, `HttpOnly`, `SameSite=Lax` cookie, `Secure` over HTTPS | The browser |
 | Live stats, logs and traffic | Nowhere. Relayed to the open page. | The person reading |
 
-Git holds your configs and their history. Meridian's database holds users, agent tokens, the activity trail and what agents last reported.
+Git holds your configs and their history. Meridian's database holds people, agent tokens, the activity trail and what agents last reported.
 
 ## Run it safely
 
@@ -33,84 +50,81 @@ Git holds your configs and their history. Meridian's database holds users, agent
   <Step title="If it must be public, use HTTPS">
     Keep `MERIDIAN_URL` on `https://`. Meridian then forces HTTPS, sends HSTS, marks cookies `Secure`, and answers only to that URL's host. Set a long random `SECRET_KEY_BASE`.
   </Step>
-  <Step title="Grant GitHub the least access">
-    Install the App only on the infra repository and the source repositories that need previews. Prefer the App to a personal access token, which reaches every repository its owner can. See [GitHub App](/reference/github-app).
+  <Step title="Give GitHub the least access">
+    Install the App only on the infra repository and on the source repositories that need previews. Use the App, not a personal access token, which reaches every repository its owner can. See [GitHub App](/reference/github-app).
   </Step>
-  <Step title="Grant servers the least access">
-    Run the agent behind the Docker socket proxy, both on their own `meridian` network, as the template does. Never put the proxy on Kamal's `kamal` network and never publish its port. Anything that can reach port 2375 can read every container's environment variables, files and logs through it. See [Install the agent](/guides/agent).
+  <Step title="Give servers the least access">
+    Run the agent behind the Docker socket proxy, both on their own `meridian` network, as the template does. Never put the proxy on Kamal's `kamal` network, and never publish its port. Anything that reaches port 2375 can read every container's environment variables, files and logs. See [Install the agent](/guides/agent).
   </Step>
   <Step title="Keep previews on their own servers">
-    A preview runs a pull request's image on a real server, with the app's secrets. Set **Preview servers** in [Settings](/operate/settings) to a label selector, so previews run only on servers set aside for them.
+    A [preview](/reference/glossary#preview) runs a pull request's image on a real server, with the app's secrets. In [Settings](/operate/settings), set **Preview servers** to a label selector, such as `role=preview`. Previews then run only on the servers you set aside for them.
   </Step>
   <Step title="Back up the database">
     Losing it loses the activity trail, people and agent tokens. Git keeps everything else. See [Backups](/operate/backups).
   </Step>
 </Steps>
 
-## What Meridian does by design
+## How each protection works
 
-### It never connects to servers
+<AccordionGroup>
+  <Accordion title="It never connects to servers">
+    Agents connect out to Meridian. Meridian has no SSH keys and opens no connection to a server. Live stats, logs and traffic travel over a WebSocket that the agent opens to `/cable`. Meridian uses it only to say "someone is watching, send for 30 seconds".
+  </Accordion>
+  <Accordion title="It never runs Kamal">
+    CI runs Kamal, from the repository, where every change is a commit or a reviewed pull request. Meridian commits version files and starts the workflow.
+  </Accordion>
+  <Accordion title="Secret values are write-only">
+    Meridian seals a value in the request that receives it, sends it to GitHub, and drops it. The value is filtered from logs, never stored on a model, never passed to a job and never broadcast. Tests check all of this with a known marker value.
+  </Accordion>
+  <Accordion title="Configs are parsed apart from Meridian">
+    ERB in a Kamal config is Ruby code from your infra repository. `bin/kamal-parse` runs it in a separate process with an empty environment. That process works in a temporary folder that holds only the files fetched from Git, so it can't read Meridian's keys or memory. Meridian kills a parse that runs over 60 seconds, and refuses a path that points outside the folder.
 
-Agents reach out to Meridian. Meridian has no SSH keys and opens no connection to a server. Live stats, logs and traffic travel over a WebSocket the agent opens to `/cable`. Meridian uses it only to say "someone is watching, send for 30 seconds".
+    `bin/kamal-parse` strips the environment, but it is not a sandbox. So Meridian checks everything it writes into a Kamal config against a strict format first. That covers hosts from a URL, form fields, and host names that agents report. A host name can hold only letters, digits, `.`, `_`, `:` and `-`, so it can't carry ERB or YAML.
+  </Accordion>
+  <Accordion title="Agents are read-only and narrow">
+    The agent calls only list, inspect, stats and, with logs on, logs. It never sends environment variables, commands, entrypoints or mounts. It never sends Docker calls through an HTTP proxy. Live stats are numbers only.
 
-### It never runs Kamal
+    The socket proxy allows every read under `/containers`, so only the agent shares its network. See [Agent protocol](/reference/agent-protocol#what-the-agent-never-sends).
+  </Accordion>
+  <Accordion title="Logs are opt-in and never stored">
+    An agent sends no logs unless it runs with `MERIDIAN_LOGS=1`, and then only for Kamal's containers, checked on the server. Only deployers and admins can open logs and traffic.
 
-CI runs Kamal, from the repository, where every change is a commit or a reviewed pull request. Meridian commits version files and dispatches the workflow.
+    Each viewing is an event in Activity, recorded before anything streams. Each channel streams only what the page recorded. Lines pass through the Solid Cable database, which keeps messages for one minute, and are written nowhere else.
+  </Accordion>
+  <Accordion title="Pull requests from forks never deploy">
+    A fork's code is anyone's code. Meridian skips previews for pull requests from forks, and records `preview.skipped` in Activity.
+  </Accordion>
+  <Accordion title="Access ends at once">
+    - Revoking an agent token closes its open connections. Meridian also checks each agent connection's token again every 60 seconds.
+    - Changing someone's role, removing them or signing them out closes their open streams.
+    - A new password signs that person out of every other session.
+  </Accordion>
+  <Accordion title="Everything has a limit">
+    | Action | Limit |
+    | --- | --- |
+    | Sign in | 10 tries in 3 minutes |
+    | Snapshots | 120 a minute per token, or per token and server for a fleet token, with 12,000 a minute for the whole fleet token |
+    | Deploy, Roll back | 10 a minute each |
+    | Redeploy | 5 a minute |
+    | Add or set a secret | 20 a minute |
 
-### Secret values are write-only
-
-A value is sealed in the request that receives it, sent to GitHub, and dropped. It is filtered from logs, never assigned to a model, never passed to a job and never broadcast. Tests assert all of this with a sentinel value.
-
-### Configs are parsed apart from Meridian
-
-ERB in a Kamal config is arbitrary Ruby from your infra repository. `bin/kamal-parse` runs it in a separate process with an empty environment, inside a temporary folder that holds only the files fetched from Git. It can't read Meridian's keys or memory. A parse that runs over 60 seconds is killed, and a path that points outside the folder is refused.
-
-`bin/kamal-parse` strips the environment, but it is not a sandbox. So everything Meridian writes into a Kamal config is checked against a strict format first: hosts from a URL, form fields, and host names that agents report. A host name must be letters, digits, `.`, `_`, `:` and `-`, so it can't carry ERB or YAML.
-
-### Agents are read-only and narrow
-
-The agent calls only list, inspect, stats and, with logs on, logs. It never sends environment variables, commands, entrypoints or mounts, and never sends Docker calls through an HTTP proxy. Live stats are numbers only. The socket proxy allows every read under `/containers`, which is why only the agent shares its network. See [Agent protocol](/reference/agent-protocol#what-the-agent-never-sends).
-
-### Logs are opt-in and never stored
-
-An agent tails nothing unless it runs with `MERIDIAN_LOGS=1`, and only Kamal's containers, checked on the server. Only deployers and admins can open logs and traffic. Each viewing is an event in Activity, recorded before anything streams, and the channels stream only what a page recorded. Lines pass through the Solid Cable database, which keeps messages for one minute, and are written nowhere else.
-
-### Pull requests from forks never deploy
-
-A fork's code is anyone's code. Meridian skips previews for pull requests from forks and records `preview.skipped` in Activity.
-
-### Access ends at once
-
-- Revoking an agent token hangs up its open lines. Meridian checks every agent line's token again every 60 seconds too.
-- Changing someone's role, removing them or signing them out hangs up their open streams.
-- A new password signs that person out of every other session.
-
-### Everything has a limit
-
-| Action | Limit |
-| --- | --- |
-| Sign in | 10 tries in 3 minutes |
-| Snapshots | 120 a minute per token, or per token and server for a fleet token, with 12,000 a minute for the whole fleet token |
-| Deploy, Roll back | 10 a minute each |
-| Redeploy | 5 a minute |
-| Add or set a secret | 20 a minute |
-
-Snapshots over 1 MiB are refused before they are parsed.
-
-### The rest
-
-- **First run.** Creating the first admin needs the setup code from Meridian's log, so whoever reaches a fresh install first can't take it.
-- **Webhooks** are verified with HMAC-SHA256 against the webhook secret. Without a secret, every webhook is refused.
-- **Content Security Policy.** Scripts and styles from Meridian's own origin, or inline with a nonce. No framing, no plugins, and forms post only to Meridian and GitHub.
-- **Host check.** In production Meridian answers only to `MERIDIAN_URL`'s host, which blocks DNS rebinding and forged `Host` headers.
-- **Roles.** Viewers read. Deployers also deploy, roll back, redeploy, read logs and traffic, and destroy previews. Admins do everything else. See [Roles](/concepts/roles).
-- **Audit trail.** Every change Meridian makes is an event, and every commit it makes for a person carries a `Meridian-Actor:` trailer.
+    Meridian refuses a snapshot over 1 MiB before it parses it.
+  </Accordion>
+  <Accordion title="First run, webhooks, browser rules and the audit trail">
+    - **First run.** Creating the first admin needs the setup code from Meridian's log. So whoever reaches a fresh install first can't take it over.
+    - **Webhooks.** Meridian checks each [webhook](/reference/glossary#webhook)'s HMAC-SHA256 signature against the webhook secret. Without a secret, it refuses every webhook.
+    - **Content Security Policy.** Scripts and styles load only from Meridian's own origin, or inline with a nonce. No framing, no plugins, and forms post only to Meridian and GitHub.
+    - **Host check.** In production, Meridian answers only to `MERIDIAN_URL`'s host. That blocks DNS rebinding and forged `Host` headers.
+    - **Roles.** Viewers read. Deployers also deploy, roll back, redeploy, read logs and traffic, and destroy previews. Admins do everything else. See [Roles](/concepts/roles).
+    - **Audit trail.** Every change Meridian makes is an event. Every commit it makes for a person carries a `Meridian-Actor:` trailer.
+  </Accordion>
+</AccordionGroup>
 
 ## Known limits
 
-- Snapshots are trusted as reported. A compromised server can lie about what it runs. It can't change Git.
+- Meridian trusts snapshots as reported. A server someone has taken over can lie about what it runs. It can't change Git.
 - A personal access token in `GITHUB_TOKEN` acts as its owner everywhere. Use it for a homelab, not production.
-- Previews run on real servers with the app's secrets. Only pull requests from the source repository itself get one, so anyone who can push a branch there can run code on your preview servers.
+- Previews run on real servers with the app's secrets. Only pull requests from the source repository itself get one. So anyone who can push a branch there can run code on your preview servers.
 
 ## Report a vulnerability
 

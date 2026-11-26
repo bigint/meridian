@@ -1,83 +1,105 @@
 ---
 title: "Troubleshooting"
-description: "Real failure modes, the message Meridian shows for each, and how to fix it."
+description: "What you see when something goes wrong in Meridian, why it happens, and how to fix it."
 icon: "wrench"
 ---
 
-Each entry starts from what you see. Two places help with most of them:
+Find what you see in the titles below. Each entry says why it happens, then how to fix it.
 
-- `kamal logs` follows Meridian's log. Raise `RAILS_LOG_LEVEL` to `debug` for more.
-- `/jobs`, for admins, lists failed jobs with their error. A sync that fails shows there as a failed `ProjectSyncJob`.
+Two places help with most problems:
+
+- `kamal logs` follows Meridian's log. For more detail, set `RAILS_LOG_LEVEL` to `debug`.
+- `/jobs`, for admins, lists failed jobs with their error. A failed sync shows there as a failed `ProjectSyncJob`.
 
 ## Setup and sign-in
 
 <AccordionGroup>
   <Accordion title="The setup code doesn't match">
-    `/first_run` says **doesn't match the one in Meridian's log**. The code is derived from `SECRET_KEY_BASE`, and Meridian logs it each time someone opens `/first_run`. Get the current one either way:
+    `/first_run` says **doesn't match the one in Meridian's log**. Meridian makes the code from `SECRET_KEY_BASE`, and logs it each time someone opens `/first_run`. If you changed `SECRET_KEY_BASE` after that log line, the code changed with it.
+
+    Get the current code with either command. The second one always gives the current code.
 
     ```bash
     kamal app logs | grep "setup code"
     kamal app exec --reuse "bin/rails meridian:setup_code"
     ```
 
-    If you changed `SECRET_KEY_BASE` since the log line, the code changed with it. Use the command. Once one user exists, `/first_run` redirects to the board.
+    Once one user exists, `/first_run` sends you to the board.
   </Accordion>
   <Accordion title="Sign-in says Try again later">
-    Sign-in allows 10 tries in 3 minutes from one address. Wait three minutes. **Try another email address or password** means the email address or password is wrong. An admin can set a new password under **Settings → People**.
+    Sign-in allows 10 tries in 3 minutes from one address. Wait 3 minutes and try again.
+
+    **Try another email address or password** means the email address or password is wrong. An admin can set a new password under **Settings → People**.
   </Accordion>
   <Accordion title="The browser loops between http and https, or the page won't load">
-    With an `https://` `MERIDIAN_URL`, Meridian redirects every request to HTTPS and trusts the proxy in front to terminate TLS. If nothing terminates TLS, as when you try Meridian on a LAN, set `MERIDIAN_URL` to the `http://` address.
+    With an `https://` `MERIDIAN_URL`, Meridian sends every request to HTTPS. It expects a proxy in front of it to handle TLS. When nothing does, as when you try Meridian on a LAN, the page never loads.
+
+    Set `MERIDIAN_URL` to the `http://` address.
   </Accordion>
   <Accordion title="Meridian answers 403 at an address that should work">
-    In production Meridian answers only to `MERIDIAN_URL`'s host. A request for another host, such as the server's IP address or a second DNS name, is blocked. Use the URL's host, or change `MERIDIAN_URL`. `/up` answers on any host.
+    In production, Meridian answers only to `MERIDIAN_URL`'s host. It blocks a request for any other host, such as the server's IP address or a second DNS name. `/up` answers on any host.
+
+    Use the URL's host, or change `MERIDIAN_URL`.
   </Accordion>
   <Accordion title="You don't have permission to do that">
-    The action needs a higher role. Deploys need a deployer. Projects, new apps, secrets, tokens and settings need an admin. Ask an admin to change your role under **Settings → People**. See [Roles](/concepts/roles).
+    The action needs a higher [role](/reference/glossary#roles). Deploys need a deployer. Projects, new apps, secrets, tokens and settings need an admin.
+
+    Ask an admin to change your role under **Settings → People**. See [Roles](/concepts/roles).
   </Accordion>
-  <Accordion title="Browser too old">
-    Meridian needs a current Chrome, Edge, Firefox or Safari, and answers older browsers with a `406` page.
+  <Accordion title="The page says your browser is too old">
+    Meridian needs a current Chrome, Edge, Firefox or Safari. It answers older browsers with a `406` page.
+
+    Update the browser, or use one of those four.
   </Accordion>
 </AccordionGroup>
 
 ## GitHub and sync
 
 <AccordionGroup>
-  <Accordion title="GitHub isn't connected">
-    **Settings → Connections** says **GitHub: Not connected**, and actions fail with **GitHub isn't connected: set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN**. Set those variables in the container's environment and redeploy. See [Environment variables](/reference/environment#github).
+  <Accordion title="Settings says GitHub: Not connected">
+    Meridian found no GitHub credentials in its environment. Actions fail with **GitHub isn't connected: set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN**.
+
+    Set those variables in the container's environment and redeploy Meridian. See [Environment variables](/reference/environment#github).
   </Accordion>
   <Accordion title="A project shows no apps">
-    Check these on the project's page, in order:
+    Meridian hasn't synced the project yet, can't reach the repository, or finds no configs. Check these on the project's page, in order:
 
-    1. **Synced** shows a commit. **never** means no sync has finished yet. Look in `/jobs` for a failed `ProjectSyncJob`, and press **Sync now**.
-    2. In App mode, the project has the right **GitHub App installation ID**, and the App is installed on that repository.
+    1. **Synced** shows a commit. **never** means no sync has finished yet. Look in `/jobs` for a failed `ProjectSyncJob`, then press **Sync now**.
+    2. With the GitHub App, the project has the right **GitHub App installation ID**, and the App is installed on that repository.
     3. **Configs** match your files. The default, `config/deploy*.yml`, doesn't find `deploy/web.yml`. Only files ending in `.yml` or `.yaml` count.
     4. **Parse errors** lists no error for the config.
 
-    Saving new config paths syncs at once. See [Infra repository](/reference/infra-repository#config-paths).
+    When you save new config paths, Meridian syncs at once. See [Choose config paths](/guides/projects#choose-config-paths).
   </Accordion>
-  <Accordion title="Parse errors on the project page">
-    Each error gives the file and line Kamal rejected, and links to it on GitHub. Fix the config in Git. The next sync clears the error. Until then the app stays as it was, with its deploys, releases and previews.
+  <Accordion title="The project page lists parse errors">
+    Kamal couldn't read a config. Each error gives the file and line, with a link to it on GitHub. Until the config parses again, its app stays as it was, with its deploys, releases and previews.
 
-    Three errors stop the whole project instead of one config:
+    Fix the config in Git and push. The next sync clears the error. See [Fix parse errors](/guides/projects#fix-parse-errors).
+
+    Three errors stop the whole project, not one config:
 
     - **Parsing timed out after 60 seconds**. ERB in a config ran too long.
-    - **Parser failed** followed by the parser's last lines. ERB crashed the parser.
+    - **Parser failed**, followed by the parser's last lines. ERB crashed the parser.
     - **The parser exited without a result**.
 
-    Every app stays as it was until the parse succeeds again. Meridian tries the same commit again after a minute, then two, four and so on, at most hourly. A new commit or **Sync now** tries at once.
+    Meridian tries the same commit again after 1 minute, then waits twice as long each time, up to once an hour. A new commit or **Sync now** tries at once.
   </Accordion>
-  <Accordion title="GitHub truncated the tree">
-    The sync fails with **GitHub truncated the tree of `<sha>`: the repository has too many files to read**. GitHub cuts trees of more than about 100,000 files short. Meridian stops rather than read a partial tree, because the missing configs would look deleted. Keep the Kamal configs in a smaller repository.
-  </Accordion>
-  <Accordion title="A config references a secret named GITHUB_…">
-    GitHub can't store secrets whose names start with `GITHUB_`, so Meridian leaves them off the Secrets page. The rest of the project syncs. Rename the secret in the config.
-  </Accordion>
-  <Accordion title="Webhooks don't arrive">
-    Meridian keeps working without webhooks. It polls each project every 30 seconds, so pushes and CI runs appear within half a minute. Previews do need the `pull_request` webhook.
+  <Accordion title="The sync fails with GitHub truncated the tree">
+    The full message is **GitHub truncated the tree of `<sha>`: the repository has too many files to read**. GitHub cuts a file list short above about 100,000 files. Meridian stops rather than read part of it, because the missing configs would look deleted.
 
-    - **Settings → Connections** says **Webhooks: Off**: set `GITHUB_APP_WEBHOOK_SECRET`.
+    Keep the Kamal configs in a smaller repository.
+  </Accordion>
+  <Accordion title="A secret named GITHUB_… is missing from the Secrets page">
+    GitHub can't store secrets whose names start with `GITHUB_`, so Meridian leaves them off the **Secrets** page. The rest of the project syncs.
+
+    Rename the secret in the config.
+  </Accordion>
+  <Accordion title="Pushes and CI runs show up late, or previews never start">
+    GitHub's [webhooks](/reference/glossary#webhook) don't reach Meridian. Meridian still checks each project every 30 seconds, so pushes and CI runs show up within 30 seconds. Previews need the `pull_request` webhook, so without it they never start.
+
+    - **Settings → Connections** says **Webhooks: Off**. Set `GITHUB_APP_WEBHOOK_SECRET`.
     - In the App's settings, **Advanced → Recent Deliveries** shows each delivery and Meridian's answer. `401` means the secret in GitHub and `GITHUB_APP_WEBHOOK_SECRET` differ. `400` from a repository webhook means its content type isn't `application/json`.
-    - No answer at all means GitHub can't reach Meridian. A Meridian on a private network gets no webhooks unless you forward them.
+    - No answer at all means GitHub can't reach Meridian. A Meridian on a private network gets no webhooks unless you forward them to it.
 
     See [GitHub App](/reference/github-app#webhook).
   </Accordion>
@@ -85,42 +107,68 @@ Each entry starts from what you see. Two places help with most of them:
 
 ## Agents
 
+Read the [agent](/reference/glossary#agent)'s log on the server first:
+
+```bash
+kamal accessory logs meridian_agent
+```
+
 <AccordionGroup>
   <Accordion title="A server never appears, or shows as never seen">
-    The **Agents** page lists servers Git knows whose agent has never reported. Read the agent's log on that host:
+    The agent on that server never reported. The **Agents** page lists such servers under **Silent agents**. Find the agent's log line below:
 
-    ```bash
-    kamal accessory logs meridian_agent
-    ```
-
-    | Log line | Fix |
+    | Log line | Why, and the fix |
     | --- | --- |
-    | `invalid configuration` with `MERIDIAN_URL is required` or `MERIDIAN_TOKEN is required` | Set the variable. The agent exits with code 2. |
-    | `no machine id` | Mount `/etc/machine-id:/host/etc/machine-id:ro`, or set `MERIDIAN_MACHINE_ID`. |
-    | `snapshot failed` with `docker:` | The agent can't reach Docker. Check `DOCKER_HOST` and that the socket proxy runs on the `meridian` network. Mounting the socket directly needs the host's docker group, because the image runs as uid 65532. |
-    | `snapshot failed` with `post snapshot:` and a network error | The host can't reach `MERIDIAN_URL`. Use an address the host itself can reach, not a container name on Kamal's network. |
+    | `invalid configuration` with `MERIDIAN_URL is required` or `MERIDIAN_TOKEN is required` | The variable is missing, and the agent exits with code 2. Set it. |
+    | `no machine id` | The agent can't read the machine ID. Mount `/etc/machine-id:/host/etc/machine-id:ro`, or set `MERIDIAN_MACHINE_ID`. |
+    | `snapshot failed` with `docker:` | The agent can't reach Docker. `DOCKER_HOST` must name `<service>-meridian_docker` on port `2375`, with the config's real service. Both accessories must be on the `meridian` network. To mount the socket directly instead, give the agent the host's docker group, because the image runs as uid 65532. |
+    | `snapshot failed` with `post snapshot:` and a network error | The server can't reach `MERIDIAN_URL`. Use an address the server itself can reach, not a container name on Kamal's network. |
   </Accordion>
-  <Accordion title="The agent gets 401">
-    `unexpected status 401` means the token is unknown or revoked. Tokens are shown only once, so create a new one on the **Agents** page, put it in `.kamal/secrets` as `MERIDIAN_TOKEN`, and reboot the agent accessory.
-  </Accordion>
-  <Accordion title="The agent gets 422: This token belongs to another server">
-    A per-server token binds to the first server that reports with it. Give each server its own token, or create a token with the fleet box ticked for many servers.
-  </Accordion>
-  <Accordion title="The agent gets 429">
-    Meridian allows 120 snapshots a minute per token, or per server for a fleet token, up to 12,000 a minute for the whole fleet token. Check that `MERIDIAN_INTERVAL` isn't below a second or two, and that several agents don't share one per-server token. The agent waits as long as `Retry-After` says, then carries on.
-  </Accordion>
-  <Accordion title="Cells turn stale">
-    A server is stale after three of its agent's intervals without a snapshot, and never sooner than 45 seconds. The **Agents** page lists silent servers. A stopped agent, a host that lost its route to Meridian, or a revoked token all look the same here, so read the agent's log. If many servers go stale at once while their agents run, look at Meridian: `/jobs` shows whether the `snapshots` queue is backed up. See [Scaling](/operate/scaling).
+  <Accordion title="The token shows Last used, but the server has no cells">
+    The agent reports, but Git and the agent name the server differently. Git uses the host Kamal connects to over SSH. The agent reports the machine's own hostname. Meridian matches them exactly, or by the first DNS label when only one server has it. IP addresses must match whole.
+
+    Find the agent's server under **Servers**, and compare its hostname with the host in your config. Set `MERIDIAN_HOSTNAME` on the agent to the host your config uses, then reboot the agent. See [Matching servers to Git](/guides/agent#matching-servers-to-git).
   </Accordion>
   <Accordion title="One machine shows as two servers">
-    Git knows a server by the host Kamal SSHes to. The agent reports the machine's own hostname. Meridian matches them exactly, or by the first DNS label when exactly one server shares it. IP addresses must match whole. Set `MERIDIAN_HOSTNAME` on the agent to the host your configs use. A rebuilt machine, with a new machine ID, takes over its old server once the old agent has been silent for 10 minutes.
+    Same cause as above: Git and the agent name the machine differently, so Meridian can't match them. Set `MERIDIAN_HOSTNAME` on the agent to the host your config uses.
+
+    A machine rebuilt with a new machine ID takes over its old server once the old agent has been silent for 10 minutes.
+  </Accordion>
+  <Accordion title="The agent logs unexpected status 401">
+    Meridian doesn't know the token, or someone revoked it. Meridian shows a token only once, so you can't get it back.
+
+    Create a new token on the **Agents** page, put it in `.kamal/secrets` as `MERIDIAN_TOKEN`, and reboot the agent accessory.
+  </Accordion>
+  <Accordion title="The agent logs 422: This token belongs to another server">
+    A per-server token binds to the first server that reports with it, and a second machine is using it.
+
+    Give each server its own token, or create a token with **Fleet token, shared by many servers** ticked. See [One token per server, or one for the fleet](/guides/agent#one-token-per-server-or-one-for-the-fleet).
+  </Accordion>
+  <Accordion title="The agent logs 429">
+    The agent sent too many snapshots. Meridian allows 120 a minute per token. A fleet token gets 120 a minute for each server, up to 12,000 a minute for the whole token. The agent waits as long as `Retry-After` says, then carries on.
+
+    One agent can't reach this limit on its own. It sends one snapshot per `MERIDIAN_INTERVAL`, which is at least 1 second, so at most 60 a minute.
+
+    A 429 means one of two things. Several machines report with one per-server token. Or a fleet token sends more than 12,000 a minute, which is 3,000 servers at the default 15 seconds. Give each server its own token, or split a very large fleet across fleet tokens.
+  </Accordion>
+  <Accordion title="Cells turn stale">
+    Meridian got no snapshot for three of the agent's intervals, and at least 45 seconds. A stopped agent, a server that lost its route to Meridian, and a revoked token all look the same here.
+
+    Read the agent's log. If many servers go stale at once while their agents run, look at Meridian instead. On `/jobs`, a long `snapshots` queue means Meridian is falling behind. See [Scaling](/operate/scaling).
+  </Accordion>
+  <Accordion title="The server page stays at Connecting…">
+    The agent's WebSocket, its open connection to `/cable`, doesn't reach Meridian.
+
+    Check that `MERIDIAN_LIVE` isn't `0`. Check that every proxy between the agent and Meridian passes WebSockets through to `/cable`.
   </Accordion>
   <Accordion title="Live stats, logs or traffic stay empty">
+    Find the line that matches, and do what it says:
+
     - The agent runs with `MERIDIAN_LIVE=0`. Remove it.
-    - The agent can't open `/cable`. Its log says so, once per try. A proxy in front of Meridian must pass WebSocket upgrades.
-    - The server sent no snapshot yet. Meridian refuses the live line until the first one.
-    - Host numbers are missing: mount `/proc:/host/proc:ro`.
-    - Logs say they are off: the agent needs `MERIDIAN_LOGS=1`. Logs follow only Kamal's containers, at most 20 at once.
+    - The agent can't open `/cable`, and its log says so on each try. Make the proxy in front of Meridian pass WebSocket upgrades.
+    - The server hasn't sent a snapshot yet. Meridian refuses the live connection until the first one arrives.
+    - Host numbers are missing. Mount `/proc:/host/proc:ro`.
+    - Logs say they are off. Run the agent with `MERIDIAN_LOGS=1`. Logs follow only Kamal's containers, at most 20 at once.
   </Accordion>
 </AccordionGroup>
 
@@ -128,41 +176,52 @@ Each entry starts from what you see. Two places help with most of them:
 
 <AccordionGroup>
   <Accordion title="A deploy stays Pending">
-    Meridian committed the version file, and the deploy waits for a run of `meridian-deploy.yml` at that commit.
+    Meridian committed the [version file](/reference/glossary#version-file). The deploy waits for a run of `meridian-deploy.yml` at that commit, and no run has started. Look for the cause that fits:
 
-    - The infra repository has no CI workflow on the project's branch. Press **Add CI workflow** on the project's page and merge it.
-    - The workflow file was renamed. Meridian tracks only `meridian-deploy.yml`.
-    - The workflow's `push` trigger no longer covers the branch or `**/*.version`.
+    - The infra repository has no [CI workflow](/reference/glossary#ci-workflow) on the project's branch. Press **Add CI workflow** on the project's page, and merge the pull request.
+    - Someone renamed the workflow file. Meridian tracks only `meridian-deploy.yml`.
+    - The workflow's `push` trigger doesn't cover the branch or `**/*.version`.
 
-    Without webhooks, a run appears within 30 seconds of starting. See [CI workflow](/reference/ci-workflow).
+    Without webhooks, a run shows up within 30 seconds of starting. See [CI workflow](/reference/ci-workflow).
   </Accordion>
-  <Accordion title="CI fails">
-    The deploy's CI link opens the run. Common causes are a missing `KAMAL_SSH_PRIVATE_KEY` or `KAMAL_REGISTRY_PASSWORD` repository secret, a secret your config names that isn't set on the **Secrets** page, an image tag the registry doesn't have, and servers GitHub's runners can't reach. For the last, set the repository variable `MERIDIAN_RUNS_ON` to a self-hosted runner.
+  <Accordion title="The deploy's CI run fails">
+    Open the run from the deploy's CI link, and find which cause fits:
+
+    - The repository has no `KAMAL_SSH_PRIVATE_KEY` or `KAMAL_REGISTRY_PASSWORD` secret.
+    - Your config names a secret that isn't set on the **Secrets** page.
+    - The registry has no image with that tag.
+    - GitHub's runners can't reach your servers. Set the repository variable `MERIDIAN_RUNS_ON` to a self-hosted runner.
   </Accordion>
   <Accordion title="The version file changed in Git since this page loaded">
-    Someone changed the version file after Meridian read it, and Meridian refuses to overwrite their change. Meridian re-reads it. Reload the page, check the new state, and try again.
+    Someone changed the version file after Meridian read it. Meridian refuses to overwrite their change, and reads the file again.
+
+    Reload the page, check the new state, and try again.
   </Accordion>
   <Accordion title="GitHub refused the commit">
-    GitHub turned the commit away for its own reason, such as branch protection or a repository rule on the project's branch. Meridian shows GitHub's message. Let the App commit to the branch, or use a branch without that rule.
+    GitHub turned the commit away, for example because of branch protection or a repository rule on the project's branch. Meridian shows GitHub's message.
+
+    Let the App commit to the branch, or use a branch without that rule.
   </Accordion>
   <Accordion title="Deploy is refused">
-    | Message | Why |
+    | Message | Why, and the fix |
     | --- | --- |
-    | **`<version>` is already in `<file>`. Use Redeploy to run it again.** | The commit would change nothing, so CI would never run. |
-    | **Version must be an image tag** | Versions are Docker tags: letters, digits, `_`, `.` and `-`, not starting with `.` or `-`. |
+    | **`<version>` is already in `<file>`. Use Redeploy to run it again.** | The commit would change nothing, so CI would never run. Press **Redeploy**. |
+    | **Version must be an image tag** | A [version](/reference/glossary#version) is a Docker tag: letters, digits, `_`, `.` and `-`, not starting with `.` or `-`. |
     | **only runs accessories** | The config is labelled `meridian.kind: accessories`. Start its accessories with `kamal accessory boot`. |
   </Accordion>
   <Accordion title="Roll back or Redeploy is refused">
-    | Message | Why |
+    | Message | Why, and the fix |
     | --- | --- |
-    | **Only the newest release can be rolled back** | Roll back reverts one release, the newest. Deploy an older version instead. |
+    | **Only the newest release can be rolled back** | Roll back reverts one [release](/reference/glossary#release), the newest. Deploy an older version instead. |
     | **`<file>` changed after `<sha>`** | Git has a newer release than Meridian synced. Reload and try again. |
     | **Nothing to roll back to** | The release created the version file, so there is no earlier version. Deploy one. |
-    | **has no version file yet: deploy a version first** | Redeploy runs the version in the version file, and there is none. |
-    | **has no meridian-deploy.yml workflow** | Add the CI workflow first. |
+    | **has no version file yet: deploy a version first** | Redeploy runs the version in the version file, and there is none. Deploy a version. |
+    | **has no meridian-deploy.yml workflow** | The repository has no CI workflow. Add it first. |
   </Accordion>
   <Accordion title="The deploy succeeded but cells stay drifted">
-    Drift compares Git's version with what agents report. A cell stays drifted while any container of that app on that server runs another version. A role Git assigns there with nothing running shows the cell as missing instead. Open the server's page to see each container. Kamal names containers after the version, so the version in the file must be the image tag Kamal deployed.
+    [Drift](/reference/glossary#drift) compares Git's version with what agents report. A cell stays drifted while any container of that app on that server runs another version. When Git assigns a role there and nothing runs, the cell shows missing instead.
+
+    Open the server's page to see each container. Kamal names containers after the version, so the version in the file must be the image tag Kamal deployed.
   </Accordion>
 </AccordionGroup>
 
@@ -170,20 +229,24 @@ Each entry starts from what you see. Two places help with most of them:
 
 <AccordionGroup>
   <Accordion title="A pull request gets no preview">
-    Meridian logs why, as `Preview for <app> #<n> skipped: <reason>`. Check, in order:
+    Meridian logs why, as `Preview for <app> #<n> skipped: <reason>`. Check these in order:
 
-    1. **Settings → Previews → Domain** is set. Without it, every preview is skipped with `Set a preview domain in Settings first`.
-    2. The app's config has `meridian.source` naming the repository the pull request is in.
-    3. The `pull_request` webhook reaches Meridian. Polling does not read pull requests.
-    4. The pull request isn't from a fork. Activity records `preview.skipped` for those, and they never get a preview.
-    5. A server matches **Preview servers**. Otherwise the log says `No server matches the preview selector`.
+    1. **Settings → Previews → Domain** is set. Without it, Meridian skips every preview with `Set a preview domain in Settings first`.
+    2. The app's config has `meridian.source`, naming the repository the pull request is in.
+    3. The `pull_request` webhook reaches Meridian. The 30-second check doesn't read pull requests.
+    4. The pull request isn't from a fork. Forks never get a preview, and Activity records `preview.skipped`.
+    5. A server matches **Preview servers**. If none does, the log says `No server matches the preview selector`.
     6. The CI workflow exists on the infra repository's branch.
   </Accordion>
   <Accordion title="A preview is Failed">
-    The CI run failed. Open it from the **Previews** page. The preview deploys the pull request's head commit SHA as the version, so the source repository's CI must push an image tagged with the full commit SHA before the run starts. Push a commit to the pull request to try again.
+    The preview's CI run failed. The [preview](/reference/glossary#preview) deploys the pull request's latest commit SHA as its version. So the source repository's CI must push an image tagged with the full commit SHA before the run starts.
+
+    Open the run from the **Previews** page to see the error. To try again, push a commit to the pull request.
   </Accordion>
   <Accordion title="A preview stays Removing">
-    Meridian asked CI to run `kamal app remove` and waits for the run to finish before it deletes the overlay. If the run fails, the preview goes back to **Failed**, and **Destroy** tries again. If the run never reports back, the hourly expiry job deletes the overlay after a day.
+    Meridian asked CI to run `kamal app remove`. It waits for the run to finish before it deletes the preview's file from Git.
+
+    If the run fails, the preview goes back to **Failed**, and **Destroy** tries again. If the run never reports back, the hourly expiry job deletes the file after a day.
   </Accordion>
 </AccordionGroup>
 
@@ -191,9 +254,13 @@ Each entry starts from what you see. Two places help with most of them:
 
 <AccordionGroup>
   <Accordion title="A secret name is refused">
-    Names must be capital letters, digits and `_`, start with a letter or `_`, and not start with `GITHUB_`. Meridian upper-cases what you type.
+    A name must use capital letters, digits and `_`, start with a letter or `_`, and not start with `GITHUB_`. Meridian turns what you type into capitals.
+
+    Change the name to fit.
   </Accordion>
   <Accordion title="A new secret value doesn't reach the app">
-    Kamal reads secrets when it deploys. After you set a value, press **Redeploy** on each app that uses it.
+    Kamal reads secrets only when it deploys.
+
+    After you set a value, press **Redeploy** on each app that uses it.
   </Accordion>
 </AccordionGroup>

@@ -1,19 +1,19 @@
 ---
 title: "Add people and set their roles"
 sidebarTitle: "People"
-description: "Give someone a sign-in with a role, change their role or password, and remove them."
+description: "Give someone a sign-in and a role, change their role or password, and remove them."
 icon: "users"
 ---
 
 import Roles from "/snippets/roles.mdx";
 
-Admins add people to Meridian directly, with an email address, a password and a role. There are no invitations and no sign-up page. People sign in with their email address and password.
+An admin adds each person to Meridian with an email address, a password and a role. There are no invitations and no sign-up page, and Meridian sends no email.
 
-**People** is under **Settings**, which only admins can open.
+**People** is a tab of **Settings**, and only admins can open **Settings**.
 
 ## Roles
 
-Each person has one role: **Viewer**, **Deployer** or **Admin**. A new person is a viewer unless you pick otherwise.
+Each person has one [role](/reference/glossary#roles): **Viewer**, **Deployer** or **Admin**. A new person is a viewer unless you pick another role.
 
 <Roles />
 
@@ -26,52 +26,55 @@ The reasons behind the split are in [Roles](/concepts/roles).
     Open **Settings**, then the **People** tab, and click **Add person**.
   </Step>
   <Step title="Fill in the form">
-    - **Name**: optional. Meridian shows the email address where there is no name.
-    - **Email**: what they sign in with. Meridian stores it in lower case, and each address can be used once.
-    - **Password**: at least 12 characters, at most 72.
+    - **Name**: optional. Where there is no name, Meridian shows the email address.
+    - **Email**: what they sign in with. Meridian stores it in lower case. Each address can belong to one person only.
+    - **Password**: from 12 to 72 characters.
     - **Role**: **Viewer**, **Deployer** or **Admin**.
   </Step>
   <Step title="Save">
     Click **Create User**. Meridian says `ada@example.com can now sign in.`
   </Step>
   <Step title="Share the password">
-    Send them Meridian's URL, their email address, and the password, privately. Meridian sends no email.
+    Send them Meridian's URL, their email address and the password, privately.
   </Step>
 </Steps>
+
+They sign in at `/session/new`. A session lasts until they sign out from the menu under their name. It also ends when an admin changes their password or removes them.
 
 ## Change a role
 
 Click **Edit** next to the person, pick a new **Role**, and click **Update User**.
 
-The change takes effect at once. Meridian closes the person's open live connections, so their pages reconnect with the new role. A deployer made a viewer stops seeing logs straight away, not at their next sign-in.
+The change works at once. Meridian closes the person's open live connections, and their pages reconnect with the new role. So a deployer you make a viewer stops seeing logs straight away.
 
 <Note>
-There must always be one admin. Meridian refuses to make the last admin a viewer or a deployer, with `There must always be one admin.`. Make someone else an admin first.
+Meridian always keeps one admin. It refuses to make the last admin a viewer or a deployer, and says `There must always be one admin.` Make someone else an admin first.
 </Note>
 
 ## Change a password
 
-Click **Edit** next to the person, type a new **Password**, and click **Update User**. Leave **Password** blank to keep the current one.
+Click **Edit** next to the person, type a new **Password**, and click **Update User**. To keep the current password, leave **Password** blank.
 
-A new password signs the person out everywhere else. Every other session of theirs ends, and their open pages disconnect. When you change your own password, your current session stays signed in.
+A new password signs the person out everywhere else, and their open pages disconnect. When you change your own password, your current session stays signed in.
 
-Only admins can open **Settings**, so a viewer or deployer can't change their own password. An admin changes it for them.
+Viewers and deployers can't open **Settings**, so they can't change their own password. An admin changes it for them.
 
 ## Remove a person
 
 Click **Edit** next to the person, click **Remove**, and confirm. Meridian ends every session they have, and they can't sign in again.
 
-What they did stays on record, under a different name in each place. Activity keeps their name, marked `(removed)`. A secret they set shows as set by `a removed user`. A deploy they made keeps their name in **Current deploy**, marked `(removed)`.
+What they did stays on record:
 
-You can't remove yourself. Ask another admin. With only one admin, that admin can't be removed at all.
+- Activity keeps their name, marked `(removed)`.
+- A secret they set shows as set by `a removed user`.
+- A deploy they made keeps their name in **Current deploy**, marked `(removed)`.
 
-## Signing in
+You can't remove yourself, so ask another admin. The last admin can't be removed at all.
 
-People sign in at `/session/new` with their email address and password. A session lasts until they sign out from the menu under their name, or until an admin changes their password or removes them.
+## If sign-in fails
 
-Sign-in allows 10 attempts every 3 minutes from one IP address. Past that, the page says `Try again later.`.
-
-The first admin is created on a new install's first run, with the setup code from Meridian's log. See [Install](/install).
+- **Try again later.** Sign-in allows 10 tries in 3 minutes from one IP address. Wait 3 minutes.
+- **A new install has no one to sign in as.** Create the first admin at `/first_run`, with the setup code from Meridian's log. See [Install](/install).
 
 ## Related
 

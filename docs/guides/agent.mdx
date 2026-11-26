@@ -1,48 +1,47 @@
 ---
 title: "Install and run the agent"
 sidebarTitle: "Agent"
-description: "Put the read-only agent on every server as two Kamal accessories, so the board shows what really runs."
+description: "Put the read-only agent on each server, so the board shows what really runs there."
 icon: "server"
 ---
 
-`meridian-agent` runs on each server and tells Meridian what is running there. It reads Docker through a read-only proxy, posts a snapshot of the host's Kamal containers every 15 seconds, and keeps one outbound WebSocket open for live stats and logs. It never starts, stops or changes anything, and it only connects out, so it works behind NAT and firewalls.
+The [agent](/reference/glossary#agent) is a small program on each server that tells Meridian what is running there. Without it, the board knows only what Git says, and every cell shows **Unknown**.
 
-Without agents, the board knows only what Git says. Every cell stays **Unknown**.
+The agent only reads, and it only connects out to Meridian, so it works behind NAT and firewalls. Every 15 seconds it sends a snapshot of the server's [Kamal](/reference/glossary#kamal) containers. For each one, that is its name, image, labels, version, state and health.
 
-## What it sends
-
-- **Kamal containers only.** It recognises them by the labels Kamal sets, `service`, `role` and `destination`, and by the name `kamal-proxy`. It takes the version from the container name, as Kamal does. Every other container is ignored and never inspected.
-- **Name, image, `service`, `role` and `destination` labels, version, state, health and start time** of each one. No other label is sent. Never environment variables, commands, entrypoints or mounts, which can hold secrets.
-- **The host's machine ID, hostname, labels, and agent version.**
-- **Live numbers and log lines**, only while someone looks, and logs only if you turn them on.
-
-The payloads, leases and limits are in [Agent protocol](/reference/agent-protocol).
+It never sends environment variables, commands, entrypoints or mounts, which can hold secrets. Live stats and logs flow only while someone is looking, and logs only if you turn them on. The full list is in [Agent protocol](/reference/agent-protocol).
 
 ## Before you start
 
-- A Kamal config whose `servers` cover every host you want to watch. The agent runs as two accessories of that config.
-- `MERIDIAN_URL` is an address each host can reach, such as `https://meridian.example.com`. Your proxy must pass WebSockets through to Meridian's `/cable`. kamal-proxy and Thruster both do.
-- You are an admin, to create the token. Anyone can open **Agents** and read the steps.
+- A Kamal [config](/reference/glossary#config) whose `servers` include every server you want to watch. The agent runs as two accessories of that config. An accessory is an extra container Kamal runs beside your app.
+- A `MERIDIAN_URL` that each server can reach, such as `https://meridian.example.com`. Every proxy in front of Meridian must pass WebSockets through to `/cable`. [kamal-proxy](/reference/glossary#kamal-proxy) and Thruster both do.
+- The admin role, to create the token. Anyone can open **Agents** and read the steps.
 
 ## Install with Kamal
 
 <Steps>
   <Step title="Create a token">
-    Open **Agents** under **Manage**. Under **Connect a server**, type a **Label**, such as `web-1`. Tick **Fleet token, shared by many servers** if one token will serve several hosts. See [One token per server, or one for the fleet](#one-token-per-server-or-one-for-the-fleet). Click **Create token**.
+    Open **Agents** under **Manage**. Under **Connect a server**, type a **Label**, such as `web-1`.
 
-    Copy the token from **Copy this token now**. Meridian keeps only a digest and can't show it again.
+    If one token will serve several servers, tick **Fleet token, shared by many servers**. See [One token per server, or one for the fleet](#one-token-per-server-or-one-for-the-fleet). Click **Create token**.
+
+    Copy the token from **Copy this token now**. Meridian can't show it again.
   </Step>
   <Step title="Give Kamal the token">
-    Add the token to the secrets file Kamal reads for the config, such as `.kamal/secrets`:
+    Add this line to the secrets file Kamal reads for the config, such as `.kamal/secrets`:
 
     ```bash .kamal/secrets
     MERIDIAN_TOKEN=$MERIDIAN_TOKEN
     ```
 
-    Then export `MERIDIAN_TOKEN` in the shell you run Kamal from, or read it from your password manager in that line.
+    Then export `MERIDIAN_TOKEN` in the shell you run Kamal from. You can also read it from your password manager in that line.
   </Step>
   <Step title="Add the two accessories">
-    Copy the accessories from **Install** on the **Agents** page. It fills in your `MERIDIAN_URL`. The same text is in `templates/kamal/agent-accessories.yml`. Put them under `accessories:`, and replace `SERVICE` with the config's `service`, and `REGION` and `PROVIDER` with your labels. `roles: [ web ]` boots them on the config's `web` hosts only: list every role whose servers should report, or name the servers with `hosts:`.
+    Copy them from **Install** on the **Agents** page, which fills in your `MERIDIAN_URL`. The same text is in `templates/kamal/agent-accessories.yml`.
+
+    Put them under `accessories:`. Replace `SERVICE` with the config's `service`, and `REGION` and `PROVIDER` with your own labels.
+
+    `roles: [ web ]` starts them on the config's `web` servers only. To cover more, list every role whose servers should report, or name the servers with `hosts:`.
 
     ```yaml config/deploy.yml
     accessories:
@@ -78,7 +77,7 @@ The payloads, leases and limits are in [Agent protocol](/reference/agent-protoco
     ```
   </Step>
   <Step title="Create the network">
-    Once per host, create the `meridian` Docker network the two accessories share. Kamal creates only its own `kamal` network.
+    Once per server, create the `meridian` Docker network that the two accessories share. Kamal creates only its own `kamal` network.
 
     ```bash
     kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
@@ -90,23 +89,26 @@ The payloads, leases and limits are in [Agent protocol](/reference/agent-protoco
     kamal accessory boot meridian_agent
     ```
 
-    `kamal deploy` never starts accessories, so this step is always by hand.
+    `kamal deploy` never starts accessories, so you always run this step by hand.
   </Step>
   <Step title="Check it reports">
-    On **Agents**, the token's **Last used** turns to a time, and a per-server token shows its server. The server's page says **Reporting**, and the board fills in its cells within one interval, 15 seconds by default.
+    On **Agents**, the token's **Last used** shows a time, and a per-server token shows its server. The server's page says **Reporting**. The board fills in its cells within one interval, 15 seconds by default.
   </Step>
 </Steps>
 
-### What each accessory does
-
-- **`meridian_docker`** is [`tecnativa/docker-socket-proxy`](https://github.com/Tecnativa/docker-socket-proxy) with `CONTAINERS=1` and `POST=0`. It allows `GET` requests under `/containers` and nothing else. The agent talks to Docker only through it, so even an agent someone has taken over can't start, stop or exec into containers. Mounting the socket `:ro` alone doesn't make the API read-only.
-- **`meridian_agent`** is the agent, a static Go binary of about 7 MB on a distroless image, running as `nonroot`. It reads the host's machine ID and hostname from the two mounted files, and the host's CPU, memory and load from `/proc` for live stats. Leave the `/proc` mount out, and the server page shows per-container numbers only.
-
 <Warning>
-Both accessories run on their own `meridian` network, never on Kamal's `kamal` network where your apps and previews run. The socket proxy answers anyone who can reach port 2375 with every container's environment, files and logs. Never publish its port on the host.
+Keep both accessories on their own `meridian` network. Never put them on Kamal's `kamal` network, where your apps and previews run. The socket proxy gives anyone who reaches port 2375 every container's environment, files and logs. Never publish that port on the server.
 </Warning>
 
-The agent still reaches `MERIDIAN_URL` from the `meridian` network, as long as that is an address the host itself can reach, such as a public or private hostname or an IP address. The name of a container on the `kamal` network doesn't work from there.
+On the `meridian` network, the agent reaches `MERIDIAN_URL` like the server itself does, by hostname or IP address. It can't reach a container on the `kamal` network by name.
+
+<Accordion title="How this works under the hood">
+  **`meridian_docker`** is [`tecnativa/docker-socket-proxy`](https://github.com/Tecnativa/docker-socket-proxy). With `CONTAINERS=1` and `POST=0`, it allows only `GET` requests under `/containers`. The agent talks to Docker only through it, so even an agent someone has taken over can't start, stop or exec into containers. A socket mounted `:ro` alone is not read-only.
+
+  **`meridian_agent`** is a static Go binary of about 7 MB, on a distroless image, running as `nonroot`. It reads the machine ID and hostname from the two mounted files, and the server's CPU, memory and load from `/proc`. Without the `/proc` mount, the server page shows per-container numbers only.
+
+  The agent finds Kamal containers by Kamal's `service`, `role` and `destination` labels and by the name `kamal-proxy`. It takes each version from the container name, as Kamal does.
+</Accordion>
 
 ## One token per server, or one for the fleet
 
@@ -117,25 +119,19 @@ The agent still reaches `MERIDIAN_URL` from the `meridian` network, as long as t
 | Revoking it silences | One server | Every server that uses it |
 | **Server** column on **Agents** | The server, or `binds on first contact` | `many` |
 
-Kamal gives every host of an accessory the same secret. With the template's `roles: [ web ]` on several hosts, use a fleet token, or one accessory per host with its own token.
+Kamal gives every server of an accessory the same secret. So if the accessories run on several servers, use a fleet token, or give each server its own accessory and token.
 
-A machine rebuilt with a new machine ID can keep a per-server token. Until the old machine has been silent for 10 minutes and turned stale, the new one gets the `422`. After that, the new machine takes the server over.
-
-To revoke a token, click **Revoke** in its row on **Agents** and confirm. Meridian refuses its snapshots from then on, and hangs up its WebSocket at once.
+To revoke a token, click **Revoke** in its row on **Agents** and confirm. Meridian refuses its snapshots from then on and closes its WebSocket at once.
 
 ## Matching servers to Git
 
-Git names a server by the host Kamal connects to, such as `web-1.example.com` or an IP address. The agent reports the machine's own hostname. Meridian matches them in this order:
+Git names a server by the host Kamal connects to, such as `web-1.example.com`. The agent reports the machine's own hostname. Meridian matches the two in this order:
 
 1. The exact hostname.
 2. The first DNS label, when only one server has it. `web-1` matches `web-1.example.com`.
 3. An IP address, matched only whole.
 
-If the agent reported before Git listed the host, it made a server of its own. Git's name takes that server over when it is the only one sharing the host's first DNS label.
-
-A machine rebuilt with a new machine ID takes its server back once the old agent has been silent for 10 minutes and turned stale. On a fleet token, that needs the exact host Git names, so set `MERIDIAN_HOSTNAME` to it. A first DNS label alone never hands over a server that has had an agent. A rebuild that reports sooner gets a server of its own at first, which moves onto Git's once the old agent has been quiet that long.
-
-When nothing matches, set `MERIDIAN_HOSTNAME` on the agent to the name in your config:
+When nothing matches, set `MERIDIAN_HOSTNAME` on the agent to the name in your config. Then reboot the agent.
 
 ```yaml
 env:
@@ -143,11 +139,13 @@ env:
     MERIDIAN_HOSTNAME: web-1.example.com
 ```
 
-Then reboot the agent. Servers whose agent never reported are listed under **Silent agents** on the **Agents** page.
+Servers whose agent never reported are listed under **Silent agents** on the **Agents** page.
+
+A server can also report before Git lists it, or be rebuilt with a new machine ID. [Servers and agents](/concepts/servers-and-agents) explains how Meridian matches those.
 
 ## Labels and map location
 
-`MERIDIAN_LABELS` sets the labels the board filters and groups by, as comma-separated `key=value` pairs. Use any keys you like. Four have a use in Meridian:
+`MERIDIAN_LABELS` sets the labels the board filters and groups by, as comma-separated `key=value` pairs. Any key works. Four have a use in Meridian:
 
 | Label | Used for |
 | --- | --- |
@@ -156,7 +154,7 @@ Then reboot the agent. Servers whose agent never reported are listed under **Sil
 | `role` | Board filter and grouping, and label selectors for new apps and previews |
 | `city` | Map place names, and the server's place |
 
-Add `lat` and `lng`, in decimal degrees, to put the server on the map. `latitude`, `longitude` and `lon` work too.
+To put the server on the map, add `lat` and `lng` in decimal degrees. `latitude`, `longitude` and `lon` work too.
 
 ```yaml
 MERIDIAN_LABELS: region=sgp,provider=ovh,role=web,city=Singapore,lat=1.35,lng=103.82
@@ -166,17 +164,17 @@ An admin can also set a location on the server's page, under **Location on the m
 
 ## Settings
 
-The agent reads its settings from the environment. These are the ones you are likely to change:
+The agent reads its settings from environment variables. These are the ones you are likely to change:
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `MERIDIAN_URL` | required | Meridian's base URL. |
 | `MERIDIAN_TOKEN` | required | The token from **Agents**. |
 | `MERIDIAN_LABELS` | none | Labels, such as `region=sgp,provider=ovh`. |
-| `MERIDIAN_INTERVAL` | `15s` | Time between snapshots, at least `1s`, with up to 20% jitter. Meridian calls a server stale after three intervals, and never sooner than 45 seconds. |
+| `MERIDIAN_INTERVAL` | `15s` | Time between snapshots, at least `1s`. Each wait varies at random by up to 20%. Meridian calls a server stale after three intervals, and never sooner than 45 seconds. |
 | `MERIDIAN_LOGS` | off | `1` or `true` lets deployers read Kamal containers' logs and traffic. |
 | `MERIDIAN_LIVE` | on | `0` or `false` turns the WebSocket off: no live stats, no logs, snapshots only. |
-| `MERIDIAN_HOSTNAME` | the host's `/etc/hostname` | The name the agent reports. |
+| `MERIDIAN_HOSTNAME` | the server's `/etc/hostname` | The name the agent reports. |
 
 Every variable, including `DOCKER_HOST` and `MERIDIAN_MACHINE_ID`, is in [Environment](/reference/environment).
 
@@ -198,55 +196,38 @@ To see what the agent would send without sending it, run `meridian-agent -print`
   </Step>
 </Steps>
 
-### From a template without `network: meridian`
+The reboot leaves a gap of a few seconds with no snapshot, well under the 45 seconds before a server turns stale. Meridian and the agents don't need the same release. Meridian accepts snapshots from older agents, and an agent ignores messages it doesn't know.
 
-Older templates put both accessories on the `kamal` network, where app containers could reach the socket proxy. Move them:
+<Accordion title="Your accessories have no network: meridian line">
+  Then both accessories run on the `kamal` network, where app containers can reach the socket proxy. Move them:
 
-<Steps>
-  <Step title="Create the network on every host">
-    ```bash
-    kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
-    ```
-  </Step>
-  <Step title="Add the network lines">
-    Add `network: meridian` to both `meridian_docker` and `meridian_agent`.
-  </Step>
-  <Step title="Reboot both">
-    ```bash
-    kamal accessory reboot meridian_docker
-    kamal accessory reboot meridian_agent
-    ```
-  </Step>
-</Steps>
+  1. Create the network on every server:
 
-## Troubleshooting
+     ```bash
+     kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
+     ```
 
-<AccordionGroup>
-  <Accordion title="The token shows Last used, but the server has no cells">
-    Git and the agent name the server differently. Find the agent's server under **Servers**, compare its hostname with the host in your config, and set `MERIDIAN_HOSTNAME` to match. See [Matching servers to Git](#matching-servers-to-git).
-  </Accordion>
-  <Accordion title="The agent logs a 422">
-    A per-server token is in use on a second machine. Create a fleet token, or one token per host.
-  </Accordion>
-  <Accordion title="The agent logs a 429">
-    One token sent more than 120 snapshots a minute, or one machine did with a fleet token, or a fleet token's machines together sent more than 12,000. The agent waits as long as the `Retry-After` header asks, then carries on. Raise `MERIDIAN_INTERVAL` if you set it very low.
-  </Accordion>
-  <Accordion title="The server page stays at Connecting…">
-    The WebSocket doesn't reach Meridian. Check that `MERIDIAN_LIVE` isn't `0`, and that every proxy between the agent and Meridian passes WebSockets through to `/cable`.
-  </Accordion>
-  <Accordion title="The agent can't reach the socket proxy">
-    `DOCKER_HOST` must name the proxy's container, `<service>-meridian_docker`, with the config's real service, on port `2375`. Both accessories must be on the `meridian` network.
-  </Accordion>
-</AccordionGroup>
+  2. Add `network: meridian` to both `meridian_docker` and `meridian_agent`.
+  3. Reboot both:
+
+     ```bash
+     kamal accessory reboot meridian_docker
+     kamal accessory reboot meridian_agent
+     ```
+</Accordion>
+
+## If something goes wrong
+
+Read the agent's log on the server with `kamal accessory logs meridian_agent`. [Troubleshooting](/operate/troubleshooting#agents) lists each log line and status code, and the fix.
 
 ## Related
 
 <Columns cols={2}>
   <Card title="Servers and agents" icon="server-cog" href="/concepts/servers-and-agents">
-    How servers, placements and staleness fit together.
+    How Meridian tracks servers and when it calls them stale.
   </Card>
   <Card title="Agent protocol" icon="cable" href="/reference/agent-protocol">
-    Snapshots, leases and limits on the wire.
+    What the agent sends, and the limits.
   </Card>
   <Card title="Live stats and logs" icon="activity" href="/guides/live-stats-and-logs">
     What the WebSocket carries.

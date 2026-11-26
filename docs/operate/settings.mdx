@@ -1,16 +1,16 @@
 ---
 title: "Settings"
-description: "The install-wide settings on the Settings page, and the settings each project has."
+description: "Every setting on the Settings page, and every field of a project."
 icon: "cog"
 ---
 
-Meridian has two places for settings that live in its database: the **Settings** page, for the whole install, and each project's settings. Everything else, such as keys, URLs and tuning, is an environment variable. See [Environment variables](/reference/environment).
+Meridian stores settings in two places: the **Settings** page, for the whole install, and each project's own fields. Keys, URLs and tuning are environment variables instead. See [Environment variables](/reference/environment).
 
 ## The Settings page
 
-**Settings** (`/settings`) is for admins. It has two tabs: **General**, described here, and **People**, where admins add and remove people. See [People](/guides/people).
+Only admins can open **Settings** (`/settings`). It has two tabs. **General** is described here. On **People**, admins add and remove people. See [People](/guides/people).
 
-Saving **General** records `settings.updated` in Activity.
+Click **Save** on **General**, and Activity records `settings.updated`.
 
 ### Workspace
 
@@ -21,33 +21,33 @@ Saving **General** records `settings.updated` in Activity.
 ### Previews
 
 <ResponseField name="Domain" type="text">
-  The domain previews are named under, such as `preview.example.com`. It needs a wildcard DNS record. Previews are off until it is set: a pull request then gets no preview, and the logs say `Set a preview domain in Settings first`.
+  The domain that previews get their names under, such as `preview.example.com`. It needs a wildcard DNS record. Until you set it, previews are off. A pull request gets no preview, and the log says `Set a preview domain in Settings first`.
 </ResponseField>
 
 <ResponseField name="Hostnames" type="select" default="nested">
-  How a preview's hostname is built from the pull request number, the app's service and the domain:
+  How Meridian builds a preview's hostname from the pull request number, the app's service and the domain:
 
   | Choice | Example | DNS |
   | --- | --- | --- |
   | `pr-<n>.<app>.<domain>` (nested) | `pr-42.web.preview.example.com` | A wildcard record per app, `*.web.preview.example.com` |
   | `pr-<n>-<app>.<domain>` (flat) | `pr-42-web.preview.example.com` | One wildcard record, `*.preview.example.com`, for every app |
 
-  Flat names sit one level below the domain, so Cloudflare's free certificate covers them. Changing this affects only new previews.
+  Flat names sit one level below the domain, so Cloudflare's free certificate covers them. A change applies to new previews only.
 </ResponseField>
 
 <ResponseField name="Preview servers" type="text">
-  Labels a server needs to host previews, such as `role=preview`, separated by commas. Of the servers that match, Meridian picks the one with the fewest containers. Blank means each app's own servers. A term that isn't `key=value` is refused.
+  The labels a server needs to host previews, separated by commas, such as `role=preview`. Of the servers that match, Meridian picks the one with the fewest containers. Leave it blank to use each app's own servers. Meridian refuses a term that isn't `key=value`.
 </ResponseField>
 
 <ResponseField name="Expire after (days)" type="number" default="7">
-  How long a preview lives. The hourly expiry job removes a preview this many days after it was first deployed, even if its pull request is still open. At least 1.
+  How long a preview lives, at least 1 day. An hourly job removes a preview this many days after its first deploy, even if its pull request is still open.
 </ResponseField>
 
 See [Previews](/guides/previews).
 
 ### Where Meridian runs
 
-The centre of the map's flows: agent reports arrive here, and deploys go out from here.
+Where Meridian itself sits on the map. The map centres its flows on this place: agent reports arrive here, and deploys go out from here.
 
 <ResponseField name="Place" type="text">
   A name for the place, such as `Singapore`.
@@ -63,7 +63,7 @@ The centre of the map's flows: agent reports arrive here, and deploys go out fro
 
 ### Connections
 
-The **Connections** card shows what Meridian read from the environment. It is never stored, and you change it with environment variables.
+The **Connections** card shows what Meridian read from its environment variables. Meridian doesn't store it. To change it, change the variables.
 
 | Connection | Shows |
 | --- | --- |
@@ -73,37 +73,32 @@ The **Connections** card shows what Meridian read from the environment. It is ne
 
 ## Project settings
 
-Each project is one infra repository. Admins add one under **Projects → Add project** and change it with **Edit** on the project's page. See [Projects](/guides/projects).
+Each [project](/reference/glossary#project) is one infra repository. Admins add one under **Projects → Add project**, and change it with **Edit** on the project's page. See [Projects](/guides/projects).
 
 <ResponseField name="Name" type="text" required>
   The project's name in Meridian.
 </ResponseField>
 
 <ResponseField name="Repository" type="text" required>
-  The GitHub repository that holds your Kamal configs, as `owner/name`. Each repository can be one project only. Case doesn't matter.
+  The GitHub repository that holds your Kamal configs, as `owner/name`. Each repository can be one project only, and case doesn't matter.
 </ResponseField>
 
 <ResponseField name="Branch" type="text" default="main" required>
-  The branch Meridian reads and commits to. Pushes to other branches are ignored.
+  The branch Meridian reads and commits to. Meridian ignores pushes to other branches.
 </ResponseField>
 
 <ResponseField name="GitHub App installation ID" type="number">
-  The installation Meridian reads the repository through. It is the number at the end of the URL GitHub shows after you install the App. Leave it blank when Meridian uses a token. See [GitHub App](/reference/github-app#installation-id).
+  The App installation Meridian reads the repository through. It is the number at the end of the URL GitHub shows after you install the App. Leave it blank if Meridian uses a token. See [GitHub App](/reference/github-app#installation-id).
 </ResponseField>
 
 <ResponseField name="Config paths" type="text" default="config/deploy*.yml" required>
-  Globs, separated by commas, that say which files are Kamal configs. A file named `x.<destination>.yml` is the `<destination>` destination of `x.yml`, or `x.yaml`, when both match. Only `.yml` destination files count, as in Kamal. **New app** writes new configs at the first glob with exactly one `*`. See [Infra repository](/reference/infra-repository#config-paths).
+  File patterns, separated by commas, that say which files are Kamal configs. A file named `x.<destination>.yml` is the `<destination>` destination of `x.yml` or `x.yaml`, when both match. As in Kamal, only `.yml` destination files count. **New app** writes new configs at the first pattern with exactly one `*`. See [Infra repository](/reference/infra-repository#config-paths).
 </ResponseField>
 
 <ResponseField name="Direct commits" type="checkbox" default="off">
-  **Let admins commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys, rollbacks and preview overlays are always commits.
+  **Let admins commit changes directly instead of opening pull requests.** When on, **New app**, **Add CI workflow** and **Edit connectors** commit to the branch. When off, each opens a pull request. Deploys, rollbacks and preview files are always commits.
 </ResponseField>
 
-Saving a new repository, branch, installation ID or config paths syncs the project at once. Other changes wait for the next push or the 30-second poll.
+A new repository, branch, installation ID or config paths syncs the project as soon as you save. Other changes wait for the next push, or for the check Meridian makes every 30 seconds.
 
-### On the project page
-
-- **Sync now** reads the repository again, even if the branch head hasn't moved.
-- **Add CI workflow** proposes `.github/workflows/meridian-deploy.yml`. See [CI workflow](/reference/ci-workflow).
-- **Parse errors** lists each config Kamal rejected, with the file and line and a link to it on GitHub. A config that fails to parse keeps its app, with its deploys, releases and previews, until it parses again.
-- **Remove project**, on the edit page, deletes the project and its apps, releases, deploys and previews from Meridian. Nothing in Git changes, and nothing is removed from servers. Destroy running previews on the **Previews** page first, or their containers keep running. The confirm names any that are left.
+The project's page also has **Sync now**, **Add CI workflow**, **Parse errors** and, on its **Edit** page, **Remove project**. [Projects](/guides/projects) explains each one.

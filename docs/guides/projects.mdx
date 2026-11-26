@@ -1,17 +1,20 @@
 ---
 title: "Connect an infra repository"
 sidebarTitle: "Projects"
-description: "Add the Git repository that holds your Kamal configs, choose which files Meridian reads, add the CI workflow, and fix parse errors."
+description: "Add the Git repository that holds your Kamal configs, pick which files Meridian reads, and add the CI workflow."
 icon: "folder-git-2"
 ---
 
-A project is one Git repository of Kamal configs, your infra repository. Meridian reads the configs from it, records what should run where, and commits deploys, rollbacks, new apps and preview overlays to it. Nothing in the repository changes except through those commits.
+A [project](/reference/glossary#project) is one [infra repository](/reference/glossary#infra-repository) added to Meridian. That is the Git repository that holds your Kamal configs. Add one, and the board shows every app in it.
 
-Everyone can see **Projects** and each project's page. Only admins can add, edit, sync or remove a project. See [Roles](/concepts/roles).
+Meridian reads the configs, and commits deploys, rollbacks, new apps and preview files back to the repository. It changes nothing else there. Everyone can see **Projects**, but only admins can change one.
+
+## Before you start
+
+- GitHub access: the GitHub App installed on the repository, or a token. See [Install](/install) and [GitHub App](/reference/github-app).
+- The admin role. See [Roles](/concepts/roles).
 
 ## Add a project
-
-You need GitHub access first: a GitHub App installed on the repository, or a token. See [Install](/install) and [GitHub App](/reference/github-app).
 
 <Steps>
   <Step title="Open the form">
@@ -19,10 +22,10 @@ You need GitHub access first: a GitHub App installed on the repository, or a tok
   </Step>
   <Step title="Fill it in">
     - **Name**: what Meridian calls the project, such as `Infra`.
-    - **Repository**: the GitHub repository, as `owner/name`, such as `acme/infra`.
+    - **Repository**: the GitHub repository, as `owner/name`, such as `acme/infra`. Each repository can be one project only, and case doesn't matter.
     - **Branch**: the branch Meridian reads and commits to, `main` by default.
-    - **GitHub App installation ID**: the number at the end of the URL after you install the App on the repository. Leave it blank when Meridian uses a token.
-    - **Config paths**: globs, comma separated. See [Choose config paths](#choose-config-paths).
+    - **GitHub App installation ID**: the number at the end of the URL after you install the App. Leave it blank if Meridian uses a token.
+    - **Config paths**: which files are Kamal configs. See [Choose config paths](#choose-config-paths).
     - **Let admins commit changes directly instead of opening pull requests**: see [Direct commits](#direct-commits).
   </Step>
   <Step title="Save">
@@ -33,18 +36,38 @@ You need GitHub access first: a GitHub App installed on the repository, or a tok
   </Step>
 </Steps>
 
-Each repository can be one project only. GitHub names repositories without regard to case, and so does Meridian.
+Next, add the CI workflow, so deploys can run.
+
+## Add the CI workflow
+
+Meridian never runs Kamal. The [CI workflow](/reference/glossary#ci-workflow), `.github/workflows/meridian-deploy.yml`, does that in GitHub Actions.
+
+<Steps>
+  <Step title="Add the two secrets">
+    Add `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` to the repository, plus any secrets your configs use. See [Secrets](/guides/secrets#the-two-ci-secrets).
+  </Step>
+  <Step title="Propose the workflow">
+    On the project's page, click **Add CI workflow** and confirm. Meridian opens a pull request titled `ci: deploy with Kamal when a version file changes`. If the project allows direct commits, it commits the file instead.
+  </Step>
+  <Step title="Merge it">
+    Review and merge the pull request. Deploys work from then on.
+  </Step>
+</Steps>
+
+The workflow runs `kamal deploy` when a push changes a `.version` file. Meridian also starts it for a redeploy or a preview.
+
+You can edit the workflow, but keep its `run-name`, because Meridian finds preview runs by it. If GitHub's runners can't reach your servers, set the repository variable `MERIDIAN_RUNS_ON` to your own runner, such as `self-hosted`. See [CI workflow](/reference/ci-workflow).
 
 ## Choose config paths
 
-**Config paths** are glob patterns, matched against every path in the repository. The default is `config/deploy*.yml`, Kamal's own layout.
+**Config paths** are patterns, separated by commas, that say which files in the repository are Kamal configs. The default, `config/deploy*.yml`, is Kamal's own layout.
 
 - `*` matches within one folder.
-- `**/` matches any number of folders, none included.
+- `**/` matches any number of folders, including none.
 - `{a,b}` matches either word.
 - Only files ending in `.yml` or `.yaml` count.
 
-Meridian reads a file whose name ends in `.<destination>.yml` as a destination of the config beside it, as Kamal does. With the default glob:
+A file whose name ends in `.<destination>.yml` is a [destination](/reference/glossary#destination) of the config beside it, as in Kamal. With the default pattern:
 
 <Tree>
   <Tree.Folder name="config" defaultOpen>
@@ -56,34 +79,42 @@ Meridian reads a file whose name ends in `.<destination>.yml` as a destination o
   </Tree.Folder>
 </Tree>
 
-This is two configs. `config/deploy.yml` has the destinations `staging` and `production`, and is two apps on the board. `config/deploy-blog.yml` has none, and is one app. A file such as `config/deploy.staging.yml` is a destination only when `config/deploy.yml` or `config/deploy.yaml` exists. Preview overlays, `<config>.pr-<n>.yml`, are never configs of their own.
+That is two configs and three [apps](/reference/glossary#app). `config/deploy.yml` has the destinations `staging` and `production`, so it is two apps. `config/deploy-blog.yml` has none, so it is one app.
 
-To keep one file per app in a folder, use `deploy/*.yml`. **New app** puts each new config at the first glob with a single `*`, with the service name in its place. See [Where the config goes](/guides/new-app#where-the-config-goes).
+To keep one file per app in a folder, use `deploy/*.yml`. **New app** puts each new config at the first pattern with a single `*`, with the service name in its place. See [Where the config goes](/guides/new-app#where-the-config-goes).
+
+<Accordion title="Edge cases">
+  A file such as `config/deploy.staging.yml` is a destination only when `config/deploy.yml` or `config/deploy.yaml` exists.
+
+  For each preview, Meridian writes a preview file, `<config>.pr-<n>.yml`. Other pages call it a preview overlay. It is never a config of its own.
+</Accordion>
 
 The full layout, with version files, is in [Infra repository](/reference/infra-repository).
 
 ## Direct commits
 
-Meridian proposes changes as pull requests by default: new apps, the CI workflow, and tunnel connector changes. Each goes on a branch named `meridian/<what>-<6 hex digits>`, such as `meridian/new-shop-3fa9c1`.
+By default, Meridian proposes new apps, the CI workflow and tunnel connector changes as pull requests. Each goes on a branch named `meridian/<what>-<6 hex digits>`, such as `meridian/new-shop-3fa9c1`.
 
-Tick **Let admins commit changes directly instead of opening pull requests**, and an admin's change goes straight to the branch instead. The project's page then says **Admins may commit directly** under **Changes**. Activity records each direct commit as `project.committed`, and each pull request as `project.pull_request`.
+Tick **Let admins commit changes directly instead of opening pull requests**, and an admin's change goes straight to the branch. The project's page then says **Admins may commit directly** under **Changes**. Activity records a direct commit as `project.committed`, and a pull request as `project.pull_request`.
 
-Deploys, rollbacks and preview overlays always commit straight to the branch, whatever this setting says. They change only version files and overlays.
+Deploys, rollbacks and preview files always commit straight to the branch, whatever this setting says. They change only version files and preview files.
 
 ## Sync
 
 Meridian reads a project again:
 
-- **On every push to the branch**, when GitHub sends the push webhook.
-- **Every 30 seconds**, whether or not webhooks arrive. A repository where nothing changed costs no GitHub rate limit.
-- **When an admin clicks Sync now** on the project's page. Meridian says `Syncing acme/infra.` and reads the repository even if the branch hasn't moved.
-- **When an admin saves a change** to the repository, branch, installation ID or config paths.
+- On every push to the branch, when GitHub sends the push [webhook](/reference/glossary#webhook).
+- Every 30 seconds, with or without webhooks. If nothing changed, this costs no GitHub rate limit.
+- When an admin clicks **Sync now**, even if the branch hasn't moved. Meridian says `Syncing acme/infra.`
+- When an admin saves a new repository, branch, installation ID or config paths.
 
-A sync reads only the files whose content changed since the last one, and parses the configs with Kamal. The project's page shows **Synced** with the commit and when. An app whose config is gone from Git leaves the board. An app whose config fails to parse stays, with its deploys, releases and previews, until it parses again.
+Each sync reads only the files that changed, and parses the configs with Kamal. The project's page shows **Synced**, with the commit and the time.
+
+An app whose config is gone from Git leaves the board. An app whose config fails to parse stays, with its deploys, releases and previews, until it parses again.
 
 ## Fix parse errors
 
-When Kamal can't read a config, the project's page lists it under **Parse errors**, and **Projects** shows a badge such as `✕ 2 parse errors`. Each error shows the file and line, a **view** link to that line on GitHub, and Kamal's message:
+When Kamal can't read a config, the project's page lists it under **Parse errors**, and **Projects** shows a badge such as `✕ 2 parse errors`. Each error has the file and line, a **view** link, and Kamal's message:
 
 ```text
 config/deploy.staging.yml:14
@@ -92,51 +123,41 @@ proxy: unknown key: hots
 
 <Steps>
   <Step title="Open the line">
-    Click **view** to open the file at the line, at the commit Meridian last read.
+    Click **view** to open the file at that line, at the commit Meridian last read.
   </Step>
   <Step title="Fix it in Git">
-    Fix the config and push to the branch. The line points at the destination file when the error is there.
+    Fix the config and push to the branch. When the error is in a destination file, the line points there.
   </Step>
   <Step title="Check it cleared">
     The next sync parses it again. **Parse errors** then says `No parse errors`, with the Kamal version it used.
   </Step>
 </Steps>
 
-If one config makes the parser hang or crash, nothing in that sync parses. Meridian keeps every app as it was and shows one error without a file. It tries that commit again after a minute, then two, four and so on, at most hourly, and reads a new push at once. Find the config the last push changed.
+<Accordion title="When the parser hangs or crashes">
+  Then nothing in that sync parses. Meridian keeps every app as it was and shows one error without a file. Look at the configs the last push changed.
 
-## Add the CI workflow
-
-Meridian never runs Kamal. CI does, with the workflow `.github/workflows/meridian-deploy.yml`.
-
-<Steps>
-  <Step title="Add the two secrets">
-    Add `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` to the repository, plus any secrets your configs use. See [Secrets](/guides/secrets#the-two-ci-secrets).
-  </Step>
-  <Step title="Propose the workflow">
-    On the project's page, click **Add CI workflow** and confirm. Meridian opens a pull request titled `ci: deploy with Kamal when a version file changes`, or commits the file if the project allows direct commits.
-  </Step>
-  <Step title="Merge it">
-    Review and merge the pull request. Deploys work from then on.
-  </Step>
-</Steps>
-
-The workflow runs `kamal deploy` when a push changes a `.version` file, and when Meridian dispatches it for a redeploy or a preview. Edit it freely. Keep its `run-name`, which Meridian matches preview runs by. Set the repository variable `MERIDIAN_RUNS_ON` to run it on your own runner, such as `self-hosted`, when GitHub's runners can't reach your servers. See [CI workflow](/reference/ci-workflow).
+  Meridian tries that commit again after 1 minute, then waits twice as long each time: 2, 4, 8 minutes, up to once an hour. It reads a new push at once.
+</Accordion>
 
 ## Edit or remove a project
 
 Click **Edit** on the project's page to change any field. Click **Update Project** to save.
 
-To remove a project, click **Remove project** on its **Edit** page and confirm. Meridian forgets the project, its apps, releases, deploys, previews and secret names, and says `Project removed. Nothing in Git was changed.`
+To remove a project, click **Remove project** on its **Edit** page and confirm. Meridian forgets the project and its apps, releases, deploys, previews and secret names. It says `Project removed. Nothing in Git was changed.`
 
 <Warning>
-Removing a project changes nothing on your servers either. Previews that were running keep running, and Meridian no longer removes them when their pull requests close. Close or destroy them first. The confirm names each one still running or being removed, such as `Preview acme/shop#12 keeps running: Destroy it on Previews first.`, and Activity names the containers and overlay files left to remove by hand.
+Removing a project changes nothing on your servers either. Running previews keep running, and Meridian stops removing them when their pull requests close. Close or destroy them first.
+
+The confirm names each preview still running or being removed, such as `Preview acme/shop#12 keeps running: Destroy it on Previews first.`
+
+Activity then names the containers and preview files left for you to remove by hand.
 </Warning>
 
 ## Related
 
 <Columns cols={2}>
   <Card title="Infra repository" icon="folder-tree" href="/reference/infra-repository">
-    Configs, destinations, version files and overlays.
+    Configs, destinations, version files and preview files.
   </Card>
   <Card title="New app" icon="square-plus" href="/guides/new-app">
     Add a config from Meridian.

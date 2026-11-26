@@ -1,19 +1,19 @@
 ---
 title: "Upgrading"
-description: "Move Meridian and its agents to a new release with Kamal: what runs on boot, what happens to the database, and how to go back."
+description: "Move Meridian to a new release with Kamal, check it, and go back if you need to."
 icon: "circle-arrow-up"
 ---
 
-Each release publishes two images, tagged with the release and with `latest`:
+To upgrade, you deploy Meridian's new image with Kamal, as you deployed the first one. Each release publishes two images, tagged with the release and with `latest`:
 
 - `ghcr.io/bigint/meridian:<tag>`, the app.
 - `ghcr.io/bigint/meridian-agent:<tag>`, the agent.
 
-Pin a tag, such as `v0.1.0`, rather than `latest`, so you choose when to upgrade.
+Pin a tag, such as `v0.1.0`, not `latest`. Then you choose when to upgrade.
 
 ## Before you upgrade
 
-1. Read the release's entry in the [changelog](/changelog). An **Upgrading** section there lists any step a release needs, such as pressing **Add CI workflow** again or changing the agent accessory.
+1. Read the release's entry in the [changelog](/changelog). If the release needs an extra step, its **Upgrading** section lists it. For example, press **Add CI workflow** again, or change the agent accessory.
 2. Back up the database, or check that Litestream is current. See [Backups](/operate/backups).
 
 ## Upgrade Meridian
@@ -26,10 +26,10 @@ From your copy of Meridian's `config/deploy.yml`, deploy the new tag:
     kamal deploy --skip-push --version v0.2.0
     ```
 
-    `--skip-push` tells Kamal not to build. Each server pulls `ghcr.io/bigint/meridian:v0.2.0`.
+    `--skip-push` tells Kamal not to build. Each server pulls `ghcr.io/bigint/meridian:v0.2.0` instead.
   </Tab>
   <Tab title="Your own build">
-    Check out the release and let Kamal build and push to your registry, the `image:` in `config/deploy.yml`:
+    Check out the release. Kamal builds it and pushes it to your registry, the `image:` in `config/deploy.yml`:
 
     ```bash
     git checkout v0.2.0
@@ -38,17 +38,17 @@ From your copy of Meridian's `config/deploy.yml`, deploy the new tag:
   </Tab>
 </Tabs>
 
-Kamal starts the new container beside the old one. kamal-proxy sends traffic to it once `/up` answers, then stops the old one, so people and agents see no downtime.
+Kamal starts the new container beside the old one. Once `/up` answers, [kamal-proxy](/reference/glossary#kamal-proxy) sends traffic to the new container, and Kamal stops the old one. People and agents see no downtime.
 
 ### What runs on boot
 
-The image's entrypoint, `bin/docker-entrypoint`, runs `bin/rails db:prepare` before the server starts. It creates any database that is missing and runs pending migrations on all four: the primary database, the cache, the queue and the cable database. Then Thruster starts on port 80, in front of Puma.
+Before the server starts, `bin/docker-entrypoint` runs `bin/rails db:prepare`. It creates any missing database and runs new migrations on all four databases: primary, cache, queue and cable. Then Thruster starts on port 80, in front of Puma.
 
-The migrations run while the old container still serves. A `job` role that runs `bin/jobs` does not run `db:prepare`, so deploy `web` first, or deploy both together with `kamal deploy`.
+The migrations run while the old container still serves. A `job` role that runs `bin/jobs` doesn't run `db:prepare`. So deploy `web` first, or deploy both together with `kamal deploy`.
 
 ### The database
 
-The SQLite files live in the `meridian_storage` volume, mounted at `/rails/storage`. The volume outlives every container, so a deploy keeps all data. Don't remove the volume, and don't move Meridian to another host without copying it.
+The SQLite files live in the `meridian_storage` volume, mounted at `/rails/storage`. The volume outlives every container, so a deploy keeps all data. Don't remove the volume. To move Meridian to another host, copy the volume too.
 
 ### Check it
 
@@ -57,43 +57,22 @@ curl -fsS https://meridian.example.com/up
 kamal logs
 ```
 
-**Settings → Connections** shows the Kamal version the new release parses configs with.
+`/up` answers when Meridian is up. **Settings → Connections** shows the Kamal version the new release parses configs with.
 
 ## Go back
 
-Kamal keeps the last five app containers on the host, stopped, and `kamal rollback` starts one of them again. To return to the previous release:
+Kamal keeps the last five app containers on the host, stopped. `kamal rollback` starts one of them again. To return to the previous release:
 
 ```bash
 kamal rollback v0.1.0
 ```
 
-`kamal rollback` doesn't undo migrations. If the newer release migrated the database in a way the older one can't read, restore the backup you took before the upgrade.
+`kamal rollback` doesn't undo migrations. If the older release can't read the migrated database, restore the backup you took before the upgrade.
 
 ## Upgrade agents
 
-The agent runs as a Kamal accessory in an infra repository's config. Change its image tag there:
-
-```yaml config/deploy.yml
-  meridian_agent:
-    image: ghcr.io/bigint/meridian-agent:v0.2.0
-```
-
-Then reboot it on every host:
-
-```bash
-kamal accessory reboot meridian_agent
-```
-
-The reboot removes the old agent and starts the new one. A server sends no snapshot for a few seconds, which is well under the 45 seconds before it turns stale. Agents and Meridian need not run the same release: Meridian accepts snapshots from older agents, and the agent ignores lease messages it doesn't know. The server's page shows the version each agent reports.
-
-The agent's config lives wherever you put the accessories, such as the config the **Agents** page's snippet went into. If a release changes the accessory itself, the changelog says what to change, for example:
-
-```bash
-kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
-kamal accessory reboot meridian_docker
-kamal accessory reboot meridian_agent
-```
+The agent runs as a Kamal accessory in an infra repository's config, so you upgrade it there. Change its image tag, then run `kamal accessory reboot meridian_agent`. Meridian accepts snapshots from older agents, so agents and Meridian don't need the same release. See [Upgrade the agent](/guides/agent#upgrade-the-agent).
 
 ## Update the CI workflow
 
-The CI workflow is a file in each infra repository, so a Meridian upgrade doesn't change it. When a release changes the template, press **Add CI workflow** on each project's page again, and merge the pull request. See [CI workflow](/reference/ci-workflow).
+The [CI workflow](/reference/glossary#ci-workflow) is a file in each infra repository, so a Meridian upgrade doesn't change it. When a release changes the workflow's template, press **Add CI workflow** on each project's page again. Then merge the pull request. See [CI workflow](/reference/ci-workflow).

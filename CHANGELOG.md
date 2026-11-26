@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Live stats
+
+- A server's page shows its CPU, memory, load and disk, and every container's CPU, memory, network and disk IO, updating every second while the page is open, with a sparkline, average and peak for each.
+- Agents keep one outbound WebSocket to Meridian's `/cable`. Nothing streams until someone opens the page, and the agent stops within 30 seconds of the last viewer leaving. See decisions 30 and 31.
+- Mount the host's `/proc` read-only at `/host/proc` for host numbers (the accessory template now does). `MERIDIAN_LIVE=0` turns live stats off.
+
 ### Inspector interface
 
 - Meridian's own look, chosen from three mockups: zinc neutrals, one indigo accent, monospace for versions and hosts, dense tables, light and dark, and no shadows. See `docs/design.md`.

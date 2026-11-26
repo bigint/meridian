@@ -23,11 +23,11 @@ Through its GitHub App, Meridian can write to your infra repository and set its 
 
 ## What Meridian does by design
 
-- **It never connects to servers.** Agents reach out to Meridian; Meridian never connects in, and it has no SSH keys.
+- **It never connects to servers.** Agents reach out to Meridian; Meridian never connects in, and it has no SSH keys. Live stats travel over a WebSocket the agent opens to `/cable`; Meridian uses it only to say "someone is watching, send stats for 30 seconds".
 - **It never runs Kamal.** CI does, from the repository, where every change is a reviewed commit or pull request.
 - **Secret values are write-only.** A value is sealed in the request that receives it, sent to GitHub, and dropped. It is filtered from logs (`filter_parameters`), never assigned to a model, never passed to a job, and never broadcast. Tests assert all of this using a sentinel value.
 - **Kamal configs are parsed in a separate process with an empty environment.** ERB in a config is arbitrary Ruby from your infra repository, and it can't read Meridian's keys or memory.
-- **Agents are read-only and narrow.** The Docker API is limited to list and inspect, and environment variables, commands and mounts are never collected.
+- **Agents are read-only and narrow.** The Docker API is limited to list, inspect and stats, and environment variables, commands and mounts are never collected. Live stats are numbers only (CPU, memory, network and disk rates) and are relayed to the open page, never stored.
 - **Webhooks** are verified with HMAC-SHA256 against the App's webhook secret.
 - **Rate limits** (Rails 8 `rate_limit`) apply to sign-in, snapshots, deploys, rollbacks, redeploys and secret writes.
 - **Content Security Policy:** same-origin only, inline scripts by nonce only, and no framing.

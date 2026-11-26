@@ -3,8 +3,8 @@
 # Put MERIDIAN_TOKEN in .kamal/secrets. Replace SERVICE with the config's
 # service.
   meridian_docker:
-    # Read-only Docker API: only GET /containers/json and
-    # /containers/{id}/json.
+    # Read-only Docker API: only GETs under /containers (list, inspect
+    # and, while someone watches a server, stats).
     image: tecnativa/docker-socket-proxy:v0.4.1
     roles: [ web ]
     env:
@@ -27,3 +27,6 @@
     volumes:
       - /etc/machine-id:/host/etc/machine-id:ro
       - /etc/hostname:/host/etc/hostname:ro
+      # Host CPU, memory and load for live stats. Leave it out and Meridian
+      # shows per-container numbers only.
+      - /proc:/host/proc:ro

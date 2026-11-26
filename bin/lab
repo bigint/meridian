@@ -107,10 +107,10 @@ case "${1:-}" in
         docker login registry:5000 -u lab --password-stdin >/dev/null &&
         docker rm -f meridian-agent >/dev/null 2>&1;
         host_ip="$(getent hosts host.docker.internal | cut -d" " -f1)";
-        docker run -d --name meridian-agent --restart unless-stopped --user 0 \
+        docker run -d --pull always --name meridian-agent --restart unless-stopped --user 0 \
           ${host_ip:+--add-host host.docker.internal:$host_ip} \
           -v /var/run/docker.sock:/var/run/docker.sock:ro \
-          -v /etc/machine-id:/host/etc/machine-id:ro -v /etc/hostname:/host/etc/hostname:ro \
+          -v /etc/machine-id:/host/etc/machine-id:ro -v /etc/hostname:/host/etc/hostname:ro -v /proc:/host/proc:ro \
           -e MERIDIAN_URL='"$url"' -e MERIDIAN_TOKEN='"$token"' -e MERIDIAN_INTERVAL=5s \
           -e "MERIDIAN_LABELS=provider=kiri,'"$(place "$server")"'" \
           registry:5000/meridian-agent:lab >/dev/null' < "$SECRETS/registry_password"

@@ -2,11 +2,22 @@
 
 `meridian-agent` is a small Go binary (standard library only, distroless image) that runs on each server and tells Meridian what is actually running there. It:
 
-- reads Docker **read-only**: `GET /containers/json` and `GET /containers/{id}/json`, nothing else;
+- reads Docker **read-only**: `GET /containers/json`, `GET /containers/{id}/json` and, only while someone has the server's page open, `GET /containers/{id}/stats`, nothing else;
 - recognises Kamal containers by the labels Kamal sets (`service`, `role`, `destination`) and takes the version from the container name, exactly as Kamal does;
 - sends container name, image, labels, state, health and start time, and **never** environment variables, commands or mounts, which can contain secrets;
 - POSTs a snapshot every 15 seconds (±20% jitter), outbound only, so it works behind NAT and firewalls;
-- backs off exponentially when Meridian is down, caps its payload at 1 MiB, and never takes the host down with it.
+- backs off exponentially when Meridian is down, caps its payload at 1 MiB, and never takes the host down with it;
+- keeps one outbound WebSocket open to Meridian's `/cable` for live stats (below).
+
+## Live stats
+
+Open a server's page and its CPU, memory, load and disk, and every container's CPU, memory, network and disk IO, update once a second.
+
+The agent holds one WebSocket open to `MERIDIAN_URL/cable`, outbound like everything else, authenticated with the same token. While nobody watches, nothing flows but ActionCable's pings. When someone opens the page, Meridian sends a 30-second lease and renews it while the page stays open. Until the lease runs out the agent streams Docker's stats for each running Kamal container and sends Meridian one frame a second, which Meridian relays to the open pages and never stores. Close the page and the agent stops within 30 seconds.
+
+Host numbers come from the host's `/proc`, mounted read-only at `/host/proc` (the template does this). Without it the page shows per-container numbers only. Disk usage is the host's root filesystem, read with `statfs` on the already-mounted `/host/etc/hostname`.
+
+`MERIDIAN_LIVE=0` turns live stats off; the agent then only posts snapshots. Your proxy must pass WebSockets through to Meridian; kamal-proxy and Thruster both do.
 
 The full reference (every environment variable and the payload format) is in [`agent/README.md`](../agent/README.md).
 

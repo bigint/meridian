@@ -9,7 +9,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
    secrets (write-only)▼  │
                      GitHub ──Actions──▶ kamal deploy ──SSH──▶ servers (kamal-proxy + apps)
                                                                   │
-                     Meridian ◀──HTTPS POST (outbound only)── meridian-agent on each server
+                     Meridian ◀──HTTPS POST + /cable WebSocket (outbound only)── meridian-agent on each server
 ```
 
 ## Data flow

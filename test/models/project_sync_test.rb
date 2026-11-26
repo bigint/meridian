@@ -12,6 +12,22 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal({ "deploy/blog.yml" => [ nil ], "deploy/web.yml" => %w[ production staging ] }, @project.config_paths(paths))
   end
 
+  test "a destination file ends in .yml, as Kamal looks for, whatever the base ends in" do
+    @project.config_globs = [ "deploy/*" ]
+    paths = %w[ deploy/web.yml deploy/web.staging.yaml deploy/api.yaml deploy/api.eu.yml ]
+
+    assert_equal({ "deploy/api.yaml" => [ "eu" ], "deploy/web.staging.yaml" => [ nil ], "deploy/web.yml" => [ nil ] }, @project.config_paths(paths))
+  end
+
+  test "a .yaml file beside a .yml config is read as a config of its own" do
+    @project.update!(config_globs: [ "deploy/*" ])
+    files = infra_files.except("deploy/web.staging.yml").merge("deploy/web.staging.yaml" => infra_files["deploy/web.staging.yml"])
+    stub_github_files(@project, files, head: "1" * 40)
+
+    assert @project.sync
+    assert_includes @project.reload.config_errors.map { it["file"] }, "deploy/web.staging.yaml"
+  end
+
   test "a preview overlay is never a config of its own, even without its base" do
     assert_equal({ "deploy/api.yml" => [ nil ] }, @project.config_paths(%w[ deploy/api.yml deploy/blog.pr-3.yml ]))
   end

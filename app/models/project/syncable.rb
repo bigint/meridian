@@ -6,6 +6,7 @@ module Project::Syncable
   extend ActiveSupport::Concern
 
   PREVIEW_DESTINATION = /\Apr-\d+\z/
+  DESTINATION_FILE = /\.([^.\/]+)\.yml\z/
 
   def sync(force: false)
     sha = git.head_sha
@@ -81,14 +82,15 @@ module Project::Syncable
       apps.find_by(attributes) || App.new(project: self, **attributes)
     end
 
-    # "deploy/web.staging.yml" is a destination file when "deploy/web.yml" exists.
+    # "deploy/web.staging.yml" is a destination file when "deploy/web.yml"
+    # (or .yaml) exists. Kamal only ever looks for <base>.<destination>.yml.
     def base_for(path, matched)
-      candidate = path.sub(/\.[^.\/]+\.ya?ml\z/, ".yml")
-      candidate if candidate != path && matched.include?(candidate)
+      return unless path.match?(DESTINATION_FILE)
+      %w[ .yml .yaml ].map { path.sub(DESTINATION_FILE, it) }.find { matched.include?(it) }
     end
 
     def destination_of(path)
-      path[/\.([^.\/]+)\.ya?ml\z/, 1]
+      path[DESTINATION_FILE, 1]
     end
 
     def read_blob(entry)

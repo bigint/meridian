@@ -38,6 +38,7 @@
 - Taking `meridian.source` or `meridian.kind` out of a config clears it in Meridian. The old values stuck, so pull requests in a repository the config no longer named kept getting previews on real servers, and an app once labelled `accessories` stayed off the board.
 - Saving a project with new config paths, branch, repository or installation syncs it at once. The scheduled sync skips a repository whose head hasn't moved, so the new paths took effect only after the next push or a press of Sync now.
 - A YAML syntax error in a destination file is reported against that file. It named the base config, with the destination file's line number, and linked to the wrong file.
+- A `.yaml` file next to a config, such as `deploy/web.staging.yaml` beside `deploy/web.yml`, is no longer taken for a destination file, which made every sync fail looking for `deploy/web.staging.yml`. Like Kamal, Meridian reads only `<config>.<destination>.yml` as a destination, and now finds it for a `.yaml` config too.
 
 ## v0.1.0 (2026-11-26)
 

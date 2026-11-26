@@ -25,7 +25,7 @@ Everything site-specific is set through environment variables, so it stays out o
 
 Per project, you can set:
 
-- **Config paths:** comma-separated globs. A file named `x.<dest>.yml` is the `<dest>` destination of `x.yml` when both match.
+- **Config paths:** comma-separated globs. A file named `x.<dest>.yml` is the `<dest>` destination of `x.yml` (or `x.yaml`) when both match; Kamal only reads destination files ending in `.yml`.
 - **Direct commits:** when on, admins' structural changes (new apps, the CI workflow) are committed instead of proposed. Deploys, rollbacks and preview overlays are always commits.
 
 ## Conventions Meridian adds to your infra repository

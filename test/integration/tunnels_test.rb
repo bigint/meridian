@@ -81,6 +81,45 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     assert_select ".alert", count: 0
   end
 
+  test "an admin edits the connectors and Meridian commits the edge config" do
+    source = file_fixture("edge/generated.yml").read
+    @project.update!(direct_commits: true)
+    @project.apps.create!(service: "edge", kind: App::ACCESSORIES, config_path: "deploy/edge.yml",
+      accessories: KamalConfig.parse({ "deploy/edge.yml" => source }, [ { "path" => "deploy/edge.yml", "destination" => nil } ]).sole["accessories"])
+    stub_github_files(@project, { "deploy/edge.yml" => source })
+    writes = stub_github_writes(@project)
+    sign_in_as users(:admin)
+    hosts = %w[ aps2-az1-node-01 apse1-az1-node-01 euc1-az1-node-01 ]
+
+    get tunnels_path
+    assert_select "a[href=?]", edit_tunnels_connectors_path(project: @project.id, secret: "CLOUDFLARE_TUNNEL_TOKEN"), text: "Edit connectors"
+
+    get edit_tunnels_connectors_path(project: @project.id, secret: "CLOUDFLARE_TUNNEL_TOKEN", hosts: hosts)
+    assert_response :success
+    assert_select ".badge", text: "+ add"
+    assert_select ".badge", text: "− remove"
+    assert_select "button", text: /Commit the change/
+
+    patch tunnels_connectors_path(project: @project.id, secret: "CLOUDFLARE_TUNNEL_TOKEN"), params: { hosts: hosts }
+    assert_response :created
+    assert_equal "deploy/edge.yml", writes.sole["path"]
+    assert_includes writes.sole["content"], "  cloudflared-euc1-az1-node-01:\n"
+    assert_not_includes writes.sole["content"], "aps2-az1-node-02"
+    assert_select ".code-block code", text: "kamal accessory remove cloudflared-aps2-az1-node-02 -c deploy/edge.yml -y"
+    assert_select ".code-block code", text: "kamal accessory boot cloudflared-euc1-az1-node-01 -c deploy/edge.yml"
+  end
+
+  test "only admins edit connectors" do
+    make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("a") ])
+
+    get tunnels_path
+    assert_select "a", text: "Edit connectors", count: 0
+
+    get edit_tunnels_connectors_path(project: @project.id, secret: "CLOUDFLARE_TUNNEL_TOKEN")
+    assert_redirected_to root_path
+    assert_equal "You don't have permission to do that.", flash[:alert]
+  end
+
   test "the sidebar links to the page" do
     get tunnels_path
     assert_select "nav[aria-label=Manage] a[href=?]", tunnels_path, text: "Tunnels"

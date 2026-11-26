@@ -1,0 +1,84 @@
+<% content_for :title, "Edit connectors · #{@tunnel.name}" %>
+<% change = @change %>
+<% ready = change.changed? && change.valid? %>
+<%= page_header "Edit connectors", meta: "Cloudflare Tunnel #{@tunnel.name}: which servers run a connector, in #{change.path}. Meridian proposes the change to #{@tunnel.project.repo_full_name}; routes and the token stay in Cloudflare." do %>
+  <%= link_to "All tunnels", tunnels_path, class: "btn" %>
+<% end %>
+
+<div class="split">
+  <div class="split__main">
+    <% if !change.changed? %>
+      <%= empty_state "Nothing to change yet", icon_name: :tunnels do %>
+        <p>Tick a server on the right to add a connector there, or untick one to remove it. The preview shows here.</p>
+      <% end %>
+    <% else %>
+      <%= titled_section "Changes" do %>
+        <ul class="flex-col gap-s">
+          <% change.added.each do |host| %><li class="flex items-center gap-s"><%= badge("+ add", tone: :ok) %><span class="mono txt-small"><%= host %></span></li><% end %>
+          <% change.removed.each do |host| %><li class="flex items-center gap-s"><%= badge("− remove", tone: :bad) %><span class="mono txt-small"><%= host %></span></li><% end %>
+        </ul>
+
+        <% change.gaps.each do |coverage| %>
+          <%= alert_box :warn, title: "#{coverage.app.name} wouldn't be on every connector's server" do %>
+            <p>It's missing on <%= safe_join(coverage.missing.map { tag.code(it) }, ", ") %>. If its hostname is routed through this tunnel, Cloudflare could send its requests there, where kamal-proxy answers 404.</p>
+          <% end %>
+        <% end %>
+
+        <% if ready %>
+          <%= button_to tunnels_connectors_path(project: @tunnel.project.id, secret: @tunnel.secret_name), method: :patch, class: "btn btn--primary", params: { hosts: change.hosts } do %>
+            <%= @tunnel.project.direct_commits? ? "Commit the change" : "Open a pull request" %>
+          <% end %>
+        <% else %>
+          <%= alert_box :bad, title: "Meridian can't make this change" do %>
+            <ul><% change.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if ready %>
+        <%= titled_section "By hand" do %>
+          <ol class="walk">
+            <% if change.remove_commands.any? %>
+              <%= render layout: "tunnels/step", locals: { number: 1, title: "Before merging, stop the dropped connectors", done: false } do %>
+                <p class="walk__text">Once the change is merged, Kamal no longer knows them.</p>
+                <%= render "shared/code_block", code: change.remove_commands.join("\n"), label: "Terminal" %>
+              <% end %>
+            <% end %>
+            <% if change.boot_commands.any? %>
+              <%= render layout: "tunnels/step", locals: { number: change.remove_commands.any? ? 2 : 1, title: "After merging, start the new ones", done: false } do %>
+                <p class="walk__text">With <code><%= @tunnel.secret_name %></code> in the environment. Each should register four connections, and Cloudflare lists it under its server's name.</p>
+                <%= render "shared/code_block", code: change.boot_commands.join("\n"), label: "Terminal" %>
+              <% end %>
+            <% end %>
+          </ol>
+        <% end %>
+
+        <%= disclosure "#{change.path} after the change" do %>
+          <%= render "shared/code_block", code: change.content, label: change.path %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <aside class="split__aside">
+    <%= form_with url: edit_tunnels_connectors_path, method: :get, class: "panel", data: { controller: "autosubmit" } do |form| %>
+      <%= hidden_field_tag :project, @tunnel.project.id %>
+      <%= hidden_field_tag :secret, @tunnel.secret_name %>
+      <fieldset class="field">
+        <legend>Connector servers</legend>
+        <% @candidates.each do |server| %>
+          <label class="check">
+            <%= check_box_tag "hosts[]", server.hostname, change.hosts.include?(server.hostname), id: "host-#{server.id}", data: { action: "autosubmit#submit" } %>
+            <span>
+              <span class="mono txt-small"><%= server.name %></span>
+              <% if change.current.include?(server.hostname) %><%= badge "now" %><% end %>
+              <span class="block txt-small txt-faint"><%= place(server) %></span>
+            </span>
+          </label>
+        <% end %>
+        <p class="field__hint">Every app the tunnel serves must run on all of these.</p>
+      </fieldset>
+      <noscript><%= form.submit "Preview", name: nil, class: "btn" %></noscript>
+    <% end %>
+  </aside>
+</div>

@@ -22,6 +22,9 @@ Rails.application.routes.draw do
   resources :events, only: :index
   resources :secrets, only: %i[ index create update ]
   resources :previews, only: %i[ index destroy ]
+  namespace :tunnels do
+    resource :connectors, only: %i[ edit update ]
+  end
   resources :tunnels, only: %i[ index new ]
   resources :agent_tokens, only: %i[ index create destroy ], path: "agents"
 

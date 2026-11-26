@@ -1,0 +1,22 @@
+<% content_for :title, "Connector change proposed" %>
+<%= page_header "Connector change #{@proposal.direct ? "committed" : "ready for review"}",
+      meta: "Tunnel #{@tunnel.name} in #{@change.path}. The Tunnels page shows the new connectors once #{@proposal.direct ? "the project syncs" : "the pull request is merged"} and they start." do %>
+  <%= link_to (@proposal.direct ? "View commit" : "Open pull request ##{@proposal.number}"), @proposal.url, class: "btn btn--primary" %>
+<% end %>
+
+<%= titled_section "Still to do by hand" do %>
+  <ol class="walk">
+    <% if @change.remove_commands.any? %>
+      <%= render layout: "tunnels/step", locals: { number: 1, title: @proposal.direct ? "Stop the dropped connectors" : "Before merging, stop the dropped connectors", done: false } do %>
+        <p class="walk__text"><%= @proposal.direct ? "Run this from a checkout from before the commit: Kamal no longer knows them after it." : "Once the pull request is merged, Kamal no longer knows them." %></p>
+        <%= render "shared/code_block", code: @change.remove_commands.join("\n"), label: "Terminal" %>
+      <% end %>
+    <% end %>
+    <% if @change.boot_commands.any? %>
+      <%= render layout: "tunnels/step", locals: { number: @change.remove_commands.any? ? 2 : 1, title: "After #{@proposal.direct ? "the commit" : "merging"}, start the new ones", done: false } do %>
+        <p class="walk__text">With <code><%= @tunnel.secret_name %></code> in the environment.</p>
+        <%= render "shared/code_block", code: @change.boot_commands.join("\n"), label: "Terminal" %>
+      <% end %>
+    <% end %>
+  </ol>
+<% end %>

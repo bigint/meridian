@@ -1,81 +1,137 @@
 <% content_for :title, "Tunnels" %>
 <%= page_header "Tunnels", meta: "Apps that reach the internet through a Cloudflare Tunnel, and whether each server's connector runs. Meridian reads this from Git and the agents. It never calls Cloudflare." %>
 
-<div class="split">
-  <%= titled_section "Apps behind a tunnel", count: @tunnels.size, class: "split__main" do %>
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
+<%= titled_section "Apps behind a tunnel", count: @tunnels.size do %>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">App</th>
+          <th scope="col">Hostnames</th>
+          <th scope="col">Token</th>
+          <th scope="col">Connectors</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @tunnels.each do |tunnel| %>
           <tr>
-            <th scope="col">App</th>
-            <th scope="col">Hostnames</th>
-            <th scope="col">Connectors</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @tunnels.each do |tunnel| %>
-            <tr>
-              <th scope="row"><%= link_to tunnel.app.name, tunnel.app %></th>
-              <td class="mono txt-small"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
-              <td>
-                <ul class="stack">
-                  <% tunnel.connectors.each do |connector| %>
-                    <li>
-                      <span class="mono txt-small"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
-                      <%= case connector.state
-                          when :running then badge("running", tone: :ok)
-                          when :stopped then badge(connector.placement.state || "stopped", tone: :warn)
-                          when :missing then badge("not booted", tone: :bad)
-                          else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
-                          end %>
-                    </li>
-                  <% end %>
-                </ul>
-                <% if tunnel.missing? %>
-                  <p class="txt-small txt-muted">Boot the missing connector with <code class="mono"><%= tunnel.boot_command %></code></p>
+            <th scope="row"><%= link_to tunnel.app.name, tunnel.app %></th>
+            <td class="mono txt-small"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
+            <td class="nowrap">
+              <% if tunnel.secret_name %>
+                <span class="mono txt-small"><%= tunnel.secret_name %></span>
+                <%= tunnel.token_set? ? badge("set #{time_ago(tunnel.secret.last_set_at)}", tone: :ok) : badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %>
+              <% else %>
+                <span class="txt-faint">no token secret</span>
+              <% end %>
+            </td>
+            <td>
+              <ul class="stack">
+                <% tunnel.connectors.each do |connector| %>
+                  <li>
+                    <span class="mono txt-small"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
+                    <%= case connector.state
+                        when :running then badge("running", tone: :ok)
+                        when :stopped then badge(connector.placement.state || "stopped", tone: :warn)
+                        when :missing then badge("not booted", tone: :bad)
+                        else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
+                        end %>
+                  </li>
                 <% end %>
-              </td>
-            </tr>
-          <% end %>
-          <% if @tunnels.none? %>
-            <tr><td colspan="3" class="table__empty">No app runs behind a tunnel yet. Tick <strong>Behind a Cloudflare Tunnel</strong> on the <%= current_user.admin? ? link_to("New app", new_app_path) : "New app" %> form, or add the snippet to an app's config.</td></tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% end %>
-
-  <div class="split__aside">
-    <div class="card">
-      <div class="card__header">Set up a tunnel</div>
-      <div class="card__body">
-        <ol class="list-numbered txt-muted">
-          <li>Create a tunnel in Cloudflare with a public hostname that points at <code>http://kamal-proxy:80</code>.</li>
-          <li>Add the accessory below to the app's config.</li>
-          <li>Add the tunnel's token as the <code>TUNNEL_TOKEN</code> secret.</li>
-          <li>After the first deploy, run <code>kamal accessory boot cloudflared</code> once. <code>kamal deploy</code> doesn't boot accessories.</li>
-        </ol>
-        <%= render "shared/code_block", code: Templates.render("kamal/cloudflared.yml"), label: "config/deploy.yml" %>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card__header">Previews</div>
-      <div class="card__body stack">
-        <% if @account.preview_domain.present? %>
-          <p class="txt-muted">Previews are named like <code><%= @account.preview_hostname("shop", 12) %></code>.</p>
-          <% if @account.preview_hostnames_nested? %>
-            <%= alert_box :warn, title: "Nested names need a paid certificate" do %>
-              <p>Cloudflare's free certificate covers one level below the domain. Tunnelled previews need flat hostnames.
-              <% if current_user.admin? %><%= link_to "Change it in settings", settings_account_path %>.<% else %>An admin can change it in settings.<% end %></p>
-            <% end %>
-          <% end %>
-        <% else %>
-          <p class="txt-muted">No preview domain is set, so previews have no hostname yet.</p>
+              </ul>
+              <% if tunnel.missing? %>
+                <p class="txt-small txt-muted">Start it with <code class="mono"><%= tunnel.boot_command %></code></p>
+              <% end %>
+            </td>
+          </tr>
         <% end %>
-      </div>
-    </div>
+        <% if @tunnels.none? %>
+          <tr><td colspan="4" class="table__empty">No app runs behind a tunnel yet. Follow the steps below, or tick <strong>Behind a Cloudflare Tunnel</strong> on the <%= current_user.admin? ? link_to("New app", new_app_path) : "New app" %> form.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
 
-    <p class="txt-small txt-muted">To put Meridian itself behind a tunnel, see <code>docs/cloudflare-tunnel.md</code>.</p>
+<% if @setup %>
+  <% app = @setup.app %>
+  <%= titled_section "Put an app behind a tunnel" do %>
+    <%= form_with url: tunnels_path(anchor: "section-put-an-app-behind-a-tunnel"), method: :get, class: "filters", data: { controller: "autosubmit" } do |form| %>
+      <div class="field">
+        <%= form.label :app, "App" %>
+        <%= form.select :app, @apps.map { [ it.name, it.id ] }, { selected: app.id }, data: { action: "autosubmit#submit" } %>
+      </div>
+      <noscript><%= form.submit "Show steps", name: nil, class: "btn" %></noscript>
+    <% end %>
+
+    <ol class="list-numbered stack">
+      <li>
+        <strong>Create the tunnel.</strong>
+        In the Cloudflare dashboard, open <strong>Networking → Tunnels</strong> and click <strong>Create Tunnel</strong>.
+        Name it <code><%= app.service %></code> and click <strong>Create Tunnel</strong>. Use one tunnel per app: Cloudflare spreads a tunnel's requests over all its connectors, so a shared tunnel would send some to servers that don't run the app.
+      </li>
+      <li>
+        <strong>Copy its token.</strong>
+        On the tunnel's <strong>Overview</strong>, under <strong>Install cloudflared connector</strong>, choose <strong>Docker</strong> and click copy beside the command.
+        Keep only the token, the long value after <code>--token</code>. Don't run the command. Kamal runs the connector.
+      </li>
+      <li>
+        <strong>Save the token as <code><%= @setup.secret_name %></code>.</strong>
+        On <%= link_to "Secrets", secrets_path(anchor: "project-#{app.project_id}") %>, in <code><%= app.project.repo_full_name %></code>, add <code><%= @setup.secret_name %></code> with the token as its value.
+        Then add this line to <code>.kamal/secrets</code> in that repository, so Kamal can read it:
+        <%= render "shared/code_block", code: @setup.secrets_line, label: ".kamal/secrets" %>
+      </li>
+      <li>
+        <strong>Route the hostname.</strong>
+        On the tunnel's <strong>Routes</strong> tab, click <strong>Add route</strong>, then <strong>Published application</strong>.
+        <% if app.hostnames.any? %>
+          Enter <%= safe_join(app.hostnames.map { tag.code(it) }, " or ") %> as the subdomain and domain,
+        <% else %>
+          Enter a hostname the app's <code>proxy</code> answers to,
+        <% end %>
+        and <code>http://kamal-proxy:80</code> as the <strong>Service URL</strong>. Click <strong>Add route</strong>. Cloudflare creates the DNS record.
+        To use a new hostname, add it to <code>proxy.hosts</code> in the config first, or kamal-proxy answers 404. Keep it one level below the domain: Cloudflare's free certificate covers <code>app.example.com</code>, not <code>app.team.example.com</code>.
+      </li>
+      <li>
+        <strong>Add the connector to the config.</strong>
+        Append this to <code><%= app.config_path %></code> and commit it:
+        <%= render "shared/code_block", code: @setup.snippet, label: app.config_path %>
+      </li>
+      <li>
+        <strong>Start the connector once.</strong>
+        <code>kamal deploy</code> doesn't start accessories. From a machine that can SSH to <%= app.servers.any? ? safe_join(app.servers.map { tag.code(it.hostname) }, ", ") : "the app's servers" %>, with <code><%= @setup.secret_name %></code> in its environment, run:
+        <%= render "shared/code_block", code: @setup.boot_command, label: "Terminal" %>
+      </li>
+      <li>
+        <strong>Check it.</strong>
+        <%= app.name %> appears in the table above with <em>running</em> on every server, and Cloudflare shows the tunnel as <strong>Healthy</strong>.
+      </li>
+    </ol>
+  <% end %>
+<% end %>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card__header">Previews</div>
+    <div class="card__body stack">
+      <% if @account.preview_domain.present? %>
+        <p class="txt-muted">Previews are named like <code><%= @account.preview_hostname("shop", 12) %></code>.</p>
+        <% if @account.preview_hostnames_nested? %>
+          <%= alert_box :warn, title: "Nested names need a paid certificate" do %>
+            <p>Cloudflare's free certificate covers one level below the domain, so tunnelled previews need flat hostnames.
+            <% if current_user.admin? %><%= link_to "Change it in settings", settings_account_path %>.<% else %>An admin can change it in settings.<% end %></p>
+          <% end %>
+        <% end %>
+      <% else %>
+        <p class="txt-muted">No preview domain is set, so previews have no hostname yet.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">Meridian itself</div>
+    <div class="card__body">
+      <p class="txt-muted">GitHub webhooks and agents must reach Meridian. To serve it through a tunnel, add the same accessory to Meridian's own <code>config/deploy.yml</code> and set <code>proxy.ssl: false</code>. See <code>docs/cloudflare-tunnel.md</code>.</p>
+    </div>
   </div>
 </div>

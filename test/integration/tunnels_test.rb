@@ -22,6 +22,20 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     assert_select ".code-block", text: /cloudflare\/cloudflared/
   end
 
+  test "spells out the steps for the chosen app" do
+    app = projects(:infra).apps.create!(service: "occasions", config_path: "deploy/occasions.yml", hostnames: [ "occasions.example.net" ])
+
+    get tunnels_path(app: app.id)
+
+    assert_response :success
+    assert_select "select[name=app] option[selected]", text: "occasions"
+    assert_select "li", text: /Networking → Tunnels/
+    assert_select ".code-block code", text: "OCCASIONS_TUNNEL_TOKEN=$OCCASIONS_TUNNEL_TOKEN"
+    assert_select ".code-block", text: /TUNNEL_TOKEN:OCCASIONS_TUNNEL_TOKEN/
+    assert_select ".code-block code", text: "kamal accessory boot cloudflared -c deploy/occasions.yml"
+    assert_select "code", text: "occasions.example.net"
+  end
+
   test "says so when no app runs behind a tunnel" do
     get tunnels_path
 

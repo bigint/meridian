@@ -8,6 +8,7 @@ require_relative "../config/environment"
 require "rails/test_help"
 require_relative "test_helpers/session_test_helper"
 require_relative "test_helpers/github_helper"
+require_relative "test_helpers/memory_cache_helper"
 
 WebMock.disable_net_connect!(allow_localhost: true)
 

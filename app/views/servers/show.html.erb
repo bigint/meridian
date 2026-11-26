@@ -13,7 +13,9 @@
 <%= page_header @server.name, meta: status %>
 
 <div class="split">
-  <div class="split__main">
+  <div class="split__main" data-controller="live-stats" data-live-stats-server-id-value="<%= @server.id %>" data-action="turbo:morph@document->live-stats#apply">
+    <%= render "live", server: @server %>
+
     <%= titled_section "Apps", count: group&.rows&.size || 0 do %>
       <div class="table-wrap">
         <table class="table">
@@ -56,23 +58,38 @@
               <th scope="col">Version</th>
               <th scope="col">State</th>
               <th scope="col">Health</th>
+              <th scope="col" class="table__end">CPU</th>
+              <th scope="col" class="table__end">Memory</th>
+              <th scope="col" class="table__end">Network<span class="sr-only"> in and out per second</span></th>
               <th scope="col">Started</th>
             </tr>
           </thead>
           <tbody>
             <% @placements.each do |placement| %>
-              <tr>
+              <tr <%= tag.attributes(data: { live_container: (placement.container_id if placement.running?) }) %>>
                 <td class="mono txt-small"><%= placement.name %></td>
                 <td><%= safe_join([ (placement.app ? link_to(placement.service, placement.app) : placement.service), (badge(placement.kind) unless placement.kind == "app") ].compact, " ") %></td>
                 <td><%= placement.role %></td>
                 <td class="mono txt-small"><%= placement.short_version %></td>
                 <td><%= placement.state %></td>
                 <td><%= placement.health == "unhealthy" ? badge("unhealthy", tone: :bad) : placement.health %></td>
+                <td class="stat" aria-live="off">
+                  <span class="stat__value" data-part="cpu">—</span>
+                  <span class="meter" aria-hidden="true"><span class="meter__fill" data-part="cpu-meter"></span></span>
+                </td>
+                <td class="stat stat--memory" aria-live="off">
+                  <span class="stat__value" data-part="memory">—</span>
+                  <span class="meter" aria-hidden="true"><span class="meter__fill" data-part="memory-meter"></span></span>
+                </td>
+                <td class="stat stat--net" aria-live="off">
+                  <span class="stat__value"><span class="sr-only">In </span><%= icon :download, width: 12, height: 12 %><span data-part="rx">—</span></span>
+                  <span class="stat__value"><span class="sr-only">Out </span><%= icon :upload, width: 12, height: 12 %><span data-part="tx">—</span></span>
+                </td>
                 <td class="nowrap"><%= time_ago(placement.started_at) %></td>
               </tr>
             <% end %>
             <% if @placements.none? %>
-              <tr><td colspan="7" class="table__empty">No containers reported.</td></tr>
+              <tr><td colspan="10" class="table__empty">No containers reported.</td></tr>
             <% end %>
           </tbody>
         </table>

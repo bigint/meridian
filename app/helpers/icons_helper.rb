@@ -7,7 +7,8 @@ module IconsHelper
     search: "search", plus: "plus", menu: "menu", chevron: "chevron-down", previous: "chevron-left", next: "chevron-right",
     collapse: "panel-left-close", expand: "panel-left-open", sign_out: "log-out", copy: "copy", copied: "check",
     info: "info", ok: "circle-check", warn: "triangle-alert", bad: "circle-x", external: "external-link",
-    system: "monitor", light: "sun", dark: "moon"
+    system: "monitor", light: "sun", dark: "moon",
+    cpu: "cpu", memory: "memory-stick", load: "gauge", disk: "hard-drive", download: "arrow-down", upload: "arrow-up"
   }.freeze
 
   # Meridian's own mark: a dial with its meridian line.

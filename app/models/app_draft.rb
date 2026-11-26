@@ -18,6 +18,7 @@ class AppDraft
   attribute :app_port, :integer
   attribute :registry, :string, default: "ghcr.io"
   attribute :version, :string, default: "latest"
+  attribute :tunnel, :boolean, default: false
 
   validates :project, :service, :source_repo, :hostname, presence: true
   validates :service, format: { with: /\A[a-z0-9][a-z0-9_-]{0,62}\z/, message: "must be lowercase letters, digits, - or _" }, allow_blank: true
@@ -66,8 +67,7 @@ class AppDraft
 
   def manual_steps
     [
-      "Point DNS for #{hostname} at #{servers.map(&:hostname).to_sentence} (or at your tunnel or load balancer).",
-      "If the servers are behind NAT, route #{hostname} through your tunnel to port 80/443 on them.",
+      *(tunnel ? tunnel_steps : dns_steps),
       "Add a Dockerfile to #{source_repo} (see below) and have its CI push #{registry}/#{image}:<tag>.",
       "Make sure the infra repository has the KAMAL_REGISTRY_PASSWORD secret#{" and RAILS_MASTER_KEY" if kind == "rails"}.",
       "Merge the pull request. Deploys then go through the app's Deploy button."
@@ -100,11 +100,30 @@ class AppDraft
   end
 
   private
+    def dns_steps
+      [
+        "Point DNS for #{hostname} at #{servers.map(&:hostname).to_sentence} (or at your tunnel or load balancer).",
+        "If the servers are behind NAT, route #{hostname} through your tunnel to port 80/443 on them."
+      ]
+    end
+
+    def tunnel_steps
+      boot = "kamal accessory boot cloudflared -c #{config_path}#{" -d #{destination}" if destination.present?}"
+      [
+        "Create a Cloudflare Tunnel with a public hostname #{hostname} pointing at http://kamal-proxy:80.",
+        "Add the tunnel's token as the TUNNEL_TOKEN secret (Meridian's Secrets page lists it once this is merged).",
+        "After the first deploy, run `#{boot}`. `kamal deploy` doesn't boot accessories."
+      ]
+    end
+
+    # The tunnel goes in the base file: accessories with roles resolve after
+    # Kamal merges the destination file.
     def config(with_servers:)
-      Templates.render("kamal/app.yml",
+      base = Templates.render("kamal/app.yml",
         service: service, description: DESCRIPTIONS.fetch(kind), image: image, kind: kind, source_repo: source_repo,
         servers: with_servers ? servers_yaml + "\n" : "", proxy_host: with_servers ? "  host: #{hostname}\n" : "", app_port: port,
         env: kind == "rails" ? "\nenv:\n  secret:\n    - RAILS_MASTER_KEY\n" : "", registry: registry, registry_username: registry_username)
+      tunnel ? "#{base}\n#{Templates.render("kamal/cloudflared.yml")}" : base
     end
 
     def servers_yaml

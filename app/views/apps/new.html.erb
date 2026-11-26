@@ -79,6 +79,10 @@
           </div>
         </div>
         <p class="field__hint">The first version is the image tag CI deploys once the pull request is merged.</p>
+        <div class="field">
+          <label class="check items-center"><%= form.check_box :tunnel %> <span class="txt-medium-weight">Behind a Cloudflare Tunnel</span></label>
+          <p class="field__hint">Adds a cloudflared accessory. Servers need no open ports; Cloudflare serves HTTPS.</p>
+        </div>
       </div>
     </div>
   </div>

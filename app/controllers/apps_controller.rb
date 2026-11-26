@@ -11,7 +11,7 @@ class AppsController < ApplicationController
   end
 
   def create
-    @draft = AppDraft.new(params.expect(app_draft: [ :project_id, :service, :source_repo, :kind, :hostname, :label_selector, :destination, :app_port, :registry, :version, server_ids: [] ]))
+    @draft = AppDraft.new(params.expect(app_draft: [ :project_id, :service, :source_repo, :kind, :hostname, :label_selector, :destination, :app_port, :registry, :version, :tunnel, server_ids: [] ]))
     if (@proposal = @draft.submit(current_user))
       render :proposed, status: :created
     else

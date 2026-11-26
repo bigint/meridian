@@ -18,7 +18,6 @@ class AppDraft
   attribute :app_port, :integer
   attribute :registry, :string, default: "ghcr.io"
   attribute :version, :string, default: "latest"
-  attribute :tunnel, :boolean, default: false
 
   validates :project, :service, :source_repo, :hostname, presence: true
   validates :service, format: { with: /\A[a-z0-9][a-z0-9_-]{0,62}\z/, message: "must be lowercase letters, digits, - or _" }, allow_blank: true
@@ -44,12 +43,7 @@ class AppDraft
     end
   end
 
-  # Where the config goes: the first config glob with the service in place of "*".
-  def config_path
-    prefix, suffix = (project&.config_globs&.find { it.include?("*") } || "config/deploy*.yml").split("*", 2)
-    separator = prefix.empty? || prefix.end_with?("/", ".", "-", "_") ? "" : "-"
-    "#{prefix}#{separator}#{service}#{suffix}"
-  end
+  def config_path = (project || Project.new).config_path_for(service)
 
   def version_path = project.version_path(config_path, destination.presence)
 
@@ -67,7 +61,8 @@ class AppDraft
 
   def manual_steps
     [
-      *(tunnel ? tunnel_steps : dns_steps),
+      *dns_steps,
+      *tunnel_steps,
       "Add a Dockerfile to #{source_repo} (see below) and have its CI push #{registry}/#{image}:<tag>.",
       "Make sure the infra repository has the KAMAL_REGISTRY_PASSWORD secret#{" and RAILS_MASTER_KEY" if kind == "rails"}.",
       "Merge the pull request. Deploys then go through the app's Deploy button."
@@ -107,25 +102,18 @@ class AppDraft
       ]
     end
 
+    # The project's shared tunnel can serve the app only from servers that
+    # run a connector, and only if the app runs on all of them.
     def tunnel_steps
-      setup = Tunnel::Setup.new(App.new(service: service, config_path: config_path, destination: destination, hostnames: [ hostname ]))
-      [
-        "In Cloudflare, open Networking → Tunnels, click Create Tunnel and name it #{service}.",
-        "On the tunnel's Overview, under Install cloudflared connector, choose Docker and copy the command. Keep only the token, the long value after --token. Don't run the command.",
-        "Set the #{setup.secret_name} secret to that token on Meridian's Secrets page, and add `#{setup.secrets_line}` to .kamal/secrets.",
-        "On the tunnel's Routes tab, click Add route → Published application. Hostname #{hostname}, Service URL http://kamal-proxy:80. Cloudflare creates the DNS record.",
-        "After the first deploy, run `#{setup.boot_command}` once, with #{setup.secret_name} in the environment. `kamal deploy` doesn't start accessories."
-      ]
+      tunnel = Tunnel.all.find { it.project == project } or return []
+      [ "To serve it through Cloudflare Tunnel #{tunnel.name}, run it on #{tunnel.connector_hosts.to_sentence} and add a route for #{hostname} to http://kamal-proxy:80 on the tunnel." ]
     end
 
-    # The tunnel goes in the base file: accessories with roles resolve after
-    # Kamal merges the destination file.
     def config(with_servers:)
-      base = Templates.render("kamal/app.yml",
+      Templates.render("kamal/app.yml",
         service: service, description: DESCRIPTIONS.fetch(kind), image: image, kind: kind, source_repo: source_repo,
         servers: with_servers ? servers_yaml + "\n" : "", proxy_host: with_servers ? "  host: #{hostname}\n" : "", app_port: port,
         env: kind == "rails" ? "\nenv:\n  secret:\n    - RAILS_MASTER_KEY\n" : "", registry: registry, registry_username: registry_username)
-      tunnel ? "#{base}\n#{Tunnel.snippet(Tunnel.secret_name(service))}" : base
     end
 
     def servers_yaml

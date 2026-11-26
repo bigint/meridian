@@ -19,6 +19,14 @@ class Project < ApplicationRecord
     "https://github.com/#{repo_full_name}"
   end
 
+  # Where a new config for this service goes: the first config glob with the
+  # service in place of "*".
+  def config_path_for(service)
+    prefix, suffix = (config_globs&.find { it.include?("*") } || "config/deploy*.yml").split("*", 2)
+    separator = prefix.empty? || prefix.end_with?("/", ".", "-", "_") ? "" : "-"
+    "#{prefix}#{separator}#{service}#{suffix}"
+  end
+
   def config_errors?
     config_errors.any?
   end

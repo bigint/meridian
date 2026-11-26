@@ -2,6 +2,9 @@ class App < ApplicationRecord
   include Deployable, Releases
 
   KINDS = %w[ static node rails other ]
+  # A config that only runs accessories, such as a Cloudflare Tunnel's
+  # connectors: Kamal never deploys an app from it, so the board leaves it out.
+  ACCESSORIES = "accessories"
 
   belongs_to :project
   has_many :assignments, dependent: :delete_all
@@ -11,9 +14,10 @@ class App < ApplicationRecord
   has_many :previews, dependent: :delete_all
 
   validates :service, :config_path, presence: true
-  validates :kind, inclusion: { in: KINDS }
+  validates :kind, inclusion: { in: [ *KINDS, ACCESSORIES ] }
 
   scope :ordered, -> { order(:service, :destination) }
+  scope :deployable, -> { where.not(kind: ACCESSORIES) }
 
   def name
     [ service, destination.presence ].compact.join(" · ")
@@ -44,7 +48,7 @@ class App < ApplicationRecord
     self.secret_names = result["secrets"]
     self.version_path = tree.key?(version_path) ? version_path : nil
     labels = result["labels"] || {}
-    self.kind = labels["meridian.kind"] if KINDS.include?(labels["meridian.kind"])
+    self.kind = labels["meridian.kind"] if [ *KINDS, ACCESSORIES ].include?(labels["meridian.kind"])
     self.source_repo = labels["meridian.source"].presence || source_repo
 
     shas = sources.index_with { tree.fetch(it).sha }

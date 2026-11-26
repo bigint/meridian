@@ -79,6 +79,19 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "code", text: "kamal accessory boot all -c deploy/blog.yml"
   end
 
+  test "an app runs its release everywhere only when no server runs another version too" do
+    server = Server.create!(name: "shop-1.example.com", hostname: "shop-1.example.com", last_seen_at: Time.current)
+    app = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", version_path: "deploy/shop.version")
+    app.releases.create!(version: "v2", commit_sha: "c" * 40, committed_at: 1.hour.ago)
+    app.assignments.create!(server: server, role: "web")
+    %w[ v2 v1 ].each { |version| server.placements.create!(app: app, container_id: version, name: "shop-web-#{version}", service: "shop", role: "web", version: version, state: "running", observed_at: Time.current) }
+
+    get app_path(app)
+    assert_select "td [data-cell][data-state=drifted]", 1
+    assert_select ".page-header", text: /0 of 1 server run v2/
+    assert_select ".page-header", text: /everywhere/, count: 0
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

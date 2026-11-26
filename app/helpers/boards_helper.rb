@@ -67,7 +67,10 @@ module BoardsHelper
     return badge("No version file yet, so Meridian can't compare versions.") unless app.versioned?
 
     release = app.latest_release&.version
-    running = cells.count { it.versions.include?(release) }
+    # A server runs the release when every container there runs it: a server
+    # with an old container left, or a role down, doesn't. Quiet agents count
+    # by their last report, which the note below says may be old.
+    running = cells.count { it.state == "in_sync" || (it.state.in?(%w[ stale stray ]) && it.versions.any? && it.versions.all?(release)) }
     quiet = cells.count { it.state == "stale" }
 
     status = if running == cells.size

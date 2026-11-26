@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- An app's status line says "✓ Running v42 everywhere" only when no server runs another version or has a role down. A server still running a v41 container beside v42 counted as running v42, while its cell showed drifted.
 - The board checks each role Git assigns to a server. A cell with a running `web` container showed in sync while the `job` container Git also put there was stopped, so the dead worker never reached Needs attention; a role running where Git doesn't put it now shows as stray.
 - The CI workflow deploys apps with a destination: a change to `deploy/web.production.version` ran `kamal deploy -c deploy/web.production.yml` without `-d production`, which Kamal rejects. It also finds `.yaml` configs, and deploys every version file a push changed rather than only the last commit's. Press **Add CI workflow** on the project page to get the new workflow.
 - Deploys of different apps no longer cancel each other in CI. Every push run shared one concurrency group, so a third deploy made while one was running cancelled the second, waiting one. Kamal now runs one at a time per app, for pushes and redeploys alike.

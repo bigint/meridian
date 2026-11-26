@@ -426,7 +426,7 @@ export default class extends Controller {
     if (lines.length || batch.dropped || batch.ended) this.lastActivityAt = performance.now()
     if (lines.length) Object.assign(source, { off: false, refused: false, ended: false })
 
-    if (batch.dropped) add(this.#notice(source, "dropped", `${plural(batch.dropped, "line")} skipped (over 512 KB/s)`, lines[0]?.key))
+    if (batch.dropped) add(this.#notice(source, "dropped", `${plural(batch.dropped, "line")} skipped: logged faster than the agent sends`, lines[0]?.key))
     for (const line of lines) add(line)
     if (batch.ended && !source.ended) {
       source.ended = true

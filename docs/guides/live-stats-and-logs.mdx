@@ -79,7 +79,7 @@ Notices appear in the lines themselves:
 | --- | --- |
 | `Logs are off on web-1's agent. Set MERIDIAN_LOGS=1 there to turn them on.` | That agent doesn't have logs turned on. |
 | `Logs refused: ...` | The agent won't follow that container, with its reason. It follows only Kamal's containers, never its own, and at most 20 at a time. |
-| `120 lines skipped (over 512 KB/s)` | The container wrote faster than the agent sends. The count says how many lines were dropped. |
+| `120 lines skipped: logged faster than the agent sends` | The container logged faster than the agent sends: more than 512 KB in a second (each line counts 64 bytes on top of its text), or, for live lines, more than 500 in 250 ms. The count says how many lines were dropped. |
 | `Container stopped` | The container is no longer running. |
 
 ### Turn logs on

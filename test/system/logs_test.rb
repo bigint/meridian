@@ -150,7 +150,7 @@ class LogsTest < ApplicationSystemTestCase
     broadcast @web, "ended" => true
 
     assert_selector ".logs__line", count: 4
-    assert_equal [ "before", "1,234 lines skipped (over 512 KB/s)", "after", "Container stopped" ], messages
+    assert_equal [ "before", "1,234 lines skipped: logged faster than the agent sends", "after", "Container stopped" ], messages
   end
 
   test "a JSON line reads as level, message and its useful fields, and opens to the whole object" do

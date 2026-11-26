@@ -1,0 +1,9 @@
+<%# One thing Meridian connects to: what it is, how it's set up, and whether it works. %>
+<div class="row connection">
+  <span class="connection__icon"><%= icon connection.icon %></span>
+  <div class="row__body">
+    <div class="row__title"><%= connection.name %></div>
+    <div class="row__meta"><%= connection.detail %></div>
+  </div>
+  <div class="row__trail"><%= badge connection.status, tone: connection.tone, mono: connection.mono %></div>
+</div>

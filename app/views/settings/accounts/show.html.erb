@@ -64,23 +64,11 @@
     <div><%= form.submit "Save", class: "btn btn--primary" %></div>
   <% end %>
 
-  <%= titled_section "Connections" do %>
-    <div class="card">
-      <div class="card__body">
-        <dl class="facts">
-          <dt>GitHub</dt>
-          <dd>
-            <% if GitHost::GitHub.token_mode? %>Token (GITHUB_TOKEN). Fine for a homelab; a GitHub App limits access more tightly.
-            <% elsif GitHost::GitHub.configured? %>App <%= GitHost::GitHub.app_id %>
-            <% else %>Not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN.<% end %>
-          </dd>
-          <dt>Webhooks</dt>
-          <dd><%= GitHost::GitHub.webhook_secret.present? ? "Secret set" : "Set GITHUB_APP_WEBHOOK_SECRET" %></dd>
-          <dt>Kamal</dt>
-          <dd><code><%= KamalConfig::KAMAL_VERSION %></code></dd>
-        </dl>
-        <p class="txt-small txt-muted">These come from the environment, so they stay out of the database. See <code>docs/configuration.md</code>.</p>
-      </div>
-    </div>
-  <% end %>
+  <div class="card connections">
+    <div class="card__header">Connections</div>
+    <% connections.each do |connection| %>
+      <%= render "connection", connection: connection %>
+    <% end %>
+    <div class="card__footer txt-small txt-muted">Read from the environment, never stored. See <code>docs/configuration.md</code>.</div>
+  </div>
 </div>

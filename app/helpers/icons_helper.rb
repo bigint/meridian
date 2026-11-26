@@ -8,7 +8,8 @@ module IconsHelper
     collapse: "panel-left-close", expand: "panel-left-open", sign_out: "log-out", copy: "copy", copied: "check",
     info: "info", ok: "circle-check", warn: "triangle-alert", bad: "circle-x", external: "external-link",
     system: "monitor", light: "sun", dark: "moon",
-    cpu: "cpu", memory: "memory-stick", load: "gauge", disk: "hard-drive", download: "arrow-down", upload: "arrow-up"
+    cpu: "cpu", memory: "memory-stick", load: "gauge", disk: "hard-drive", download: "arrow-down", upload: "arrow-up",
+    git_host: "folder-git-2", webhooks: "webhook", kamal: "ship"
   }.freeze
 
   # Meridian's own mark: a dial with its meridian line.

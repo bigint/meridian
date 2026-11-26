@@ -9,6 +9,7 @@ require "rails/test_help"
 require_relative "test_helpers/session_test_helper"
 require_relative "test_helpers/github_helper"
 require_relative "test_helpers/memory_cache_helper"
+require_relative "test_helpers/env_helper"
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
@@ -17,7 +18,7 @@ module ActiveSupport
     parallelize(workers: :number_of_processors)
     fixtures :all
 
-    include GitHubHelper
+    include GitHubHelper, EnvHelper
 
     teardown { GitHost::GitHub::TOKENS.clear }
   end

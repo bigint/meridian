@@ -19,13 +19,4 @@ class GitHubTokenTest < ActiveSupport::TestCase
   test "an App wins when both are set" do
     with_env("GITHUB_TOKEN" => "ghp_test") { assert_not GitHost::GitHub.token_mode? }
   end
-
-  private
-    def with_env(values)
-      original = values.keys.to_h { [ it, ENV[it] ] }
-      values.each { |key, value| ENV[key] = value }
-      yield
-    ensure
-      original.each { |key, value| ENV[key] = value }
-    end
 end

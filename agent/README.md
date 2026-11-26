@@ -260,10 +260,13 @@ and only while the line is subscribed. They are never queued.
 - A container may send 512 KiB a second, counting each line's `m` plus 64
   bytes for the rest of it, so even empty lines are bounded (8192 a second).
   Lines beyond that are dropped and counted in the next batch's `dropped`.
-- `ended: true` comes once, when Docker closes the follow stream, usually
-  because the container stopped (in the last batch, with any lines still
-  waiting). The agent stops following. The next tail starts it again, when the
-  container runs.
+- `ended: true` comes once, when Docker closes the follow stream and an
+  inspect then shows the container is no longer running (in the last batch,
+  with any lines still waiting). The agent stops following. The next tail
+  starts it again, when the container runs. A stream closed under a running
+  container (the socket proxy cuts streams idle for 10 minutes) is reopened a
+  second later with `since=<the last line's stamp>`, so nothing is lost or
+  repeated and no `ended` is sent.
 - Memory is bounded: a partial line and one batch per container, and a reader
   that runs at most 64 lines ahead of the batcher. A slow WebSocket slows
   Docker's stream down and never grows a queue. A bug in a follower is logged

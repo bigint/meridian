@@ -150,6 +150,16 @@ func (fd *logDocker) logs(w http.ResponseWriter, r *http.Request) {
 	}
 	history := slices.Clone(b.history)
 	history = history[max(0, len(history)-tail):]
+	if since := q.Get("since"); since != "" { // "<unix seconds>.<nanoseconds>", with tail=all
+		sec, nsec, _ := strings.Cut(since, ".")
+		s, _ := strconv.ParseInt(sec, 10, 64)
+		ns, _ := strconv.ParseInt(nsec, 10, 64)
+		from := time.Unix(s, ns)
+		history = slices.DeleteFunc(slices.Clone(b.history), func(e logEntry) bool {
+			at, _ := time.Parse(time.RFC3339Nano, e.ts)
+			return at.Before(from)
+		})
+	}
 	tty := b.tty
 	var sub *logSub
 	if follow && b.status == "running" {
@@ -224,6 +234,16 @@ func (fd *logDocker) stop(id string) {
 	b := fd.boxes[id]
 	b.status = "exited"
 	for sub := range b.subs {
+		sub.once.Do(func() { close(sub.end) })
+	}
+}
+
+// cut closes the container's follow streams while it keeps running, as the
+// socket proxy does to a stream idle for 10 minutes.
+func (fd *logDocker) cut(id string) {
+	fd.mu.Lock()
+	defer fd.mu.Unlock()
+	for sub := range fd.boxes[id].subs {
 		sub.once.Do(func() { close(sub.end) })
 	}
 }
@@ -793,6 +813,44 @@ func TestTailSpacesFullBatchesInsteadOfBurstingThem(t *testing.T) {
 	if min := 9 * rig.tl.batchEvery; elapsed < min {
 		t.Fatalf("%d batches in %v, want them spread over at least %v", len(got), elapsed, min)
 	}
+}
+
+// A follow stream closed under a running container is not the container
+// stopping: the agent reopens it from its last line, sends no ended, and
+// loses and repeats nothing.
+func TestTailReopensAStreamCutWhileTheContainerRuns(t *testing.T) {
+	fd := newLogDocker(t)
+	id := containerID(0xa8)
+	fd.add(id, kamalApp(old(1, 5, "history")))
+	rig := startLogRig(t, fd, true, func(tl *tailer) { tl.reopenAfter = 100 * time.Millisecond })
+	rig.tail(id, 30, 10)
+	waitFor(t, "the follow", func() bool { return fd.activeFor(id) == 1 })
+	fd.push(id, fresh(1, 1, "before the cut"))
+	got := rig.lines(t, 2)
+
+	fd.cut(id)
+	waitFor(t, "the cut", func() bool { return fd.activeFor(id) == 0 })
+	fd.push(id, fresh(1, 2, "while cut")) // logged before the agent reopens
+	waitFor(t, "the reopened follow", func() bool { return fd.activeFor(id) == 1 })
+	fd.push(id, fresh(1, 3, "after the reopen"))
+	got = append(got, rig.lines(t, 2)...)
+
+	if m := allMessages(got); !slices.Equal(m, []string{"history", "before the cut", "while cut", "after the reopen"}) {
+		t.Fatalf("lines = %v", m)
+	}
+	for _, b := range got {
+		if b.Ended {
+			t.Fatalf("ended was sent for a running container: %s", b.raw)
+		}
+	}
+	reqs := fd.logRequests(id)
+	if len(reqs) != 2 || !strings.Contains(reqs[1], "follow=1") || !strings.Contains(reqs[1], "&since=") {
+		t.Fatalf("log requests = %v, want the follow then a follow since the last line", reqs)
+	}
+
+	// Once it really stops, ended comes.
+	fd.stop(id)
+	rig.until(t, "ended", func(o logsOut) bool { return o.Ended })
 }
 
 func TestTailOfAStoppedContainerSendsItsHistoryAndEnded(t *testing.T) {

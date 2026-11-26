@@ -17,6 +17,9 @@ const (
 	maxTailed     = 20          // containers followed at once
 	maxBacklog    = 1000        // lines one tail may ask for
 	sweepInterval = time.Second // how often lapsed leases are noticed
+	// A follow stream Docker closed while the container still runs (the socket
+	// proxy cuts streams idle for 10 minutes) is reopened after this pause.
+	reopenInterval = time.Second
 	// The reader may run this many lines ahead of the batcher, which is as
 	// far as one slow WebSocket write can back Docker's stream up.
 	linesAhead     = 64
@@ -53,8 +56,9 @@ type tailer struct {
 	enabled bool             // MERIDIAN_LOGS
 	self    string           // the agent's own container id, or its first 12 digits; never tailed
 
-	sweepEvery time.Duration
-	batchEvery time.Duration
+	sweepEvery  time.Duration
+	batchEvery  time.Duration
+	reopenAfter time.Duration
 
 	followers map[string]*follower // by full container id; owned by run
 	wg        sync.WaitGroup       // every follower and fetch goroutine
@@ -62,15 +66,16 @@ type tailer struct {
 
 func newTailer(docker *dockerClient, send func([]byte) bool, log *slog.Logger, now func() time.Time, enabled bool, self string) *tailer {
 	return &tailer{
-		docker:     docker,
-		send:       send,
-		log:        log,
-		now:        now,
-		enabled:    enabled,
-		self:       self,
-		sweepEvery: sweepInterval,
-		batchEvery: batchEvery,
-		followers:  map[string]*follower{},
+		docker:      docker,
+		send:        send,
+		log:         log,
+		now:         now,
+		enabled:     enabled,
+		self:        self,
+		sweepEvery:  sweepInterval,
+		batchEvery:  batchEvery,
+		reopenAfter: reopenInterval,
+		followers:   map[string]*follower{},
 	}
 }
 
@@ -186,8 +191,10 @@ type follower struct {
 }
 
 // run checks the container, then follows it until it ends. It tells Meridian
-// why it refused a container, and reports ended when Docker closes the stream.
-// A follower that was cancelled says nothing.
+// why it refused a container, and reports ended once Docker closes the stream
+// and the container is no longer running. A stream closed under a running
+// container is reopened from the last line it carried. A follower that was
+// cancelled says nothing.
 func (f *follower) run() {
 	t := f.t
 	defer f.cancel() // wakes a history fetch still waiting for ready
@@ -213,7 +220,7 @@ func (f *follower) run() {
 	// History is everything logged up to now; the clock Docker stamps lines
 	// with is this host's.
 	since := t.now()
-	body, err := t.docker.logs(f.ctx, f.id, true, f.backlog)
+	body, err := t.docker.logs(f.ctx, f.id, true, f.backlog, time.Time{})
 	if err != nil {
 		if f.ctx.Err() == nil {
 			refusal := refusedDocker
@@ -226,9 +233,45 @@ func (f *follower) run() {
 		}
 		return
 	}
-	defer body.Close()
 	t.log.Debug("following container logs", "container", short(f.id), "backlog", f.backlog)
-	f.pump(body, since)
+	b := t.newBatcher(f.id)
+	from := since
+	for {
+		last := f.pump(body, since, b)
+		body.Close()
+		if f.ctx.Err() != nil {
+			return
+		}
+		if last.After(from) {
+			from = last
+		}
+		if !f.stillRunning() {
+			b.finish()
+			return
+		}
+		select { // a pause, so a stream that keeps closing cannot spin
+		case <-f.ctx.Done():
+			return
+		case <-time.After(t.reopenAfter):
+		}
+		// Docker's since includes lines stamped exactly then: skip the last one.
+		if body, err = t.docker.logs(f.ctx, f.id, true, 0, from.Add(time.Nanosecond)); err != nil {
+			if f.ctx.Err() == nil {
+				t.log.Warn("container logs: cannot reopen the stream", "container", short(f.id), "error", err)
+				b.finish()
+			}
+			return
+		}
+	}
+}
+
+// stillRunning asks Docker again whether the container runs, after its
+// follow stream closed.
+func (f *follower) stillRunning() bool {
+	ctx, cancel := context.WithTimeout(f.ctx, dockerTimeout)
+	defer cancel()
+	in, err := f.t.docker.inspectContainer(ctx, f.id)
+	return err == nil && in.ID == f.id && in.State.Status == "running"
 }
 
 // admit is the check Meridian's say-so never replaces: the container exists
@@ -261,8 +304,9 @@ func (f *follower) admit() (inspectedContainer, string) {
 // pump reads the stream in one goroutine and batches it in this one, so a
 // slow write to Meridian never stops the batch timer. The channel between
 // them is small: when it is full the reader waits, and Docker's side of the
-// stream waits with it.
-func (f *follower) pump(body io.Reader, since time.Time) {
+// stream waits with it. It returns when ctx ends or Docker closes the stream,
+// with the latest stamp it read; what is left in b is the caller's.
+func (f *follower) pump(body io.Reader, since time.Time, b *batcher) (last time.Time) {
 	lines := make(chan logLine, linesAhead)
 	var readErr error
 	go func() {
@@ -278,7 +322,6 @@ func (f *follower) pump(body io.Reader, since time.Time) {
 		})
 	}()
 
-	b := f.t.newBatcher(f.id)
 	ticker := time.NewTicker(max(f.t.batchEvery/5, time.Millisecond))
 	defer ticker.Stop()
 	for {
@@ -288,16 +331,16 @@ func (f *follower) pump(body io.Reader, since time.Time) {
 		}
 		select {
 		case <-f.ctx.Done():
-			return
+			return last
 		case l, ok := <-in:
 			if !ok { // Docker closed the stream
-				if f.ctx.Err() == nil {
-					if readErr != nil {
-						f.t.log.Warn("container logs: the stream broke", "container", short(f.id), "error", readErr)
-					}
-					b.finish()
+				if f.ctx.Err() == nil && readErr != nil {
+					f.t.log.Warn("container logs: the stream broke", "container", short(f.id), "error", readErr)
 				}
-				return
+				return last
+			}
+			if l.at.After(last) {
+				last = l.at
 			}
 			b.add(l, f.backlog > 0 && !l.at.IsZero() && !l.at.After(since))
 		case <-ticker.C:
@@ -318,7 +361,7 @@ func (f *follower) fetchBacklog(n int) {
 	}
 	ctx, cancel := context.WithTimeout(f.ctx, backlogTimeout)
 	defer cancel()
-	body, err := f.t.docker.logs(ctx, f.id, false, n)
+	body, err := f.t.docker.logs(ctx, f.id, false, n, time.Time{})
 	if err != nil {
 		if ctx.Err() == nil {
 			f.t.log.Warn("container logs: cannot fetch the backlog", "container", short(f.id), "error", err)

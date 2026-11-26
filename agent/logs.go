@@ -58,15 +58,19 @@ type logReply struct {
 }
 
 // logs opens GET /containers/{id}/logs for the lines the wire format
-// carries: both streams, with timestamps, the last tail lines and, with
-// follow, every new one until ctx ends or Docker closes the stream. The
-// caller closes the body.
-func (c *dockerClient) logs(ctx context.Context, id string, follow bool, tail int) (io.ReadCloser, error) {
+// carries: both streams, with timestamps, the last tail lines (or, with a
+// non-zero since, every line stamped since then) and, with follow, every new
+// one until ctx ends or Docker closes the stream. The caller closes the body.
+func (c *dockerClient) logs(ctx context.Context, id string, follow bool, tail int, since time.Time) (io.ReadCloser, error) {
 	followFlag := 0
 	if follow {
 		followFlag = 1
 	}
 	path := fmt.Sprintf("/containers/%s/logs?follow=%d&stdout=1&stderr=1&timestamps=1&tail=%d", url.PathEscape(id), followFlag, tail)
+	if !since.IsZero() {
+		path = fmt.Sprintf("/containers/%s/logs?follow=%d&stdout=1&stderr=1&timestamps=1&tail=all&since=%d.%09d",
+			url.PathEscape(id), followFlag, since.Unix(), since.Nanosecond())
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
 	if err != nil {
 		return nil, err

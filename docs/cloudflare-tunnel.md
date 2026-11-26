@@ -20,7 +20,7 @@ Previews are named `pr-<n>.<app>.<preview domain>` by default. That is two level
 
 1. In **Settings → General**, set **Hostnames** to `pr-<n>-<app>.<domain>`. Only new and reopened previews change. Existing ones keep their hostname.
 2. Give the preview servers' tunnel a wildcard public hostname `*.<preview domain>` that points at `http://kamal-proxy:80`.
-3. Add a proxied wildcard DNS record `*.<preview domain>`. One record covers every app.
+3. Add a proxied wildcard DNS record, a CNAME from `*.<preview domain>` to `<tunnel id>.cfargotunnel.com`. One record covers every app.
 
 The preview servers need the `cloudflared` accessory with that tunnel's token, as above.
 
@@ -28,7 +28,7 @@ The preview servers need the `cloudflared` accessory with that tunnel's token, a
 
 GitHub webhooks and agents must reach Meridian. A tunnel can do that.
 
-- Add the same `cloudflared` accessory to Meridian's own `config/deploy.yml`. Use `hosts:` in place of `roles:` if that reads simpler.
+- Add the same `cloudflared` accessory to Meridian's own `config/deploy.yml`. Its `roles: [ web ]` works there as it is.
 - Set `proxy.ssl: false`, because Cloudflare terminates TLS.
 - `MERIDIAN_URL` stays the public `https://` URL.
 - Agents connect out over HTTP and keep one outbound WebSocket to `/cable`. Both work through a tunnel.

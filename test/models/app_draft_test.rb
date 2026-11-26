@@ -68,6 +68,21 @@ class AppDraftTest < ActiveSupport::TestCase
     assert_not build.valid?
   end
 
+  test "refuses a service or a hostname another app already has" do
+    @project.update!(config_globs: [ "config/deploy.yml", "deploy/*.yml" ])
+    @project.apps.create!(service: "shop", config_path: "config/deploy.yml", hostnames: [ "www.example.com" ])
+
+    draft = build
+    assert_not draft.valid?
+    assert_includes draft.errors[:service], "is already the service of shop, in config/deploy.yml"
+
+    draft = build(service: "store", hostname: "www.example.com")
+    assert_not draft.valid?
+    assert_includes draft.errors[:hostname], "is already served by shop"
+
+    assert build(service: "shop", destination: "production").valid?, "a destination names its containers apart"
+  end
+
   test "never overwrites a file already in Git, even one that isn't an app" do
     stub_github_files(@project, { "deploy/shop.yml" => "service: [ broken\n" })
     writes = stub_github_writes(@project)

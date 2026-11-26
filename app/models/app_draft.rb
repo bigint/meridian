@@ -37,7 +37,7 @@ class AppDraft
   validates :destination, format: { with: /\A[a-z0-9_-]+\z/ }, allow_blank: true
   validates :version, format: { with: App::VERSION_FORMAT }
   validates :registry, format: { with: %r{\A[a-z0-9][a-z0-9.-]*(:\d{1,5})?(/[a-z0-9._-]+)*\z}i, message: "must be a registry host, such as ghcr.io" }
-  validate :servers_chosen, :path_free, :kamal_accepts_it
+  validate :servers_chosen, :path_free, :names_free, :kamal_accepts_it
 
   attr_writer :project
   def project = @project ||= Project.find_by(id: project_id)
@@ -155,6 +155,17 @@ class AppDraft
       paths = [ config_path, (project.destination_path(config_path, destination) if destination.present?) ].compact
       if (taken = project.apps.where(config_path: paths).pick(:config_path))
         errors.add(:service, "already has a config at #{taken}")
+      end
+    end
+
+    # Two configs with one service (and destination) name the same containers
+    # and kamal-proxy service, and kamal-proxy gives a host to one service.
+    def names_free
+      if project && service.present? && (twin = project.apps.find_by(service: service, destination: destination.to_s))
+        errors.add(:service, "is already the service of #{twin.name}, in #{twin.config_path}")
+      end
+      if hostname.present? && (owner = App.where.not(hostnames: []).find { it.hostnames.any? { |taken| taken.casecmp?(hostname) } })
+        errors.add(:hostname, "is already served by #{owner.name}")
       end
     end
 

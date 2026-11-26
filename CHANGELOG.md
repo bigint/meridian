@@ -22,6 +22,7 @@
 - The tunnel setup page asks for a server when none is picked, instead of showing an edge config with no hosts that Kamal rejects.
 - A connector or accessory on a server whose agent has gone quiet shows as unknown, as the docs say. It kept the agent's last report, so a dead server's connector showed running and the Tunnels page said every connector was running.
 - A tunnel counts an app as served from a connector's server only when one of its kamal-proxy roles runs there. An app whose `job` role alone ran on a connector's server was marked safe to route, though kamal-proxy there answers 404 for it.
+- New app refuses a service name another config in the project already uses (with the same destination) and a hostname another app already serves. Both passed, since only the config path was checked, and the two apps then fought over the same containers or kamal-proxy host.
 
 ## v0.1.0 (2026-11-26)
 

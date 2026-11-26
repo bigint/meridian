@@ -24,7 +24,7 @@
                       <span class="mono txt-small"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
                       <%= case connector.state
                           when :running then badge("running", tone: :ok)
-                          when :stopped then badge(connector.placement.state, tone: :warn)
+                          when :stopped then badge(connector.placement.state || "stopped", tone: :warn)
                           when :missing then badge("not booted", tone: :bad)
                           else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
                           end %>

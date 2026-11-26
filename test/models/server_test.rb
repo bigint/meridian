@@ -31,4 +31,16 @@ class ServerTest < ActiveSupport::TestCase
     assert_not_equal placed, Server.for_host("web-1.example.com")
     assert_equal "10.0.0.9", Server.for_host("10.0.0.9").name
   end
+
+  test "two Git hosts sharing a first label never take the same agent's server" do
+    sgp = Server.create!(name: "web-1", hostname: "web-1", machine_id: "m-sgp", last_seen_at: Time.current)
+    App.new(project: projects(:infra), service: "web", config_path: "config/deploy.yml",
+      roles: [ { "name" => "web", "hosts" => [ "web-1.sgp.example.com", "web-1.fra.example.com" ] } ]).save!(validate: false)
+
+    assert_equal sgp, Server.for_host("web-1.sgp.example.com")
+    fra = Server.for_host("web-1.fra.example.com")
+    assert_not_equal sgp, fra, "the first host already named it, before its assignment is written"
+    assert_nil fra.machine_id
+    assert_equal "web-1.sgp.example.com", sgp.reload.name
+  end
 end

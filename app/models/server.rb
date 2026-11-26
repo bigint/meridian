@@ -35,12 +35,20 @@ class Server < ApplicationRecord
   # An agent that reported before Git listed its host made its own row,
   # named by the machine's hostname. When exactly one such row shares the
   # host's first DNS label, Git's name takes it over, as a claim would have.
+  # A row already named by another of Git's hosts is that host's, even before
+  # a sync writes its assignment (web-1.sgp and web-1.fra in one config).
   def self.reported_as(host)
     return if ip?(host)
 
     short = host.split(".").first
     matches = where.not(machine_id: nil).where.missing(:assignments).select { [ it.hostname, it.name ].any? { |name| !ip?(name) && name.split(".").first == short } }
+    matches -= matches.select { git_hosts.include?(it.name) } if matches.any?
     matches.sole.tap { it.update!(name: host, hostname: host) } if matches.one?
+  end
+
+  # Every host a config lists, for its roles or its accessories.
+  def self.git_hosts
+    App.pluck(:roles, :accessories).flatten.filter_map { it["hosts"] if it.is_a?(Hash) }.flatten.to_set
   end
 
   def self.ip?(host)

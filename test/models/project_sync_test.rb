@@ -127,6 +127,17 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil @project.apps.find_by(service: "blog")
   end
 
+  test "a truncated tree stops the sync instead of reading as deleted configs" do
+    @project.sync
+    stub_request(:get, "#{GitHubHelper::API}/repos/example/infra/branches/main").to_return_json(body: { commit: { sha: "7" * 40 } })
+    stub_request(:get, "#{GitHubHelper::API}/repos/example/infra/git/trees/#{"7" * 40}?recursive=true")
+      .to_return_json(body: { sha: "7" * 40, tree: [ { path: "deploy/blog.yml", type: "blob", sha: "1" * 40 } ], truncated: true })
+
+    assert_raises(GitHost::Error) { @project.sync }
+    assert_equal 4, @project.apps.count
+    assert_equal "a" * 40, @project.reload.last_synced_sha
+  end
+
   test "ERB in configs cannot see Meridian's environment" do
     files = { "deploy/leak.yml" => <<~YAML }
       service: leak

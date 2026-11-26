@@ -33,6 +33,7 @@
 - A config that references a secret GitHub can't store, such as `GITHUB_TOKEN`, no longer stops the project syncing. The name failed validation, which rolled every sync back, so nothing in the repository changed in Meridian again and no error showed.
 - A secret name added by hand on the Secrets page without a value survives the next sync, which deleted it. A name that was set and that no config references any more says so, instead of listing the apps that used to.
 - Secret names are recorded from the apps a sync just wrote. When a push landed during a sync job, its second sync read the first one's apps from memory and missed new names until the next push.
+- A repository tree GitHub cuts short (it truncates trees of more than about 100,000 files) stops the sync. It was read as whole, so every config past the cut looked deleted and its app was destroyed.
 
 ## v0.1.0 (2026-11-26)
 

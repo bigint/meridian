@@ -43,8 +43,15 @@ class GitHost::GitHub
     end
   end
 
+  # Every file at the commit. GitHub cuts a very large tree short and says
+  # so; read as whole, it would look as if the missing configs were deleted.
   def tree(sha)
-    request { client.tree(repo, sha, recursive: true).tree.select { it.type == "blob" }.map { GitHost::Entry.new(path: it.path, sha: it.sha) } }
+    request do
+      tree = client.tree(repo, sha, recursive: true)
+      raise GitHost::Error, "GitHub truncated the tree of #{sha.first(7)}: the repository has too many files to read" if tree.truncated
+
+      tree.tree.select { it.type == "blob" }.map { GitHost::Entry.new(path: it.path, sha: it.sha) }
+    end
   end
 
   def blob(sha)

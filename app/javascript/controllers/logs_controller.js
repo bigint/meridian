@@ -89,6 +89,10 @@ function levelTone(level) {
   return "quiet"
 }
 
+// Any JSON value as text. A parsed object can hold its own "toString" key,
+// which String() and template strings would call, and throw on.
+const asText = value => value !== null && typeof value === "object" ? JSON.stringify(value) : String(value)
+
 function shown(value) {
   if (typeof value === "string") return /[\s"=]/.test(value) ? JSON.stringify(value) : value
   return JSON.stringify(value)
@@ -122,26 +126,27 @@ function took(nanoseconds) {
 // The container's name for a target, "<short id>:<port>", when Meridian knows it.
 function answeredBy(object, targets) {
   const target = typeof object.target === "string" ? object.target : ""
-  return targets[target.split(":")[0]] ?? (target || object.service || "")
+  const id = target.split(":")[0]
+  return Object.hasOwn(targets, id) ? targets[id] : (target || object.service || "")
 }
 
 function requestSegments(object, targets) {
   const segments = []
-  const add = (text, ...classes) => { if (text) segments.push({ text: String(text).replace(CONTROLS, ""), classes }) }
-  const query = object.query ? `?${object.query}` : ""
+  const add = (text, ...classes) => { if (text) segments.push({ text: asText(text).replace(CONTROLS, ""), classes }) }
+  const query = object.query ? `?${asText(object.query)}` : ""
 
   add(String(object.status), "json-level", `json-level--${statusTone(object.status)}`)
   add(` ${object.method} `, "json-message")
-  add(`${object.host ?? ""}${object.path}${query}`, "json-message")
+  add(`${asText(object.host ?? "")}${object.path}${query}`, "json-message")
   if (typeof object.duration === "number") add(`  ${took(object.duration)}`, "json-value")
   const container = answeredBy(object, targets)
   if (container) { add("  → ", "json-key"); add(container, "json-value") }
 
   const visitor = object.req_cf_connecting_ip || object.remote_addr
   const edge = typeof object.req_cf_ray === "string" ? object.req_cf_ray.split("-")[1] : null
-  const where = [ object.req_cf_ipcountry, edge && `via ${edge}` ].filter(Boolean).join(" ")
+  const where = [ object.req_cf_ipcountry, edge && `via ${edge}` ].filter(Boolean).map(asText).join(" ")
   if (visitor || where) add("  from ", "json-key")
-  add([ visitor, where ].filter(Boolean).join(" "), "json-value")
+  add([ visitor, where ].filter(Boolean).map(asText).join(" "), "json-value")
   return segments
 }
 
@@ -174,7 +179,7 @@ function parseStructured(message, targets) {
   const keys = Object.keys(object).filter(key => !skip.has(key) && object[key] !== "" && object[key] !== null)
   keys.sort((a, b) => (FIRST_KEYS.includes(a) ? FIRST_KEYS.indexOf(a) : FIRST_KEYS.length) - (FIRST_KEYS.includes(b) ? FIRST_KEYS.indexOf(b) : FIRST_KEYS.length))
   for (const key of keys.slice(0, INLINE_FIELDS)) {
-    const tone = (key === "error" || key === "err") ? "json-value--bad" : key === "status" && Number(object[key]) >= 500 ? "json-value--bad" : key === "status" && Number(object[key]) >= 400 ? "json-value--warn" : null
+    const tone = (key === "error" || key === "err") ? "json-value--bad" : key === "status" && Number(asText(object[key])) >= 500 ? "json-value--bad" : key === "status" && Number(asText(object[key])) >= 400 ? "json-value--warn" : null
     segments.push({ text: (segments.length ? "  " : "") + key, classes: [ "json-key" ] })
     segments.push({ text: "=", classes: [ "json-key" ] })
     segments.push({ text: shown(object[key]).replace(CONTROLS, ""), classes: tone ? [ "json-value", tone ] : [ "json-value" ] })

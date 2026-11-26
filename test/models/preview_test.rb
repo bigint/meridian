@@ -161,6 +161,35 @@ class PreviewTest < ActiveSupport::TestCase
     assert_equal 2, @dispatches.count { it.dig("inputs", "command") == "remove" }
   end
 
+  test "expiry stops asking CI to remove a preview after three failed removals" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    travel 8.days
+
+    3.times do
+      PreviewExpiryJob.perform_now
+      assert preview.reload.removing?
+      track("remove deploy/api.yml pr-7", conclusion: "failure")
+      travel 1.hour
+    end
+    PreviewExpiryJob.perform_now
+
+    assert preview.reload.failed?
+    assert preview.removal_given_up?
+    assert_equal 3, @dispatches.count { it.dig("inputs", "command") == "remove" }
+    assert_match "remove api-pr-7 by hand", Event.where(action: "preview.removal_failed").sole.details["summary"]
+
+    preview.close
+    assert preview.reload.removing?, "Destroy still asks again"
+  end
+
+  test "a preview deployed again starts its removal attempts over" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    preview.update!(state: "failed", remove_attempts: Preview::REMOVE_ATTEMPTS)
+    Preview.deploy(@app, number: 7, head_sha: "i" * 40, url: nil)
+
+    assert_equal 0, preview.reload.remove_attempts
+  end
+
   test "an overlay GitHub won't delete keeps its preview in removing" do
     preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
     preview.close

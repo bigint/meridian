@@ -4,13 +4,15 @@
 # removes it; Meridian only commits the overlay and asks CI to run.
 class Preview < ApplicationRecord
   STATES = %w[ deploying active failed removing removed ].freeze
+  # Expiry asks CI this many times to remove a preview, then leaves it to a person.
+  REMOVE_ATTEMPTS = 3
 
   belongs_to :app
 
   enum :state, STATES.index_by(&:itself), validate: true
 
   scope :current, -> { where.not(state: "removed") }
-  scope :expired, -> { where(state: %w[ deploying active failed ]).where(expires_at: ..Time.current) }
+  scope :expired, -> { where(state: %w[ deploying active failed ], remove_attempts: ...REMOVE_ATTEMPTS).where(expires_at: ..Time.current) }
   scope :ordered, -> { order(created_at: :desc) }
 
   after_commit -> { broadcast_refresh_later_to :previews }
@@ -28,7 +30,7 @@ class Preview < ApplicationRecord
       # One being removed, or past its time, comes back for a whole lifetime;
       # otherwise the next hourly expiry would take it down again.
       revived = fresh || preview.removing? || preview.expires_at.past?
-      preview.assign_attributes(pr_url: url, head_sha: head_sha, state: "deploying")
+      preview.assign_attributes(pr_url: url, head_sha: head_sha, state: "deploying", remove_attempts: 0)
       preview.expires_at = account.preview_ttl_days.days.from_now if revived
       if fresh
         preview.destination = "pr-#{number}"
@@ -63,7 +65,7 @@ class Preview < ApplicationRecord
       # remove run replayed by polling, or one that ends after the pull
       # request reopened, must not take down the preview deployed since.
       # A failed removal goes back to failed, where Destroy and expiry try again.
-      if command == "remove" && preview.removing? then success ? preview.finish_removal : preview.update!(state: "failed")
+      if command == "remove" && preview.removing? then success ? preview.finish_removal : preview.removal_failed
       # Runs for one preview run one at a time, so the last to finish is the
       # newest, whether the state before it was deploying, active or failed.
       elsif command == "deploy" && !preview.removing? && !preview.removed? then preview.update!(state: success ? "active" : "failed")
@@ -80,8 +82,22 @@ class Preview < ApplicationRecord
     return if removing? || removed?
 
     dispatch("remove")
-    update!(state: "removing")
+    update!(state: "removing", remove_attempts: remove_attempts + 1)
     Event.record("preview.removing", subject: self, actor: actor, summary: "Removing #{app.service} preview for ##{pr_number} (#{reason})")
+  end
+
+  # Back to failed, overlay kept, so Destroy and expiry can ask again; after
+  # REMOVE_ATTEMPTS failures expiry stops asking, and a person has to look.
+  def removal_failed
+    update!(state: "failed")
+    return unless removal_given_up?
+
+    Event.record("preview.removal_failed", subject: self,
+      summary: "CI failed to remove the #{app.service} preview for ##{pr_number} #{remove_attempts} times; expiry has stopped trying. Check the runs, then Destroy it again or remove #{app.service}-pr-#{pr_number} by hand")
+  end
+
+  def removal_given_up?
+    failed? && remove_attempts >= REMOVE_ATTEMPTS
   end
 
   # Removed once the overlay is gone. If GitHub refuses the delete, the

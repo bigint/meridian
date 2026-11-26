@@ -103,6 +103,7 @@
 - The "Browser too old" page is styled again. The error pages' styles moved to `public/error-pages.css`, which the CSP allows.
 - A pull request reopened, or pushed to, after its preview was removed gets its overlay back, and a push to an expired preview gives it a whole new lifetime. The overlay was never committed again, so CI ran Kamal for a destination with no file, and a preview brought back after expiry was taken down at the next hourly check.
 - Retrying a failed preview removal finishes it. Polling replays the newest finished run, so the old failed remove run came back while the retry ran, marked the preview failed again, and the retry's success was then ignored, leaving the overlay in Git. A preview now ignores runs from before its latest dispatch.
+- Expiry stops asking CI to remove a preview after three failed removals, and the Previews page and activity log say it needs a hand. A removal that could never succeed, such as one whose server was gone, was dispatched again every hour for good.
 
 ### Upgrading
 

@@ -1,5 +1,78 @@
 ---
-title: "Activity"
+title: "Look back with Activity"
+sidebarTitle: "Activity"
+description: "Find who deployed, rolled back, set a secret, read logs or changed a setting, and when."
+icon: "history"
 ---
 
-This page is being written.
+**Activity** is the audit trail: everything Meridian did, and who asked for it. Each deploy, rollback and redeploy, each secret set, each project, token, person and setting change, each preview opened or removed, and each time someone read logs or traffic, is one entry.
+
+Everyone who can sign in can read it. See [Roles](/concepts/roles).
+
+<Frame>
+  <img className="block dark:hidden" src="/screenshots/activity.png" alt="The Activity page, with entries grouped by day" />
+  <img className="hidden dark:block" src="/screenshots/activity-dark.png" alt="The Activity page, with entries grouped by day" />
+</Frame>
+
+## Read an entry
+
+Entries are newest first, grouped by day under **Today**, **Yesterday**, or the date. Each entry shows:
+
+- A sentence, such as `Deployed shop · production to v1.4.2`.
+- Who did it. A removed person shows as their name with `(removed)`. Work Meridian did on its own, such as opening a preview, shows **Meridian**.
+- The action, such as `app.deploy`.
+- The commit's short SHA, or a **pull request** link, when the action made one.
+- The time, as `HH:MM`. Hover it for the full timestamp.
+
+The full list of actions, with what each records, is in [Activity events](/reference/activity-events).
+
+## Filter
+
+<Steps>
+  <Step title="Open Filters">
+    Click **Filters** at the top of the page.
+  </Step>
+  <Step title="Pick what to see">
+    - **Action starts with**: an action or the start of one. `app.deploy` finds deploys. `app.` finds deploys, rollbacks and redeploys. `secret.` finds every secret set.
+    - **Who**: one person, or **Anyone**.
+  </Step>
+  <Step title="Apply">
+    Click **Apply**.
+  </Step>
+</Steps>
+
+The filters live in the URL, so you can share a filtered view:
+
+| Parameter | Value | Example |
+| --- | --- | --- |
+| `action_name` | the start of an action | `/events?action_name=app.rollback` |
+| `actor` | a person's ID | `/events?actor=3` |
+| `page` | a page number | `/events?page=2` |
+
+The page shows 50 entries. **Older** and **Newer** move between pages.
+
+## What it answers
+
+| Question | Filter |
+| --- | --- |
+| Who shipped what this week? | `app.deploy`, `app.rollback` and `app.redeploy` |
+| Who rotated a secret? | `secret.set` |
+| Who read the logs of a container? | `logs.viewed` |
+| Why didn't a pull request get a preview? | `preview.skipped` |
+| What changed in the infra repository through Meridian? | `project.committed` and `project.pull_request` |
+| Who changed someone's role? | `user.updated` |
+
+<Note>
+Activity records what Meridian did. A commit someone pushed to the infra repository directly isn't an entry. It shows in the app's **Releases**, and in **Current deploy** as by **Git**. See [Deploy](/guides/deploy#follow-a-deploy).
+</Note>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Activity events" icon="list" href="/reference/activity-events">
+    Every action Meridian records.
+  </Card>
+  <Card title="Security" icon="shield" href="/operate/security">
+    What the audit trail is for.
+  </Card>
+</Columns>

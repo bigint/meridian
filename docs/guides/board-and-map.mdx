@@ -1,5 +1,187 @@
 ---
-title: "Board and map"
+title: "Read the board and the map"
+sidebarTitle: "Board and map"
+description: "Find what needs attention, filter and group the apps × servers grid, inspect an app, search, and see your fleet on a world map."
+icon: "layout-grid"
 ---
 
-This page is being written.
+import DriftStates from "/snippets/drift-states.mdx";
+
+The board answers one question: does every server run what Git says? Each cell is one app on one server, marked with its drift state. The map shows the same cells by place. Both update as agents report, without a reload.
+
+Everyone who can sign in sees the board and the map. See [Roles](/concepts/roles).
+
+## The board
+
+The board is Meridian's home page, `/`. Its header counts the apps and servers it shows, and says `all matching Git` when every cell is in sync.
+
+<Frame>
+  <img className="block dark:hidden" src="/screenshots/board.png" alt="The board: Needs attention above the apps × servers grid, with the inspector on the right" />
+  <img className="hidden dark:block" src="/screenshots/board-dark.png" alt="The board: Needs attention above the apps × servers grid, with the inspector on the right" />
+</Frame>
+
+On a new install, **Getting started** lists three steps and ticks each one off as it happens: **Connect your infra repository**, **Put the agent on your servers**, and **Deploy something**. It goes away once all three are done.
+
+### Needs attention
+
+**Needs attention** turns problems into sentences, most urgent first:
+
+| Order | State | Sentence |
+| --- | --- | --- |
+| 1 | Missing | **shop** isn't running on **web-1**, but Git says it should. |
+| 2 | Drifted | **shop** on **web-1** runs `v1.4.1`, not `v1.4.2` from Git. |
+| 3 | Stray | **shop** is running on **web-3**, but Git doesn't put it there. |
+| 4 | Stale | **web-2**'s agent has gone quiet. |
+
+When only some of an app's roles are missing or stray, the sentence names those roles. Each item has a line on what it probably means, and a button: **Open shop**, **Open server**, or **See agents**. A quiet agent is one item for its server, not one per app on it. More than three quiet servers become one item, such as **5 agents** have gone quiet.
+
+The first four items show. The rest are under a disclosure, such as **3 more things need attention**. The **Board** link in the sidebar carries the same count.
+
+### The grid
+
+**Every app on every server** is the grid. Pick how it reads:
+
+- **Apps × servers**: one row per app. The **Git** column shows the newest release's version. Server columns sit under a heading for their group, such as a region.
+- **Servers × apps**: one row per server, grouped into sections, with one column per app.
+
+Each cell shows what the server reports:
+
+| Cell | Means |
+| --- | --- |
+| `v1.4.2` | The running version, in the colour of its state: in sync, stray or stale. |
+| `≠v1.4.1` | Drifted: a version other than Git's. |
+| `✕` | Missing: Git puts the app here, and nothing runs. |
+| `?` | Unknown: nothing to compare yet. |
+
+A dashed cell means the agent is quiet or Meridian can't tell. Hover a cell to see the app, the server, the state and every version running. **What do these mean?** under the grid explains each state:
+
+<DriftStates />
+
+See [Drift](/concepts/drift) for how Meridian decides.
+
+### Filter by state
+
+The chips above the grid count cells per state: **All**, then each state that has any. Click one to show only cells in that state. Click it again to clear it. The counts ignore the state filter, so you can switch from one state to another.
+
+### Filters
+
+Open **Filters** for the rest:
+
+| Filter | Shows |
+| --- | --- |
+| **App** | Apps whose service contains the text. |
+| **Project** | One project's apps. |
+| **Region**, **Provider**, **Role** | Servers whose `region`, `provider` or `role` label has the value. The menus list the values in use. |
+| **Group by** | **Automatic**, **Nothing**, **Region**, **Provider** or **Role**. |
+
+Click **Apply**. **Clear** removes every filter.
+
+**Automatic** grouping groups by region when the board shows more than 30 servers, or servers in more than one region. Otherwise it doesn't group. Under a region heading, a server's name drops the region part, so `aps2-az1-node-01` reads `az1-01`. Hover it for the full name. A server without the label goes under a heading such as **No region**.
+
+Labels come from the agent's `MERIDIAN_LABELS`. See [Labels](/guides/agent#labels-and-map-location).
+
+### Pages
+
+The grid shows 25 rows a page, apps or servers depending on the view. **Previous** and **Next** sit under it, with `Page 1 of 3`. Every server or app the page's rows use gets a column.
+
+### URL parameters
+
+Every filter lives in the URL, so a link opens the board as you left it.
+
+| Parameter | Values | Example |
+| --- | --- | --- |
+| `view` | `apps` (default) or `servers` | `/?view=servers` |
+| `state` | `in_sync`, `drifted`, `missing`, `stray`, `stale` or `unknown` | `/?state=drifted` |
+| `app` | text the service contains | `/?app=shop` |
+| `project` | a project's ID | `/?project=2` |
+| `region`, `provider`, `role` | a label value | `/?region=sgp&role=web` |
+| `group` | `region`, `provider`, `role` or `none`. Leave it out for automatic. | `/?group=provider` |
+| `page` | a page number | `/?page=2` |
+| `inspect` | an app's ID, for the side panel | `/?inspect=14` |
+
+## The inspector
+
+Click an app's name in the grid to open it in the side panel. Without a choice, the panel shows the first app that needs attention, or else the first row.
+
+The panel shows:
+
+- The app's kind and project, and one status line, such as `✓ Running v1.4.2 everywhere`, `2 of 3 servers run v1.4.2`, or `No version file yet, so Meridian can't compare versions.`. When some agents are quiet, it adds how many, and that their last report may be old.
+- **Ship a version**, for deployers and admins: type a tag and click **Deploy**. See [Deploy](/guides/deploy).
+- **Servers**: each server's cell, with its `city` or `region` label.
+- **Recent releases**: the last three, with version, message, author, commit and age.
+- **Redeploy** and **Roll back**, for deployers and admins, when the app has a version file.
+- **Open app page**.
+
+## Search
+
+The box at the top of every page searches apps, servers and projects. Results appear as you type. It matches an app's service or destination, a server's name or hostname, and a project's name or repository. Names that start with what you typed come first, then shorter names. It shows the best eight.
+
+Press **Enter** to open the first result. Press **Escape** to clear the box.
+
+<Frame>
+  <img className="block dark:hidden" src="/screenshots/search.png" alt="Search results for apps, servers and projects under the search box" />
+  <img className="hidden dark:block" src="/screenshots/search-dark.png" alt="Search results for apps, servers and projects under the search box" />
+</Frame>
+
+**Apps** and **Servers** have search boxes of their own, over the app's service and over the server's name and hostname. **Servers** also has **Only silent agents**.
+
+## The map
+
+**Map** puts every server with a location on a world map.
+
+<Frame>
+  <img className="block dark:hidden" src="/screenshots/map.png" alt="The map: places as dots, lines between places that share apps, and the place panel" />
+  <img className="hidden dark:block" src="/screenshots/map-dark.png" alt="The map: places as dots, lines between places that share apps, and the place panel" />
+</Frame>
+
+### Places
+
+Servers within 60 km of each other are one place, about one metro area. A place is named by its servers' most common `city` label, else their most common `region` label, else its first server's name. Its dot grows with the number of servers.
+
+A place takes the worst state of its cells, in the order missing, drifted, stray, stale, unknown, in sync. A place with no cells is in sync if any of its servers reports, and unknown if none does.
+
+- **Lines** join places that run the same app, thicker when they share more apps. Stray cells don't count.
+- **Flows** show Meridian's own traffic: agents reporting in, and deploys going out to places whose servers are being deployed. They need a location for Meridian itself. An admin sets it in **Settings**, under **Where Meridian runs**.
+- **Names** show for Meridian, for places that need attention or are being deployed, and for the place you picked. Hover any other dot to see its name.
+
+### Chips
+
+The chips above the map count things:
+
+- **App** chips, when there are between two and eight apps: click one to show only that app's cells. Click it again to show every app.
+- **Places** chips count places per problem state, and **Deploying** counts places with a deploy under way.
+- `Every place matches Git` shows when no place has a problem and nothing is deploying.
+
+**Filters** has **App**, **Project**, **Region**, **Provider** and **Role**, as on the board.
+
+### The place panel and table
+
+Click a dot, or a name in **Places**, to open the place in the side panel. The URL gets `place=<key>`. Without a choice, the panel shows the place that needs attention first, or else the biggest.
+
+The panel shows the place's state, region and coordinates, each server with its cells and agent status, and **Shares apps with**: the other places that run the same apps. **Open on the board** opens the board filtered to the place's region. **Open server** shows when the place has one server.
+
+**Places** lists every place, problems first. It shows the region, every cell, and whether the agents report or are quiet. Servers without a location are counted under the table.
+
+### Give a server a location
+
+Use either:
+
+- **Agent labels.** Add `lat` and `lng`, in decimal degrees, to `MERIDIAN_LABELS`, such as `MERIDIAN_LABELS=region=sgp,city=Singapore,lat=1.35,lng=103.82`.
+- **The server page.** An admin sets **Latitude** and **Longitude** under **Location on the map** and clicks **Save location**.
+
+An agent that reports `lat` and `lng` overrides the server page's location on its next snapshot. See [Labels and map location](/guides/agent#labels-and-map-location).
+
+## Live updates
+
+When an agent's report changes something, Meridian refreshes the board, the map, and the app and server pages that show it. Each region refreshes at most once a second, however many reports arrive, and the page keeps its scroll position. Once a minute Meridian also redraws every region with a quiet agent, so its cells turn stale without a new report.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Drift" icon="git-compare" href="/concepts/drift">
+    How each state is decided.
+  </Card>
+  <Card title="Install the agent" icon="server" href="/guides/agent">
+    What fills in the cells.
+  </Card>
+</Columns>

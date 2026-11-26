@@ -1,5 +1,80 @@
 ---
-title: "Traffic"
+title: "Watch an app's traffic"
+sidebarTitle: "Traffic"
+description: "See an app's requests as kamal-proxy logs them on every server it runs on, filtered to that app, and never stored."
+icon: "arrow-left-right"
 ---
 
-This page is being written.
+An app's **Traffic** page shows its requests as they happen. Meridian follows kamal-proxy's log on every server the app runs on, keeps only the app's own request lines, and streams them into the page. It is the logs stream again, aimed at the `kamal-proxy` container.
+
+Deployers and admins can open it. On an app's page, click **Traffic**. See [Roles](/concepts/roles).
+
+## What a request shows
+
+Each request is one line:
+
+```text
+web-1  200 GET shop.example.com/cart?step=2  4.2 ms  → shop-web-3f2a9c1e5b7d  from 203.0.113.7
+```
+
+- The chip at the start is the server the request came through.
+- The status, coloured: green below 300, muted for 3xx, amber for 4xx, red for 5xx.
+- The method, host, path and query.
+- How long kamal-proxy took to answer.
+- The container that answered, by name and short version, when Meridian knows it.
+- Who asked, after `from`: the client address. Behind Cloudflare, the visitor's address and country, and the Cloudflare location, such as `from 198.51.100.4 SG via SIN`, when the app logs those headers. See [Behind a Cloudflare Tunnel](#behind-a-cloudflare-tunnel).
+
+Every other field kamal-proxy logged stays searchable with **Filter lines**, and one click away on the line. The page has the logs page's tools, without the stdout and stderr switch: **Filter lines**, **Wrap**, **Follow**, **Clear**, and a chip per server to hide or show it.
+
+## Before you start
+
+- Each server runs the agent with `MERIDIAN_LOGS=1`. Traffic uses the same opt-in as logs. A server without it shows `Logs are off on web-1's agent. Set MERIDIAN_LOGS=1 there to turn them on.` See [Turn logs on](/guides/live-stats-and-logs#turn-logs-on).
+- The agent has reported kamal-proxy on at least one of the app's servers. Until then the page says `No kamal-proxy reported for shop`.
+
+## Which servers and lines
+
+Meridian follows kamal-proxy on every server where the app has containers, where Git places it, and where one of its previews runs, up to 20 servers.
+
+kamal-proxy logs every app's requests in one stream. Meridian keeps only lines whose `service` is one of the app's:
+
+- `<service>-<role>` for each role, such as `shop-web`.
+- `<service>-<role>-<destination>` for an app with a destination, such as `shop-web-production`.
+- The same for each of the app's previews, such as `shop-pr-12-web-pr-12`.
+
+Every other app's requests and kamal-proxy's own lines stop at Meridian and never reach the page.
+
+The page starts from kamal-proxy's last 200 lines on each server, every app's together, before filtering. A quiet app on a busy server may show few requests at first. Meridian can't ask for more. The agent sends at most 512 KB a second from one container, and a kamal-proxy line runs to about a kilobyte.
+
+## Behind a Cloudflare Tunnel
+
+Through a tunnel, every request reaches kamal-proxy from `cloudflared`, so the client address is the connector's. Log Cloudflare's headers to see the visitor:
+
+```yaml config/deploy.yml
+proxy:
+  logging:
+    request_headers:
+      - Cf-Connecting-Ip
+      - Cf-Ipcountry
+      - Cf-Ray
+```
+
+Each request then shows the visitor's address and country, and the Cloudflare location it came through, the last part of `Cf-Ray`, such as `SIN`. Apps created with **New app** in a project that has a tunnel get this block. Add it to older apps and deploy. See [Cloudflare Tunnel](/guides/cloudflare-tunnel#traffic-behind-a-tunnel).
+
+## Leases and limits
+
+Traffic holds the same leases as logs. Opening the page sends each kamal-proxy's agent a 30-second tail lease, with 200 lines of history. The page renews it every 10 seconds while it stays open and Meridian has heard from it in the last 75 seconds. Close the page, and the agents stop within 30 seconds. The details are in [How the stream works](/guides/live-stats-and-logs#how-the-stream-works).
+
+## Nothing is stored
+
+Request lines are relayed to the open page and kept nowhere else. They pass through the cable database, which keeps each message for about a minute. Each time someone opens the page, Activity records `traffic.viewed`, with who, and how many servers. See [Activity](/guides/activity).
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Live stats and logs" icon="activity" href="/guides/live-stats-and-logs">
+    The same stream, for containers.
+  </Card>
+  <Card title="Agent protocol" icon="cable" href="/reference/agent-protocol">
+    Tail leases and log batches on the wire.
+  </Card>
+</Columns>

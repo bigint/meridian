@@ -119,7 +119,7 @@ The agent still reaches `MERIDIAN_URL` from the `meridian` network, as long as t
 
 Kamal gives every host of an accessory the same secret. With the template's `roles: [ web ]` on several hosts, use a fleet token, or one accessory per host with its own token.
 
-A machine rebuilt with a new machine ID can keep a per-server token. Once the old machine has been silent for 10 minutes, the new one takes the server back.
+A machine rebuilt with a new machine ID can keep a per-server token. Until the old machine has been silent for 10 minutes and turned stale, the new one gets the `422`. After that, the new machine takes the server over.
 
 To revoke a token, click **Revoke** in its row on **Agents** and confirm. Meridian refuses its snapshots from then on, and hangs up its WebSocket at once.
 
@@ -132,6 +132,8 @@ Git names a server by the host Kamal connects to, such as `web-1.example.com` or
 3. An IP address, matched only whole.
 
 If the agent reported before Git listed the host, it made a server of its own. Git's name takes that server over when it is the only one sharing the host's first DNS label.
+
+A machine rebuilt with a new machine ID takes its server back once the old agent has been silent for 10 minutes and turned stale. On a fleet token, that needs the exact host Git names, so set `MERIDIAN_HOSTNAME` to it. A first DNS label alone never hands over a server that has had an agent. A rebuild that reports sooner gets a server of its own at first, which moves onto Git's once the old agent has been quiet that long.
 
 When nothing matches, set `MERIDIAN_HOSTNAME` on the agent to the name in your config:
 

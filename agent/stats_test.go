@@ -942,3 +942,16 @@ func TestStartLiveWiresTheLineWhenEnabledAndNotWhenOff(t *testing.T) {
 		}
 	})
 }
+
+func TestDiskUsageRefusesMemoryFilesystems(t *testing.T) {
+	for _, fsType := range []uint64{tmpfsMagic, ramfsMagic} {
+		if _, _, err := diskUsage(fsType, 4096, 1000, 900); err == nil {
+			t.Errorf("fs type %#x: want an error, a RAM filesystem is not the host's disk", fsType)
+		}
+	}
+	const ext4 = 0xef53
+	total, used, err := diskUsage(ext4, 4096, 1000, 900)
+	if err != nil || total != 4096*1000 || used != 4096*100 {
+		t.Fatalf("ext4: got total=%d used=%d err=%v", total, used, err)
+	}
+}

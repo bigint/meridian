@@ -20,7 +20,7 @@ module Drift
   def self.state(assigned:, versions:, release:, server:)
     if !server.reporting? then assigned ? "unknown" : nil
     elsif server.stale? then "stale"
-    elsif !assigned then versions.any? ? "stray" : nil
+    elsif !assigned then versions.empty? ? nil : "stray"
     elsif versions.empty? then "missing"
     elsif release.nil? then "unknown"
     elsif versions.all?(release) then "in_sync"

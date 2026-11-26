@@ -11,7 +11,8 @@ class Board
   Cell = Data.define(:app, :server, :state, :versions, :roles, :health, :release, :role_states) do
     def initialize(role_states: {}, **) = super
 
-    def version = versions.first || release
+    # What the server reported running, never Git's version standing in for it.
+    def version = versions.compact.first
     def roles_in(state) = role_states.select { |_, it| it == state }.keys
   end
 

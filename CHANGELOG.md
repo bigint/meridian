@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- A container whose version the agent couldn't read shows on the board: running where Git doesn't put it, it was left out instead of shown as stray. A quiet server's cell no longer prints Git's version when its agent last reported nothing running there.
 - The Apps page reads every app's newest release in one query, instead of one query per app (200 at the target size).
 - Search always shows the best match. It took the first eight names of each kind alphabetically before ranking, so with eight servers such as `a1-db-1` before it, searching `db-1` never showed the server called `db-1`.
 - Search finds names with `_` or `%` in them: the top-bar search, the Apps and Servers searches, the board's app filter and the Activity page's action filter. SQLite's LIKE has no escape character unless told, so `my_app` matched nothing. The Apps and Servers searches also no longer fail on a `q` that isn't text.

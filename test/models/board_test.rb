@@ -63,6 +63,22 @@ class BoardTest < ActiveSupport::TestCase
     assert_equal [ "cron" ], cell.roles_in("stray")
   end
 
+  test "a quiet server's cell never shows Git's version as if it ran there" do
+    @server.update!(last_seen_at: 10.minutes.ago)
+    versioned_app("shop", version: "v42")
+
+    cell = Board.new.cells.sole
+    assert_equal "stale", cell.state
+    assert_nil cell.version, "the agent reported nothing running"
+  end
+
+  test "a container whose version the agent couldn't read is still stray" do
+    other = Server.create!(name: "web-2.example.com", hostname: "web-2.example.com", last_seen_at: Time.current)
+    start versioned_app("shop"), role: "web", version: nil, server: other
+
+    assert_equal "stray", Board.new.cells.find { it.server == other }&.state
+  end
+
   private
     def versioned_app(service, version: "v2", roles: %w[ web ], server: @server)
       app = projects(:infra).apps.create!(service: service, config_path: "deploy/#{service}.yml", version_path: "deploy/#{service}.version")

@@ -41,12 +41,18 @@ class ProjectsController < ApplicationController
   end
 
   def destroy
+    left = @project.live_previews
     @project.destroy
-    Event.record("project.removed", summary: "Removed #{@project.repo_full_name}")
+    Event.record("project.removed", summary: [ "Removed #{@project.repo_full_name}", (left_previews(left) if left.any?) ].compact.join(". "))
     redirect_to projects_path, notice: "Project removed. Nothing in Git was changed."
   end
 
   private
+    def left_previews(previews)
+      containers = previews.map { "#{it.app.service}-pr-#{it.pr_number}" }.to_sentence
+      "#{"Preview".pluralize(previews.size)} #{previews.map(&:label).to_sentence} #{previews.one? ? "was" : "were"} still running: remove the #{containers} containers and #{previews.map(&:overlay_path).to_sentence} by hand"
+    end
+
     def set_project
       @project = Project.find(params[:id])
     end

@@ -106,4 +106,4 @@ Saving a new repository, branch, installation ID or config paths syncs the proje
 - **Sync now** reads the repository again, even if the branch head hasn't moved.
 - **Add CI workflow** proposes `.github/workflows/meridian-deploy.yml`. See [CI workflow](/reference/ci-workflow).
 - **Parse errors** lists each config Kamal rejected, with the file and line and a link to it on GitHub. A config that fails to parse keeps its app, with its deploys, releases and previews, until it parses again.
-- **Remove project**, on the edit page, deletes the project and its apps, releases, deploys and previews from Meridian. Nothing in Git changes, and nothing is removed from servers. Destroy running previews on the **Previews** page first, or their containers keep running.
+- **Remove project**, on the edit page, deletes the project and its apps, releases, deploys and previews from Meridian. Nothing in Git changes, and nothing is removed from servers. Destroy running previews on the **Previews** page first, or their containers keep running. The confirm names any that are left.

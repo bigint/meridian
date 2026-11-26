@@ -75,6 +75,7 @@ class Preview < ApplicationRecord
   end
 
   def url = "https://#{hostname}"
+  def label = "#{app.source_repo}##{pr_number}" # as the Previews page lists it
   def project = app.project
 
   # Closed or expired: ask CI to `kamal app remove`, then drop the overlay once it has.

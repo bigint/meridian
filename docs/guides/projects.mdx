@@ -129,7 +129,7 @@ Click **Edit** on the project's page to change any field. Click **Update Project
 To remove a project, click **Remove project** on its **Edit** page and confirm. Meridian forgets the project, its apps, releases, deploys, previews and secret names, and says `Project removed. Nothing in Git was changed.`
 
 <Warning>
-Removing a project changes nothing on your servers either. Previews that were running keep running, and Meridian no longer removes them when their pull requests close. Close or destroy them first.
+Removing a project changes nothing on your servers either. Previews that were running keep running, and Meridian no longer removes them when their pull requests close. Close or destroy them first. The confirm names each one still running or being removed, such as `Preview acme/shop#12 keeps running: Destroy it on Previews first.`, and Activity names the containers and overlay files left to remove by hand.
 </Warning>
 
 ## Related

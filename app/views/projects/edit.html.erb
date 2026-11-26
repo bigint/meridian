@@ -1,6 +1,8 @@
 <% content_for :title, "Edit #{@project.name}" %>
 <%= page_header "Edit #{@project.name}" do %>
+  <% left = @project.live_previews %>
+  <% warning = "#{"Preview".pluralize(left.size)} #{left.map(&:label).to_sentence} #{left.one? ? "keeps" : "keep"} running: Destroy #{left.one? ? "it" : "them"} on Previews first." if left.any? %>
   <%= button_to "Remove project", project_path(@project), method: :delete, class: "btn btn--danger",
-        form: { data: { turbo_confirm: "Remove this project from Meridian? Nothing in Git changes." } } %>
+        form: { data: { turbo_confirm: [ "Remove this project from Meridian? Nothing in Git changes.", warning ].compact.join(" ") } } %>
 <% end %>
 <%= render "form", project: @project %>

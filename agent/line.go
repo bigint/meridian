@@ -27,24 +27,6 @@ var (
 	errConfirmTimeout = errors.New("subscription was not confirmed in time")
 )
 
-// lineState is where the line is in its lifecycle.
-//
-//	dialing -> subscribing -> live -> backoff -> dialing ...
-//
-// Any state can fall to backoff when the session fails.
-type lineState int
-
-const (
-	lineDialing     lineState = iota // opening the WebSocket
-	lineSubscribing                  // open; waiting for welcome and confirm_subscription
-	lineLive                         // subscribed: frames may be sent
-	lineBackoff                      // waiting to try again
-)
-
-func (s lineState) String() string {
-	return [...]string{"dialing", "subscribing", "live", "backoff"}[s]
-}
-
 type lineTimings struct {
 	readTimeout    time.Duration // silence from the server that means a dead line
 	confirmTimeout time.Duration // open, but never confirmed
@@ -80,9 +62,8 @@ type line struct {
 	watches    chan int                                         // seconds from watch messages
 	tails      chan tailRequest                                 // tail messages
 
-	mu    sync.Mutex
-	state lineState
-	ws    *wsConn // valid while state == lineLive
+	mu sync.Mutex
+	ws *wsConn // set only while subscribed: frames may be sent
 }
 
 func newLine(cfg config, log *slog.Logger, rnd func() float64) (*line, error) {
@@ -114,7 +95,6 @@ func newLine(cfg config, log *slog.Logger, rnd func() float64) (*line, error) {
 		wait:       sleepCtx,
 		watches:    make(chan int, 8),
 		tails:      make(chan tailRequest, 32),
-		state:      lineBackoff,
 	}, nil
 }
 
@@ -188,7 +168,6 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 		}
 	}()
 
-	l.setState(lineDialing, nil)
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+l.token)
 	header.Set("Origin", l.origin)
@@ -199,17 +178,15 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 		if errors.As(err, &he) && (he.status == http.StatusUnauthorized || he.status == http.StatusForbidden) {
 			err = fmt.Errorf("%w: %w", errRefused, err)
 		}
-		l.setState(lineBackoff, nil)
 		return false, err
 	}
-	l.setState(lineSubscribing, nil)
 
 	stopCtxWatch := context.AfterFunc(ctx, ws.shutdown)
 	confirmDog := newWatchdog(l.timings.confirmTimeout, ws.close)
 	defer func() {
 		stopCtxWatch()
 		confirmDog.stop()
-		l.setState(lineBackoff, nil)
+		l.setLive(nil)
 		ws.shutdown()
 	}()
 
@@ -234,7 +211,7 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 			if m.Identifier == l.identifier && !confirmed {
 				confirmed = true
 				confirmDog.stop()
-				l.setState(lineLive, ws)
+				l.setLive(ws)
 				l.log.Info("live line subscribed")
 			}
 		case "reject_subscription":
@@ -292,9 +269,9 @@ func (l *line) deliver(m cableMessage) {
 // the frame is dropped and send reports false.
 func (l *line) send(frame []byte) bool {
 	l.mu.Lock()
-	state, ws := l.state, l.ws
+	ws := l.ws
 	l.mu.Unlock()
-	if state != lineLive {
+	if ws == nil {
 		return false
 	}
 	cmd, err := json.Marshal(cableCommand{Command: "message", Identifier: l.identifier, Data: string(frame)})
@@ -304,13 +281,10 @@ func (l *line) send(frame []byte) bool {
 	return ws.writeText(cmd) == nil
 }
 
-func (l *line) setState(s lineState, ws *wsConn) {
+func (l *line) setLive(ws *wsConn) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.state != s {
-		l.log.Debug("live line", "state", s.String())
-	}
-	l.state, l.ws = s, ws
+	l.ws = ws
 }
 
 // retryDelay is base doubled per failure past the first, capped at ceiling,

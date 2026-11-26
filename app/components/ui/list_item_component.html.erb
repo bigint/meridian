@@ -1,8 +1,0 @@
-<li class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface">
-  <% if leading? %><div class="shrink-0"><%= leading %></div><% end %>
-  <div class="min-w-0 flex-1">
-    <div class="text-ink break-words"><%= @href ? link_to(content.presence || @title, @href, class: "hover:underline") : (content.presence || @title) %></div>
-    <% if subtitle? %><div class="mt-0.5 text-xs text-ink-muted break-words"><%= subtitle %></div><% end %>
-  </div>
-  <% if trailing? %><div class="flex shrink-0 items-center gap-2 text-xs text-ink-muted"><%= trailing %></div><% end %>
-</li>

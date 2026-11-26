@@ -3,82 +3,81 @@
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @map.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 <% sites = @map.sites %>
-<% place_url = ->(site) { map_path(request.query_parameters.merge(place: site.key)) } %>
 <% services = App.distinct.order(:service).pluck(:service) %>
 <% problems = sites.group_by(&:state).slice(*Drift::ATTENTION_RANK.keys) %>
 <% deploying = sites.count { @map.deploying?(it) } %>
 
-<%= render Ui::PageHeaderComponent.new(title: "Map", subtitle: "#{pluralize(sites.sum { it.servers.size }, "server")} in #{pluralize(sites.size, "place")}#{" · Meridian runs in #{@map.hub_name}" if @map.hub}") %>
+<%= page_header "Map", meta: "#{pluralize(sites.sum { it.servers.size }, "server")} in #{pluralize(sites.size, "place")}#{" · Meridian runs in #{@map.hub_name}" if @map.hub}" %>
 
-<div class="flex flex-wrap items-center gap-1.5" data-map-chips>
+<div class="chips" data-map-chips>
   <% if services.size.between?(2, 8) %>
-    <span class="mr-1 text-xs text-ink-muted">App</span>
-    <%= render Ui::StatComponent.new(label: "All", value: services.size, current: @map.filters[:app].blank?, href: map_path(request.query_parameters.except("app", "place"))) %>
+    <span class="chips__label">App</span>
+    <%= chip "All", services.size, current: @map.filters[:app].blank?, href: map_path(request.query_parameters.except("app", "place")) %>
     <% services.each do |service| %>
-      <%= render Ui::StatComponent.new(label: service, value: App.where(service: service).count, current: @map.filters[:app] == service,
-            href: map_path(request.query_parameters.except("place").merge(app: (@map.filters[:app] == service ? nil : service)))) %>
+      <%= chip service, App.where(service: service).count, current: @map.filters[:app] == service,
+            href: map_path(request.query_parameters.except("place").merge(app: (@map.filters[:app] == service ? nil : service))) %>
     <% end %>
-    <span class="mx-1.5 h-5 w-px bg-line" aria-hidden="true"></span>
+    <span class="chips__rule" aria-hidden="true"></span>
   <% end %>
-  <% if problems.any? || deploying.positive? %><span class="mr-1 text-xs text-ink-muted">Places</span><% end %>
-  <% problems.each do |state, list| %>
-    <%= render Ui::StatComponent.new(label: Drift::LABELS[state], value: list.size, state: state) %>
-  <% end %>
-  <% if deploying.positive? %>
-    <span class="inline-flex h-7 items-center gap-1.5 rounded-full border border-line px-3 text-xs"><span class="font-bold text-info" aria-hidden="true">↗</span>Deploying <span class="font-mono text-ink-muted"><%= deploying %></span></span>
-  <% end %>
-  <% if problems.empty? && deploying.zero? && sites.any? %>
-    <span class="inline-flex h-7 items-center gap-1.5 rounded-full border border-line px-3 text-xs"><span class="font-bold text-ok" aria-hidden="true">✓</span>Every place matches Git</span>
-  <% end %>
+  <% if problems.any? || deploying.positive? %><span class="chips__label">Places</span><% end %>
+  <% problems.each do |state, list| %><%= chip Drift::LABELS[state], list.size, state: state %><% end %>
+  <% if deploying.positive? %><%= chip "Deploying", deploying, symbol: "↗", tone: "txt-info" %><% end %>
+  <% if problems.empty? && deploying.zero? && sites.any? %><%= chip "Every place matches Git", nil, symbol: "✓", tone: "txt-ok" %><% end %>
 </div>
 
-<%= render Ui::DisclosureComponent.new(summary: "Filters", open: @map.filters.except(:app).any?) do %>
-  <%= form_with url: map_path, method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
-    <div><%= form.label :app %><%= form.search_field :app, value: @map.filters[:app], placeholder: "Service", compact: true %></div>
-    <div><%= form.label :project %><%= form.select :project, @projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: @map.filters[:project] }, compact: true %></div>
+<%= disclosure "Filters", open: @map.filters.except(:app).any? do %>
+  <%= form_with url: map_path, method: :get, class: "filters" do |form| %>
+    <div class="field"><%= form.label :app %><%= form.search_field :app, value: @map.filters[:app], placeholder: "Service" %></div>
+    <div class="field"><%= form.label :project %><%= form.select :project, @projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: @map.filters[:project] } %></div>
     <% Board::LABELS.each do |key| %>
-      <div><%= form.label key %><%= form.select key, Board.new.label_values(key), { include_blank: "All", selected: @map.filters[key.to_sym] }, compact: true %></div>
+      <div class="field"><%= form.label key %><%= form.select key, Board.new.label_values(key), { include_blank: "All", selected: @map.filters[key.to_sym] } %></div>
     <% end %>
-    <%= form.submit "Apply", name: nil, variant: :secondary %>
-    <% if @map.filters.any? %><%= render Ui::ButtonComponent.new(label: "Clear", href: map_path, variant: :ghost) %><% end %>
+    <%= form.submit "Apply", name: nil, class: "btn" %>
+    <% if @map.filters.any? %><%= link_to "Clear", map_path, class: "btn btn--plain" %><% end %>
   <% end %>
 <% end %>
 
-<div class="flex flex-wrap gap-5">
-  <div class="min-w-0 flex-[999_1_560px] space-y-5">
-    <%= render WorldMapComponent.new(map: @map, selected: @selected, place_url: place_url) %>
+<div class="split">
+  <div class="split__main">
+    <%= render "maps/world", map: @map, selected: @selected %>
 
     <% unless @map.hub %>
-      <%= render Ui::AlertComponent.new(tone: :info) do %>
-        <% if current_user.admin? %><%= link_to "Set where Meridian runs", settings_account_path, class: "font-medium underline" %><% else %>An admin can set where Meridian runs<% end %>
+      <div class="alert" role="status"><span class="alert__icon" aria-hidden="true">ⓘ</span><div class="alert__body"><p>
+        <% if current_user.admin? %><%= link_to "Set where Meridian runs", settings_account_path %><% else %>An admin can set where Meridian runs<% end %>
         to see agent reports and deploys flowing on the map.
-      <% end %>
+      </p></div></div>
     <% end %>
 
-    <%= render Ui::SectionComponent.new(title: "Places", count: sites.size) do %>
+    <%= titled_section "Places", count: sites.size do %>
       <% rows = sites.sort_by { [ Drift::ATTENTION_RANK.fetch(it.state, 9), @map.deploying?(it) ? 0 : 1, it.name ] } %>
-      <%= render Ui::TableComponent.new(rows: rows, empty: "No server has a location yet.") do |table| %>
-        <% table.with_column("Place", header: true) do |site| %>
-          <%= link_to site.name, place_url.call(site), class: (site == @selected ? "font-semibold text-accent" : "font-medium text-ink hover:text-accent"), aria: { current: (site == @selected ? "true" : nil) } %>
-        <% end %>
-        <% table.with_column("Region", mono: true) { |site| site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" } %>
-        <% table.with_column("Running") do |site| %>
-          <div class="flex flex-wrap gap-1"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= render VersionCellComponent.new(cell: cell) %><% end %></div>
-        <% end %>
-        <% table.with_column("Agents", nowrap: true) { |site| site.stale? ? render(Ui::BadgeComponent.new("… quiet")) : "reporting" } %>
-      <% end %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Place</th><th scope="col">Region</th><th scope="col">Running</th><th scope="col">Agents</th></tr></thead>
+          <tbody>
+            <% rows.each do |site| %>
+              <tr>
+                <th scope="row"><%= link_to site.name, map_place_path(site), class: (site == @selected ? "txt-accent txt-strong" : nil), aria: { current: (site == @selected ? "true" : nil) } %></th>
+                <td class="mono txt-small"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
+                <td><div class="cells"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= version_cell cell %><% end %></div></td>
+                <td class="nowrap"><%= site.stale? ? badge("… quiet") : "reporting" %></td>
+              </tr>
+            <% end %>
+            <% if rows.none? %><tr><td colspan="4" class="table__empty">No server has a location yet.</td></tr><% end %>
+          </tbody>
+        </table>
+      </div>
       <% if (unlocated = @map.unlocated).any? %>
-        <p class="text-xs text-ink-muted"><%= pluralize(unlocated.size, "server") %> without a location (<%= unlocated.first(5).map(&:short_name).join(", ") %><%= "…" if unlocated.size > 5 %>). Add <code>lat=…,lng=…</code> to <code>MERIDIAN_LABELS</code> on their agent, or set it on the server page.</p>
+        <p class="txt-small txt-muted"><%= pluralize(unlocated.size, "server") %> without a location (<%= unlocated.first(5).map(&:short_name).join(", ") %><%= "…" if unlocated.size > 5 %>). Add <code>lat=…,lng=…</code> to <code>MERIDIAN_LABELS</code> on their agent, or set it on the server page.</p>
       <% end %>
     <% end %>
   </div>
 
-  <aside aria-label="Selected place" class="min-w-0 flex-[1_1_320px] lg:max-w-sm">
-    <div id="place" class="rounded-lg border border-line bg-surface p-4 lg:sticky lg:top-16 lg:max-h-[calc(100svh-5rem)] lg:overflow-y-auto">
+  <aside class="split__aside" aria-label="Selected place">
+    <div id="place" class="panel">
       <% if @selected %>
-        <%= render PlaceInspectorComponent.new(map: @map, site: @selected, place_url: place_url) %>
+        <%= render "maps/place", map: @map, site: @selected %>
       <% else %>
-        <p class="text-ink-muted">No server has a location yet. Agents report one with <code>lat</code> and <code>lng</code> labels, or set it on a server's page.</p>
+        <p class="txt-muted">No server has a location yet. Agents report one with <code>lat</code> and <code>lng</code> labels, or set it on a server's page.</p>
       <% end %>
     </div>
   </aside>

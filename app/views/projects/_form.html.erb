@@ -1,20 +1,42 @@
-<%= form_with model: project, class: "space-y-6" do |form| %>
+<%= form_with model: project, class: "stack-l" do |form| %>
   <%= render "shared/errors", record: project %>
-  <%= render Ui::CardComponent.new do %>
-    <div class="space-y-4">
-      <%= form.field :name, required: true, autofocus: true %>
-      <%= form.field :repo_full_name, label: "Repository", hint: "The GitHub repository that holds your Kamal configs, as owner/name.", required: true, placeholder: "acme/infra" %>
-      <%= form.field :default_branch, label: "Branch", required: true %>
-      <%= form.field :installation_id, label: "GitHub App installation ID", hint: "Shown in the URL after installing the Meridian GitHub App on this repository. Leave blank when Meridian uses a token." do %>
-        <%= form.number_field :installation_id %>
-      <% end %>
-      <%= form.field :config_globs, label: "Config paths", value: project.config_globs.join(", "),
-            hint: safe_join([ "Globs, comma separated. ", tag.code("config/deploy.staging.yml"), " is read as the ", tag.code("staging"), " destination of ", tag.code("config/deploy.yml"), "." ]) %>
-      <label class="flex items-center gap-2 text-sm"><%= form.check_box :direct_commits %> Let admins commit changes directly instead of opening pull requests</label>
+  <div class="card">
+    <div class="card__body">
+      <div class="fields">
+        <div class="field">
+          <%= form.label :name %>
+          <%= form.text_field :name, required: true, autofocus: true %>
+          <%= field_errors(project, :name) %>
+        </div>
+        <div class="field">
+          <%= form.label :repo_full_name, "Repository" %>
+          <%= form.text_field :repo_full_name, required: true, placeholder: "acme/infra" %>
+          <p class="field__hint">The GitHub repository that holds your Kamal configs, as owner/name.</p>
+          <%= field_errors(project, :repo_full_name) %>
+        </div>
+        <div class="field">
+          <%= form.label :default_branch, "Branch" %>
+          <%= form.text_field :default_branch, required: true %>
+          <%= field_errors(project, :default_branch) %>
+        </div>
+        <div class="field">
+          <%= form.label :installation_id, "GitHub App installation ID" %>
+          <%= form.number_field :installation_id %>
+          <p class="field__hint">Shown in the URL after installing the Meridian GitHub App on this repository. Leave blank when Meridian uses a token.</p>
+          <%= field_errors(project, :installation_id) %>
+        </div>
+        <div class="field">
+          <%= form.label :config_globs, "Config paths" %>
+          <%= form.text_field :config_globs, value: project.config_globs.join(", ") %>
+          <p class="field__hint">Globs, comma separated. <code>config/deploy.staging.yml</code> is read as the <code>staging</code> destination of <code>config/deploy.yml</code>.</p>
+          <%= field_errors(project, :config_globs) %>
+        </div>
+        <label class="check"><%= form.check_box :direct_commits %> <span>Let admins commit changes directly instead of opening pull requests</span></label>
+      </div>
     </div>
-  <% end %>
-  <div class="flex gap-2">
-    <%= form.submit %>
-    <%= render Ui::ButtonComponent.new(label: "Cancel", href: project.persisted? ? project_path(project) : projects_path, variant: :ghost) %>
+  </div>
+  <div class="flex gap-s">
+    <%= form.submit class: "btn btn--primary" %>
+    <%= link_to "Cancel", project.persisted? ? project_path(project) : projects_path, class: "btn btn--plain" %>
   </div>
 <% end %>

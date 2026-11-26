@@ -1,0 +1,77 @@
+<%# The board as one table. Apps × servers puts each region's servers under
+    a shared heading; servers × apps groups the rows by region instead.
+    locals: board, selected (an app id), inspectable (app names open the
+    board's side panel instead of the app page) %>
+<% inspectable = local_assigns[:inspectable] %>
+<% grouped = board.group_by.present? %>
+<div class="table-wrap">
+  <table class="matrix" data-board-grid>
+    <% if board.view == "apps" %>
+      <thead>
+        <% if grouped || board.groups.size > 1 %>
+          <tr>
+            <td class="matrix__name" colspan="2"></td>
+            <% board.groups.each do |group| %>
+              <th scope="colgroup" colspan="<%= group.columns.size %>" class="matrix__region"><%= matrix_group_title(board, group) %></th>
+            <% end %>
+          </tr>
+        <% end %>
+        <tr>
+          <th scope="col" class="matrix__name matrix__head">App</th>
+          <th scope="col" class="matrix__head">Git</th>
+          <% board.groups.each do |group| %>
+            <% group.columns.each_with_index do |server, index| %>
+              <th scope="col" class="matrix__server <%= "matrix__first" if index.zero? %>">
+                <%= link_to matrix_server_label(server, grouped), server, title: server.name %>
+              </th>
+            <% end %>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% board.page_rows.each do |app| %>
+          <tr aria-selected="<%= app.id == selected %>">
+            <th scope="row" class="matrix__name">
+              <% if inspectable %>
+                <%= link_to app.name, board_path(request.query_parameters.merge(inspect: app.id)), data: { turbo_frame: "inspector", turbo_action: "advance" } %>
+              <% else %>
+                <%= link_to app.name, app %>
+              <% end %>
+            </th>
+            <td class="matrix__git"><%= matrix_release(board, app)&.first(12) || "–" %></td>
+            <% board.groups.each do |group| %>
+              <% group.columns.each_with_index do |server, index| %>
+                <td class="<%= "matrix__first" if index.zero? %>"><% if (cell = group.cells[[ app.id, server.id ]]) %><%= version_cell cell %><% end %></td>
+              <% end %>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    <% else %>
+      <% apps = board.groups.flat_map(&:columns).uniq.sort_by(&:name) %>
+      <thead>
+        <tr>
+          <th scope="col" class="matrix__name matrix__head">Server</th>
+          <% apps.each do |app| %>
+            <th scope="col" class="matrix__server"><%= link_to app.name, app, title: app.name %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <% board.groups.each do |group| %>
+        <tbody>
+          <% if grouped %>
+            <tr class="matrix__group"><th scope="rowgroup" colspan="<%= apps.size + 1 %>"><%= matrix_group_title(board, group) %></th></tr>
+          <% end %>
+          <% group.rows.each do |server| %>
+            <tr>
+              <th scope="row" class="matrix__name"><%= link_to matrix_server_label(server, false), server, title: server.name, class: "mono" %></th>
+              <% apps.each do |app| %>
+                <td><% if (cell = group.cells[[ app.id, server.id ]]) %><%= version_cell cell %><% end %></td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      <% end %>
+    <% end %>
+  </table>
+</div>

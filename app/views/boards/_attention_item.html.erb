@@ -1,0 +1,8 @@
+<li class="row">
+  <%= avatar state: item.state %>
+  <div class="row__body">
+    <div class="row__title attention-sentence"><%= attention_sentence(item) %></div>
+    <div class="row__meta"><%= attention_detail(item) %></div>
+  </div>
+  <div class="row__trail"><%= attention_action(item) %></div>
+</li>

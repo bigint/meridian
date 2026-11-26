@@ -3,99 +3,96 @@
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 
-<%= render Ui::PageHeaderComponent.new(title: "Board", subtitle: "#{pluralize(@board.apps.size, "app")} on #{pluralize(@board.servers.size, "server")}, compared with Git") do |header| %>
-  <% if current_user.admin? %>
-    <% header.with_actions { render Ui::ButtonComponent.new(label: "New app", href: new_app_path, variant: :primary, icon: :plus) } %>
-  <% end %>
+<%= page_header "Board", meta: "#{pluralize(@board.apps.size, "app")} on #{pluralize(@board.servers.size, "server")}, compared with Git" do %>
+  <% if current_user.admin? %><%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %><% end %>
 <% end %>
 
 <% steps = getting_started %>
 <% unless steps.all? { it[:done] } %>
-  <%= render Ui::SectionComponent.new(title: "Getting started") do %>
-    <%= render Ui::StepsComponent.new(steps: steps) %>
+  <%= titled_section "Getting started" do %>
+    <ol class="steps">
+      <% steps.each_with_index do |step, index| %>
+        <li class="step <%= "step--done" if step[:done] %>">
+          <span class="step__mark"><%= step[:done] ? "✓" : index + 1 %></span>
+          <div>
+            <% if step[:done] %><span class="step__title"><%= step[:title] %></span><% else %><%= link_to step[:title], step[:href], class: "step__title" %><% end %>
+            <p class="step__detail"><%= step[:detail] %></p>
+          </div>
+        </li>
+      <% end %>
+    </ol>
   <% end %>
 <% end %>
 
-<div class="flex flex-wrap gap-5">
-  <div class="min-w-0 flex-[999_1_560px] space-y-5">
+<div class="split">
+  <div class="split__main">
     <% items = @board.attention %>
-    <%= render Ui::SectionComponent.new(title: "Needs attention", count: items.size, id: "attention") do %>
+    <%= titled_section "Needs attention", count: items.size, id: "attention" do %>
       <% if items.empty? %>
-        <p class="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5 text-ink-muted">
+        <p class="card card__body">
           <% if Project.exists? %>
-            <span class="font-bold text-ok" aria-hidden="true">✓</span> Everything matches Git.
+            <span><span class="txt-ok txt-strong" aria-hidden="true">✓</span> Everything matches Git.</span>
           <% else %>
-            Nothing to check yet. <%= link_to "Connect your infra repository", new_project_path, class: "text-accent hover:underline" %> to see your apps.
+            <span>Nothing to check yet. <%= link_to "Connect your infra repository", new_project_path %> to see your apps.</span>
           <% end %>
         </p>
       <% else %>
-        <%= render Ui::ListComponent.new do %>
-          <% items.first(4).each do |item| %><%= render AttentionItemComponent.new(item: item) %><% end %>
-        <% end %>
+        <ul class="rows"><%= render partial: "boards/attention_item", collection: items.first(4), as: :item %></ul>
         <% if items.size > 4 %>
-          <%= render Ui::DisclosureComponent.new(summary: "#{pluralize(items.size - 4, "more thing")} need attention") do %>
-            <%= render Ui::ListComponent.new do %>
-              <% items.drop(4).each do |item| %><%= render AttentionItemComponent.new(item: item) %><% end %>
-            <% end %>
+          <%= disclosure "#{pluralize(items.size - 4, "more thing")} need attention" do %>
+            <ul class="rows"><%= render partial: "boards/attention_item", collection: items.drop(4), as: :item %></ul>
           <% end %>
         <% end %>
       <% end %>
     <% end %>
 
-    <%= render Ui::SectionComponent.new(title: "Every app on every server", id: "everything") do |section| %>
-      <% section.with_actions do %>
-        <%= render Ui::SegmentedControlComponent.new(label: "Arrange the grid", items: [
-              [ "Apps × servers", request.query_parameters.merge(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
-              [ "Servers × apps", request.query_parameters.merge(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
-      <% end %>
-
-      <div class="flex flex-wrap gap-1.5" data-summary aria-label="Filter by state">
-        <%= render Ui::StatComponent.new(label: "All", value: @board.summary.values.sum, current: @board.state.nil?,
-              href: request.query_parameters.merge(state: nil, page: nil, anchor: "everything")) %>
+    <% arrange = segmented("Arrange the grid", [
+         [ "Apps × servers", request.query_parameters.merge(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
+         [ "Servers × apps", request.query_parameters.merge(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
+    <%= titled_section "Every app on every server", id: "everything", actions: arrange do %>
+      <div class="chips" data-summary aria-label="Filter by state">
+        <%= chip "All", @board.summary.values.sum, current: @board.state.nil?, href: request.query_parameters.merge(state: nil, page: nil, anchor: "everything") %>
         <% Drift::STATES.each do |state| %>
           <% next if @board.summary.fetch(state, 0).zero? && @board.state != state %>
-          <%= render Ui::StatComponent.new(label: Drift::LABELS[state], value: @board.summary.fetch(state, 0), state: state, current: @board.state == state,
-                href: request.query_parameters.merge(state: (@board.state == state ? nil : state), page: nil, anchor: "everything")) %>
+          <%= chip Drift::LABELS[state], @board.summary.fetch(state, 0), state: state, current: @board.state == state,
+                href: request.query_parameters.merge(state: (@board.state == state ? nil : state), page: nil, anchor: "everything") %>
         <% end %>
       </div>
 
-      <div class="flex flex-wrap gap-x-6 gap-y-3">
+      <div class="flex flex-wrap gap-l">
         <%= render "boards/filters", board: @board, projects: @projects %>
-        <%= render Ui::DisclosureComponent.new(summary: "What do these mean?") do %>
-          <%= render Ui::DescriptionListComponent.new do |list| %>
-            <% Drift::STATES.each do |state| %>
-              <% list.with_item(render(Ui::StateComponent.new(state))) { Drift::MEANINGS[state] } %>
-            <% end %>
-          <% end %>
+        <%= disclosure "What do these mean?" do %>
+          <dl class="facts">
+            <% Drift::STATES.each do |state| %><dt><%= state_badge state %></dt><dd><%= Drift::MEANINGS[state] %></dd><% end %>
+          </dl>
         <% end %>
       </div>
 
       <% if @board.groups.empty? %>
-        <%= render Ui::EmptyStateComponent.new(title: Project.none? ? "Nothing to show yet" : "Nothing matches these filters", icon: :board) do |empty| %>
+        <%= empty_state(Project.none? ? "Nothing to show yet" : "Nothing matches these filters", icon_name: :board) do %>
           <% if Project.none? %>
-            <% empty.with_action { render Ui::ButtonComponent.new(label: "Connect your infra repository", href: new_project_path, variant: :primary) } %>
+            <%= link_to "Connect your infra repository", new_project_path, class: "btn btn--primary" %>
           <% else %>
-            <% empty.with_action { render Ui::ButtonComponent.new(label: "Clear filters", href: board_path(view: @board.view)) } %>
+            <%= link_to "Clear filters", board_path(view: @board.view), class: "btn" %>
           <% end %>
         <% end %>
       <% else %>
-        <%= render BoardMatrixComponent.new(board: @board, selected: @inspected&.id,
-              inspect_url: ->(app) { board_path(request.query_parameters.merge(inspect: app.id)) }) %>
-        <p class="text-xs text-ink-muted">Each cell is the version a server runs: green is what Git says, ≠ drifted, ✕ missing, dashed means its agent is quiet or Meridian can't tell. Click an app to inspect it.</p>
+        <%= render "boards/matrix", board: @board, selected: @inspected&.id, inspectable: true %>
+        <p class="txt-small txt-muted">Each cell is the version a server runs: green is what Git says, ≠ drifted, ✕ missing, dashed means its agent is quiet or Meridian can't tell. Click an app to inspect it.</p>
       <% end %>
 
-      <%= render Ui::PaginationComponent.new(label: "Page #{@board.page} of #{@board.pages}",
+      <%= pagination label: "Page #{@board.page} of #{@board.pages}",
             previous_url: (request.query_parameters.merge(page: @board.page - 1, anchor: "everything") if @board.page > 1),
-            next_url: (request.query_parameters.merge(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages)) %>
+            next_url: (request.query_parameters.merge(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages) %>
     <% end %>
   </div>
 
-  <aside aria-label="Selected app" class="min-w-0 flex-[1_1_320px] lg:max-w-sm">
-    <turbo-frame id="inspector" target="_top" class="block rounded-lg border border-line bg-surface p-4 lg:sticky lg:top-16 lg:max-h-[calc(100svh-5rem)] lg:overflow-y-auto">
+  <aside class="split__aside" aria-label="Selected app">
+    <turbo-frame id="inspector" target="_top" class="panel">
       <% if @inspected %>
-        <%= render AppInspectorComponent.new(app: @inspected, user: current_user) %>
+        <%= render "boards/inspector", app: @inspected %>
       <% else %>
-        <p class="text-ink-muted">Pick an app in the grid to see its servers and releases, and to deploy it.</p>
+        <p class="txt-muted">Pick an app in the grid to see its servers and releases, and to deploy it.</p>
       <% end %>
     </turbo-frame>
   </aside>

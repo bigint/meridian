@@ -1,0 +1,14 @@
+/* Meridian's styles: plain CSS, no build step. Propshaft serves every file
+   in this folder (stylesheet_link_tag :app). Files load alphabetically, so
+   the cascade order is fixed here with layers, not by file order.
+
+   colors.css     the palette, light and dark in one place
+   base.css       elements: type, links, forms, tables, focus
+   layout.css     the shell: sidebar, top bar, page header, panels
+   buttons.css    .btn
+   badges.css     .badge, .chip, .cell (a version on a server), .avatar
+   blocks.css     cards, rows, tables, alerts, tabs, empty states…
+   board.css      the board's matrix and the inspector panel
+   map.css        the world map
+   utilities.css  a few single-purpose classes */
+@layer reset, base, layout, components, modules, utilities;

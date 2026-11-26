@@ -3,13 +3,13 @@
     {
       "warning_type": "Cross-Site Scripting",
       "warning_code": 4,
-      "fingerprint": "4f2db9028204dbda85f141def9a5c438793b67e2eab0aee74806913e4d8d1297",
+      "fingerprint": "ac8ad38827a3ee18ad6c77af1b16d8d785d8734808b167d8ddc8a84f3bad5191",
       "check_name": "LinkToHref",
       "message": "Potentially unsafe model attribute in `link_to` href",
       "file": "app/views/projects/show.html.erb",
-      "line": 3,
+      "line": 2,
       "link": "https://brakemanscanner.org/docs/warning_types/link_to_href",
-      "code": "link_to(Project.find(params[:id]).repo_full_name, Project.find(params[:id]).repo_url, :class => \"font-mono text-xs text-accent hover:underline\")",
+      "code": "link_to(Project.find(params[:id]).repo_full_name, Project.find(params[:id]).repo_url, :class => \"mono txt-small link\")",
       "render_path": [
         {
           "type": "controller",

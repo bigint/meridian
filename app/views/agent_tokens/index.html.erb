@@ -1,60 +1,107 @@
 <% content_for :title, "Agents" %>
-<%= render Ui::PageHeaderComponent.new(title: "Agents") do |header| %>
-  <% header.with_description { "Each server runs a small agent that reports its containers. Tokens let an agent report; revoke one to cut it off." } %>
-<% end %>
+<%= page_header "Agents" %>
+<p class="txt-muted">Each server runs a small agent that reports its containers. Tokens let an agent report; revoke one to cut it off.</p>
 
 <% if @token&.token %>
-  <%= render Ui::AlertComponent.new(tone: :warn, title: "Copy this token now") do %>
-    <p>Meridian keeps only a digest and can't show it again.</p>
-    <%= render Ui::CodeBlockComponent.new(code: @token.token, label: "MERIDIAN_TOKEN") %>
-  <% end %>
+  <div class="alert alert--warn" role="status">
+    <span class="alert__icon" aria-hidden="true">!</span>
+    <div class="alert__body">
+      <p class="alert__title">Copy this token now</p>
+      <p>Meridian keeps only a digest and can't show it again.</p>
+      <%= render "shared/code_block", code: @token.token, label: "MERIDIAN_TOKEN" %>
+    </div>
+  </div>
 <% end %>
 
-<div class="grid gap-6 2xl:grid-cols-2">
-  <%= render Ui::SectionComponent.new(title: "Tokens", count: @tokens.size) do %>
-    <%= render Ui::TableComponent.new(rows: @tokens, empty: "No tokens yet.") do |table| %>
-      <% table.with_column("Label", header: true) { |token| safe_join([ token.label, (render(Ui::BadgeComponent.new("fleet")) if token.fleet?) ].compact, " ") } %>
-      <% table.with_column("Server") { |token| token.server ? link_to(token.server.name, token.server, class: "hover:underline") : tag.span(token.fleet? ? "many" : "binds on first contact", class: "text-ink-faint") } %>
-      <% table.with_column("Last used", nowrap: true) { |token| token.revoked? ? render(Ui::BadgeComponent.new("revoked", tone: :bad)) : time_ago(token.last_used_at) } %>
-      <% if current_user.admin? %>
-        <% table.with_column("", align: :right) do |token| %>
-          <% unless token.revoked? %>
-            <%= render Ui::ButtonComponent.new(label: "Revoke", href: agent_token_path(token), method: :delete, variant: :danger, size: :sm,
-                  confirm: "Revoke “#{token.label}”? Agents using it stop reporting.") %>
+<div class="grid-2 grid-2--wide">
+  <%= titled_section "Tokens", count: @tokens.size do %>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Label</th>
+            <th scope="col">Server</th>
+            <th scope="col">Last used</th>
+            <% if current_user.admin? %><th scope="col" class="table__end"></th><% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <% @tokens.each do |token| %>
+            <tr>
+              <th scope="row"><%= safe_join([ token.label, (badge("fleet") if token.fleet?) ].compact, " ") %></th>
+              <td><%= token.server ? link_to(token.server.name, token.server) : tag.span(token.fleet? ? "many" : "binds on first contact", class: "txt-faint") %></td>
+              <td class="nowrap"><%= token.revoked? ? badge("revoked", tone: :bad) : time_ago(token.last_used_at) %></td>
+              <% if current_user.admin? %>
+                <td class="table__end">
+                  <% unless token.revoked? %>
+                    <%= button_to "Revoke", agent_token_path(token), method: :delete, class: "btn btn--danger btn--small",
+                          form: { data: { turbo_confirm: "Revoke “#{token.label}”? Agents using it stop reporting." } } %>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
           <% end %>
-        <% end %>
-      <% end %>
-    <% end %>
+          <% if @tokens.none? %>
+            <tr><td colspan="<%= current_user.admin? ? 4 : 3 %>" class="table__empty">No tokens yet.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
 
     <% if current_user.admin? %>
-      <%= render Ui::CardComponent.new(title: "New token") do %>
-        <%= form_with model: AgentToken.new, url: agent_tokens_path, class: "space-y-3" do |form| %>
-          <%= form.field :label, required: true, placeholder: "web-1" %>
-          <label class="flex items-start gap-2 text-sm">
-            <%= form.check_box :fleet, class: "mt-0.5" %>
-            <span>Fleet token, shared by many servers <span class="block text-xs text-ink-muted">Identity comes from each machine id. One token per server is safer: revoking it affects only that server.</span></span>
-          </label>
-          <%= form.submit "Create token" %>
-        <% end %>
-      <% end %>
+      <div class="card">
+        <div class="card__header">New token</div>
+        <div class="card__body">
+          <%= form_with model: AgentToken.new, url: agent_tokens_path, class: "stack" do |form| %>
+            <div class="field">
+              <%= form.label :label %>
+              <%= form.text_field :label, required: true, placeholder: "web-1" %>
+              <%= field_errors(form.object, :label) %>
+            </div>
+            <label class="check">
+              <%= form.check_box :fleet %>
+              <span>Fleet token, shared by many servers <span class="block txt-small txt-muted">Identity comes from each machine id. One token per server is safer: revoking it affects only that server.</span></span>
+            </label>
+            <div><%= form.submit "Create token", class: "btn btn--primary" %></div>
+          <% end %>
+        </div>
+      </div>
     <% end %>
   <% end %>
 
-  <%= render Ui::SectionComponent.new(title: "Install") do %>
-    <p class="text-ink-muted">Add the agent to your Kamal config as an accessory on every host. It only makes outbound HTTPS requests and reads Docker through a proxy that allows listing and inspecting containers, nothing else.</p>
-    <%= render Ui::CodeBlockComponent.new(code: render("agent_tokens/accessory", meridian_url: request.base_url), label: "config/deploy.yml") %>
-    <p class="text-xs text-ink-muted">Put <code>MERIDIAN_TOKEN</code> in <code>.kamal/secrets</code>, then <code>kamal accessory boot meridian_agent</code> and <code>kamal accessory boot meridian_docker</code>. Details in <code>docs/agent.md</code>.</p>
+  <%= titled_section "Install" do %>
+    <p class="txt-muted">Add the agent to your Kamal config as an accessory on every host. It only makes outbound HTTPS requests and reads Docker through a proxy that allows listing and inspecting containers, nothing else.</p>
+    <%= render "shared/code_block", code: render("agent_tokens/accessory", meridian_url: request.base_url), label: "config/deploy.yml" %>
+    <p class="txt-small txt-muted">Put <code>MERIDIAN_TOKEN</code> in <code>.kamal/secrets</code>, then <code>kamal accessory boot meridian_agent</code> and <code>kamal accessory boot meridian_docker</code>. Details in <code>docs/agent.md</code>.</p>
   <% end %>
 </div>
 
-<%= render Ui::SectionComponent.new(title: "Silent agents", count: @silent.size) do %>
-  <p class="text-xs text-ink-muted">Agents that haven't reported for more than <%= distance_of_time_in_words(Server::STALE_AFTER) %>.</p>
-  <%= render Ui::TableComponent.new(rows: @silent, empty: "None.") do |table| %>
-    <% table.with_column("Server", header: true) { |server| link_to server.name, server, class: "hover:underline" } %>
-    <% table.with_column("Last seen") { |server| time_ago(server.last_seen_at) } %>
-    <% table.with_column("Agent", mono: true) { |server| server.agent_version } %>
-  <% end %>
+<%= titled_section "Silent agents", count: @silent.size do %>
+  <p class="txt-small txt-muted">Agents that haven't reported for more than <%= distance_of_time_in_words(Server::STALE_AFTER) %>.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Server</th>
+          <th scope="col">Last seen</th>
+          <th scope="col">Agent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @silent.each do |server| %>
+          <tr>
+            <th scope="row"><%= link_to server.name, server %></th>
+            <td><%= time_ago(server.last_seen_at) %></td>
+            <td class="mono txt-small"><%= server.agent_version %></td>
+          </tr>
+        <% end %>
+        <% if @silent.none? %>
+          <tr><td colspan="3" class="table__empty">None.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
   <% if @never.any? %>
-    <p class="text-xs text-ink-muted">No agent has ever reported from <%= pluralize(@never.size, "server") %>: <%= safe_join(@never.first(20).map { link_to it.name, it, class: "underline" }, ", ") %><%= "…" if @never.size > 20 %></p>
+    <p class="txt-small txt-muted">No agent has ever reported from <%= pluralize(@never.size, "server") %>: <%= safe_join(@never.first(20).map { link_to it.name, it }, ", ") %><%= "…" if @never.size > 20 %></p>
   <% end %>
 <% end %>

@@ -1,2 +1,6 @@
-<% if notice %><%= render(Ui::AlertComponent.new(tone: :info)) { notice } %><% end %>
-<% if alert %><%= render(Ui::AlertComponent.new(tone: :bad)) { alert } %><% end %>
+<% if notice %>
+  <div class="alert" role="status"><span class="alert__icon" aria-hidden="true">ⓘ</span><div class="alert__body"><%= notice %></div></div>
+<% end %>
+<% if alert %>
+  <div class="alert alert--bad" role="alert"><span class="alert__icon" aria-hidden="true">✕</span><div class="alert__body"><%= alert %></div></div>
+<% end %>

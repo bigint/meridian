@@ -1,36 +1,60 @@
 <% content_for :title, "Previews" %>
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <%= turbo_stream_from :previews %>
-<%= render Ui::PageHeaderComponent.new(title: "Previews") do |header| %>
-  <% header.with_description do %>
-    A pull request in an app's source repository gets <code>pr-&lt;n&gt;.&lt;app&gt;.<%= Account.current.preview_domain.presence || "&lt;preview domain&gt;".html_safe %></code>.
-    <%= link_to "Set the preview domain", settings_account_path, class: "text-accent-strong hover:underline" if Account.current.preview_domain.blank? && current_user.admin? %>
-  <% end %>
-<% end %>
+<%= page_header "Previews" %>
+<p class="txt-muted">
+  A pull request in an app's source repository gets <code>pr-&lt;n&gt;.&lt;app&gt;.<%= Account.current.preview_domain.presence || "&lt;preview domain&gt;".html_safe %></code>.
+  <%= link_to "Set the preview domain", settings_account_path if Account.current.preview_domain.blank? && current_user.admin? %>
+</p>
 
-<%= render Ui::TableComponent.new(rows: @previews, empty: "No open previews. They appear when a pull request opens in an app's source repository.") do |table| %>
-  <% table.with_column("App", header: true) { |preview| link_to preview.app.name, preview.app, class: "hover:underline" } %>
-  <% table.with_column("Pull request") { |preview| safe_join([ link_to("#{preview.app.source_repo}##{preview.pr_number}", preview.pr_url, class: "hover:underline"), (tag.span(short_sha(preview.head_sha), class: "font-mono text-xs text-ink-muted") if preview.head_sha) ].compact, " ") } %>
-  <% table.with_column("URL", mono: true) { |preview| link_to preview.hostname, preview.url, class: "text-accent-strong hover:underline" } %>
-  <% table.with_column("State") { |preview| render Ui::BadgeComponent.new(preview.state.humanize, tone: { "active" => :ok, "failed" => :bad, "removing" => :neutral }.fetch(preview.state, :info), data: { preview_state: preview.state }) } %>
-  <% table.with_column("Expires", nowrap: true) { |preview| tag.time("in #{time_ago_in_words(preview.expires_at)}", datetime: preview.expires_at.iso8601) } %>
-  <% if current_user.can_deploy? %>
-    <% table.with_column("", align: :right) do |preview| %>
-      <% unless preview.removing? %>
-        <%= render Ui::ButtonComponent.new(label: "Destroy", href: preview_path(preview), method: :delete, variant: :danger, size: :sm, confirm: "Remove pr-#{preview.pr_number} from its server now?") %>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">App</th>
+        <th scope="col">Pull request</th>
+        <th scope="col">URL</th>
+        <th scope="col">State</th>
+        <th scope="col">Expires</th>
+        <% if current_user.can_deploy? %><th scope="col" class="table__end"></th><% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @previews.each do |preview| %>
+        <tr>
+          <th scope="row"><%= link_to preview.app.name, preview.app %></th>
+          <td><%= safe_join([ link_to("#{preview.app.source_repo}##{preview.pr_number}", preview.pr_url), (tag.span(short_sha(preview.head_sha), class: "mono txt-small txt-muted") if preview.head_sha) ].compact, " ") %></td>
+          <td class="mono txt-small"><%= link_to preview.hostname, preview.url, class: "link" %></td>
+          <td><%= badge preview.state.humanize, tone: { "active" => :ok, "failed" => :bad, "removing" => nil }.fetch(preview.state, :info), data: { preview_state: preview.state } %></td>
+          <td class="nowrap"><%= tag.time("in #{time_ago_in_words(preview.expires_at)}", datetime: preview.expires_at.iso8601) %></td>
+          <% if current_user.can_deploy? %>
+            <td class="table__end">
+              <% unless preview.removing? %>
+                <%= button_to "Destroy", preview_path(preview), method: :delete, class: "btn btn--danger btn--small",
+                      form: { data: { turbo_confirm: "Remove pr-#{preview.pr_number} from its server now?" } } %>
+              <% end %>
+            </td>
+          <% end %>
+        </tr>
       <% end %>
-    <% end %>
-  <% end %>
-<% end %>
+      <% if @previews.none? %>
+        <tr><td colspan="<%= current_user.can_deploy? ? 6 : 5 %>" class="table__empty">No open previews. They appear when a pull request opens in an app's source repository.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
 
 <% if @recent.any? %>
-  <%= render Ui::SectionComponent.new(title: "Recently removed") do %>
-    <%= render Ui::ListComponent.new do |list| %>
+  <%= titled_section "Recently removed" do %>
+    <ul class="rows">
       <% @recent.each do |preview| %>
-        <% list.with_item(title: "#{preview.app.name} ##{preview.pr_number}") do |item| %>
-          <% item.with_trailing { tag.span(time_ago(preview.updated_at), class: "text-xs text-ink-muted") } %>
-        <% end %>
+        <li class="row">
+          <div class="row__body">
+            <div class="row__title"><%= "#{preview.app.name} ##{preview.pr_number}" %></div>
+          </div>
+          <div class="row__trail"><%= time_ago(preview.updated_at) %></div>
+        </li>
       <% end %>
-    <% end %>
+    </ul>
   <% end %>
 <% end %>

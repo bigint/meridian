@@ -1,0 +1,37 @@
+<%# The navigation. A drawer on phones; from 64rem up a sidebar that the
+    toggle collapses to a rail of icons (sidebar_controller.js). %>
+<div class="sidebar__inner">
+  <%= link_to root_path, class: "sidebar__brand", title: "Meridian" do %>
+    <%= icon :logo, class: "txt-accent", width: 24, height: 24 %><span class="sidebar__brand-name">Meridian</span>
+  <% end %>
+
+  <nav class="sidebar__nav" aria-label="Main">
+    <%= sidebar_link("Board", root_path, :board, attention_count) %>
+    <%= sidebar_link("Map", map_path, :map) %>
+    <%= sidebar_link("Apps", apps_path, :apps) %>
+    <%= sidebar_link("Servers", servers_path, :servers) %>
+    <%= sidebar_link("Activity", events_path, :activity) %>
+    <%= sidebar_link("Previews", previews_path, :previews) %>
+  </nav>
+
+  <nav class="sidebar__nav" aria-label="Manage">
+    <p class="sidebar__heading">Manage</p>
+    <%= sidebar_link("Projects", projects_path, :projects) %>
+    <%= sidebar_link("Agents", agent_tokens_path, :agents) %>
+    <%= sidebar_link("Secrets", secrets_path, :secrets) %>
+  </nav>
+
+  <div class="sidebar__foot">
+    <% if current_user.admin? %>
+      <nav class="sidebar__nav" aria-label="Admin">
+        <%= sidebar_link("Settings", settings_root_path, :settings) %>
+        <%= sidebar_link("Jobs", "/jobs", :jobs) %>
+      </nav>
+    <% end %>
+    <% label = sidebar_collapsed? ? "Expand sidebar" : "Collapse sidebar" %>
+    <button type="button" class="sidebar__toggle" data-action="sidebar#toggle" data-sidebar-target="toggle"
+      aria-label="<%= label %>" aria-expanded="<%= !sidebar_collapsed? %>" title="<%= label %>">
+      <%= icon :collapse %><span class="sidebar__label" data-sidebar-target="label"><%= label %></span>
+    </button>
+  </div>
+</div>

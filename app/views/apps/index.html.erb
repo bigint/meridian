@@ -1,20 +1,39 @@
 <% content_for :title, "Apps" %>
-<%= render Ui::PageHeaderComponent.new(title: "Apps", subtitle: "Every Kamal config in your infra repositories, one row per destination.") do |header| %>
-  <% header.with_actions do %>
-    <%= form_with url: apps_path, method: :get do |form| %>
-      <%= form.label :q, "Search apps", class: "sr-only" %><%= form.search_field :q, value: params[:q], placeholder: "Search apps", compact: true %>
-    <% end %>
-    <% if current_user.admin? %><%= render Ui::ButtonComponent.new(label: "New app", href: new_app_path, variant: :primary, icon: :plus) %><% end %>
+<%= page_header "Apps", meta: "Every Kamal config in your infra repositories, one row per destination." do %>
+  <%= form_with url: apps_path, method: :get, class: "filters" do |form| %>
+    <%= form.label :q, "Search apps", class: "sr-only" %><%= form.search_field :q, value: params[:q], placeholder: "Search apps" %>
   <% end %>
+  <% if current_user.admin? %><%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %><% end %>
 <% end %>
 
-<%= render Ui::TableComponent.new(rows: @apps, empty: "No apps yet. They appear when a project syncs.") do |table| %>
-  <% table.with_column("App", header: true) { |app| link_to app.name, app, class: "hover:text-accent" } %>
-  <% table.with_column("Project") { |app| link_to app.project.name, app.project, class: "hover:text-accent" } %>
-  <% table.with_column("Kind") { |app| render Ui::BadgeComponent.new(app.kind) } %>
-  <% table.with_column("Hostnames") { |app| app.hostnames.join(", ") } %>
-  <% table.with_column("Config", mono: true) { |app| safe_join([ app.config_path, (" #{app.destination_flag}" if app.destination_flag) ].compact) } %>
-  <% table.with_column("Latest release", nowrap: true) do |app| %>
-    <% if (release = app.latest_release) %><code class="text-ink"><%= release.short_version %></code> <span class="text-xs"><%= time_ago(release.committed_at) %></span><% end %>
-  <% end %>
-<% end %>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">App</th>
+        <th scope="col">Project</th>
+        <th scope="col">Kind</th>
+        <th scope="col">Hostnames</th>
+        <th scope="col">Config</th>
+        <th scope="col">Latest release</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @apps.each do |app| %>
+        <tr>
+          <th scope="row"><%= link_to app.name, app %></th>
+          <td><%= link_to app.project.name, app.project %></td>
+          <td><%= badge app.kind %></td>
+          <td><%= app.hostnames.join(", ") %></td>
+          <td class="mono txt-small"><%= safe_join([ app.config_path, (" #{app.destination_flag}" if app.destination_flag) ].compact) %></td>
+          <td class="nowrap">
+            <% if (release = app.latest_release) %><code class="txt-ink"><%= release.short_version %></code> <span class="txt-small"><%= time_ago(release.committed_at) %></span><% end %>
+          </td>
+        </tr>
+      <% end %>
+      <% if @apps.none? %>
+        <tr><td colspan="6" class="table__empty">No apps yet. They appear when a project syncs.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

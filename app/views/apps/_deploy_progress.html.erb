@@ -1,0 +1,24 @@
+<%# The current deploy: who, what, CI, and each server's progress as its
+    agent reports the new version running. locals: deploy, app %>
+<div class="card">
+  <div class="card__header">
+    <span class="flex items-center gap-s"><%= badge deploy.state_label, tone: deploy_tone(deploy) %><span><%= deploy_heading(deploy) %></span></span>
+    <span class="txt-small txt-muted"><%= time_ago(deploy.created_at) %></span>
+  </div>
+  <div class="card__meta">
+    <span>By <%= deploy.actor&.display_name || "Git" %></span>
+    <span>Commit <%= link_to deploy.commit_sha.first(7), app.project.git.commit_url(deploy.commit_sha), class: "mono link" %></span>
+    <% if deploy.ci_url %><%= link_to "CI run ↗", deploy.ci_url, class: "link" %><% end %>
+  </div>
+  <ul>
+    <% deploy.progress.each do |server, versions, done| %>
+      <li class="row">
+        <%= link_to server.short_name, server, title: server.name, class: "mono txt-small" %>
+        <span class="row__trail ml-auto">
+          <code><%= versions.join(", ").presence || "–" %></code>
+          <%= badge(done ? "✓ Running #{deploy.version}" : "… Waiting", tone: (done ? :ok : nil)) %>
+        </span>
+      </li>
+    <% end %>
+  </ul>
+</div>

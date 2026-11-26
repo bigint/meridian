@@ -1,12 +1,34 @@
 <% content_for :title, "Projects" %>
-<%= render Ui::PageHeaderComponent.new(title: "Projects", subtitle: "A project is one Git repository that holds Kamal configs.") do |header| %>
-  <% if current_user.admin? %><% header.with_actions { render Ui::ButtonComponent.new(label: "Add project", href: new_project_path, variant: :primary, icon: :plus) } %><% end %>
+<%= page_header "Projects", meta: "A project is one Git repository that holds Kamal configs." do %>
+  <% if current_user.admin? %>
+    <%= link_to new_project_path, class: "btn btn--primary" do %><%= icon :plus %> Add project<% end %>
+  <% end %>
 <% end %>
 
-<%= render Ui::TableComponent.new(rows: @projects, empty: "No projects yet.") do |table| %>
-  <% table.with_column("Project", header: true) { |project| link_to project.name, project, class: "hover:text-accent" } %>
-  <% table.with_column("Repository", mono: true) { |project| link_to project.repo_full_name, project.repo_url, class: "hover:text-accent" } %>
-  <% table.with_column("Apps", align: :right) { |project| project.apps.size } %>
-  <% table.with_column("Synced", nowrap: true) { |project| safe_join([ (short_sha(project.last_synced_sha) if project.last_synced_sha), time_ago(project.synced_at) ].compact, " ") } %>
-  <% table.with_column("Problems") { |project| project.config_errors? ? render(Ui::BadgeComponent.new("✕ #{pluralize(project.config_errors.size, "parse error")}", tone: :bad)) : "–" } %>
-<% end %>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Project</th>
+        <th scope="col">Repository</th>
+        <th scope="col" class="table__end">Apps</th>
+        <th scope="col">Synced</th>
+        <th scope="col">Problems</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @projects.each do |project| %>
+        <tr>
+          <th scope="row"><%= link_to project.name, project %></th>
+          <td class="mono txt-small"><%= link_to project.repo_full_name, project.repo_url %></td>
+          <td class="table__end"><%= project.apps.size %></td>
+          <td class="nowrap"><%= safe_join([ (short_sha(project.last_synced_sha) if project.last_synced_sha), time_ago(project.synced_at) ].compact, " ") %></td>
+          <td><%= project.config_errors? ? badge("✕ #{pluralize(project.config_errors.size, "parse error")}", tone: :bad) : "–" %></td>
+        </tr>
+      <% end %>
+      <% if @projects.none? %>
+        <tr><td colspan="5" class="table__empty">No projects yet.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,63 @@
+/* One palette for both themes. light-dark() picks a side from the page's
+   color-scheme: the system's by default, or the person's choice
+   (html[data-theme], set by theme_controller.js and a cookie). */
+@layer base {
+  :root {
+    color-scheme: light dark;
+
+    --color-canvas: light-dark(#ffffff, #09090b);
+    --color-surface: light-dark(#fafafa, #111113);
+    --color-raised: light-dark(#f4f4f5, #1c1c1f);
+    --color-ink: light-dark(#18181b, #f4f4f5);
+    --color-ink-muted: light-dark(#52525b, #a1a1aa);
+    --color-ink-faint: light-dark(#a1a1aa, #71717a);
+    --color-line: light-dark(#e4e4e7, #27272a);
+    --color-line-strong: light-dark(#d4d4d8, #3f3f46);
+
+    /* One accent: indigo. */
+    --color-accent: light-dark(#4338ca, #818cf8);
+    --color-accent-strong: light-dark(#3730a3, #a5b4fc);
+    --color-accent-soft: light-dark(#eef2ff, rgb(129 140 248 / 0.14));
+    --color-accent-ink: light-dark(#ffffff, #1e1b4b);
+
+    /* States. Always paired with a symbol and a word. */
+    --color-ok: light-dark(#166534, #4ade80);
+    --color-ok-soft: light-dark(#f0fdf4, rgb(74 222 128 / 0.10));
+    --color-ok-line: light-dark(#bbf7d0, rgb(74 222 128 / 0.30));
+    --color-warn: light-dark(#92400e, #fbbf24);
+    --color-warn-soft: light-dark(#fffbeb, rgb(251 191 36 / 0.10));
+    --color-warn-line: light-dark(#f59e0b, #d97706);
+    --color-bad: light-dark(#b91c1c, #f87171);
+    --color-bad-soft: light-dark(#fef2f2, rgb(248 113 113 / 0.10));
+    --color-bad-line: light-dark(#f87171, #dc2626);
+    --color-info: light-dark(#6d28d9, #a78bfa);
+    --color-info-soft: light-dark(#f5f3ff, rgb(167 139 250 / 0.10));
+    --color-info-line: light-dark(#a78bfa, #7c3aed);
+    --color-mute: light-dark(#52525b, #a1a1aa);
+    --color-mute-soft: light-dark(#f4f4f5, #27272a);
+    --color-backdrop: rgb(0 0 0 / 0.4);
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+    --radius-small: 4px;
+    --radius: 6px;
+    --radius-large: 8px;
+
+    --space-xs: 0.25rem;
+    --space-s: 0.5rem;
+    --space: 0.75rem;
+    --space-m: 1rem;
+    --space-l: 1.25rem;
+    --space-xl: 1.5rem;
+
+    --text-xs: 0.6875rem;  /* 11px */
+    --text-s: 0.75rem;     /* 12px */
+    --text: 0.8125rem;     /* 13px */
+    --text-m: 0.875rem;    /* 14px */
+    --text-l: 1.125rem;    /* 18px */
+  }
+
+  html[data-theme="light"] { color-scheme: light; }
+  html[data-theme="dark"] { color-scheme: dark; }
+}

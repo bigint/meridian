@@ -1,6 +1,0 @@
-<div class="flex flex-wrap items-center gap-2">
-  <% Ui::ButtonComponent::VARIANTS.each_key do |variant| %>
-    <%= render Ui::ButtonComponent.new(label: variant.to_s.capitalize, variant: variant) %>
-    <%= render Ui::ButtonComponent.new(label: "#{variant.to_s.capitalize} sm", variant: variant, size: :sm) %>
-  <% end %>
-</div>

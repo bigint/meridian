@@ -1,0 +1,125 @@
+@layer components {
+  /* A bordered surface. No shadows anywhere. */
+  .card { border: 1px solid var(--color-line); border-radius: var(--radius-large); background: var(--color-canvas); }
+  .card__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-s); padding: 0.625rem var(--space-m); border-block-end: 1px solid var(--color-line); font-weight: 500; }
+  .card__body { padding: var(--space-m); display: flex; flex-direction: column; gap: var(--space-m); }
+  .card__footer { padding: 0.625rem var(--space-m); border-block-start: 1px solid var(--color-line); }
+  .card__meta { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-m); padding: var(--space-s) var(--space-m); border-block-end: 1px solid var(--color-line); font-size: var(--text-s); color: var(--color-ink-muted); }
+  .card--compact .card__body { padding: var(--space); gap: var(--space-s); }
+
+  /* Data tables scroll in their own box. position: relative keeps
+     screen-reader-only text inside the box, so pages never scroll sideways. */
+  .table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--color-line); border-radius: var(--radius-large); }
+  .table {
+    font-size: var(--text);
+
+    th, td { padding: var(--space-s) var(--space); vertical-align: middle; border-block-start: 1px solid var(--color-line); }
+    td { color: var(--color-ink-muted); }
+    tbody th { font-weight: 500; color: var(--color-ink); }
+    thead th {
+      border-block-start: 0;
+      background: var(--color-surface);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--color-ink-muted);
+    }
+    tbody tr:hover { background: var(--color-surface); }
+    .table__empty { padding-block: var(--space-xl); text-align: center; color: var(--color-ink-faint); }
+    .table__end { text-align: end; }
+  }
+
+  /* Rows: something leading, a title and a line under it, something trailing. */
+  .rows { border: 1px solid var(--color-line); border-radius: var(--radius-large); background: var(--color-canvas); }
+  .row { display: flex; align-items: center; gap: var(--space); padding: var(--space) var(--space-m); & + .row { border-block-start: 1px solid var(--color-line); } }
+  .row--stacked { flex-direction: column; align-items: stretch; gap: var(--space-s); }
+  a.row:hover { background: var(--color-surface); color: inherit; }
+  .row__body { flex: 1; min-inline-size: 0; }
+  .row__title { color: var(--color-ink); }
+  .row__meta { margin-block-start: 0.125rem; font-size: var(--text-s); color: var(--color-ink-muted); overflow-wrap: anywhere; }
+  .row__trail { display: flex; flex-shrink: 0; align-items: center; gap: var(--space-s); font-size: var(--text-s); color: var(--color-ink-muted); }
+
+  /* Term and value pairs. */
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-s) var(--space-xl); font-size: var(--text-m); }
+  .facts dt { color: var(--color-ink-muted); }
+  .facts dd { min-inline-size: 0; overflow-wrap: anywhere; }
+
+  /* Something folded away until asked for. */
+  .disclosure > summary {
+    display: inline-flex; align-items: center; gap: var(--space-xs);
+    font-size: var(--text-s); font-weight: 500; color: var(--color-ink-muted); user-select: none;
+    &:hover { color: var(--color-ink); }
+    svg { inline-size: 0.875rem; block-size: 0.875rem; rotate: -90deg; transition: rotate 150ms; }
+  }
+  .disclosure[open] > summary svg { rotate: 0deg; }
+  .disclosure__body { margin-block-start: var(--space); }
+
+  /* Sub-pages and views of the same thing. */
+  .tabs { display: flex; gap: var(--space-m); }
+  .tabs a { padding: 0 0.125rem var(--space-s); border-block-end: 2px solid transparent; font-size: var(--text-m); font-weight: 500; color: var(--color-ink-muted);
+    &:hover { color: var(--color-ink); }
+    &[aria-current="page"] { border-color: var(--color-accent); color: var(--color-ink); } }
+
+  .segmented { display: inline-flex; padding: 0.125rem; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
+  .segmented a { padding: var(--space-xs) 0.625rem; border-radius: var(--radius-small); font-size: var(--text-s); font-weight: 500; color: var(--color-ink-muted);
+    &:hover { color: var(--color-ink); }
+    &[aria-current="true"] { background: var(--color-canvas); color: var(--color-ink); outline: 1px solid var(--color-line); outline-offset: -1px; } }
+
+  /* When there is nothing to show, and what to do about it. */
+  .empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-s); padding: 2.5rem var(--space-xl); border: 1px dashed var(--color-line); border-radius: var(--radius-large); text-align: center; color: var(--color-ink-muted);
+    svg { inline-size: 1.5rem; block-size: 1.5rem; color: var(--color-ink-faint); } }
+  .empty__title { font-weight: 500; color: var(--color-ink); }
+  .empty__body { max-inline-size: 28rem; }
+
+  /* Messages in the flow of the page. */
+  .alert { display: flex; gap: 0.625rem; padding: 0.625rem var(--space); border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent); border-radius: var(--radius); background: var(--color-accent-soft); font-size: var(--text-m); }
+  .alert__icon { font-weight: 600; color: var(--color-accent-strong); }
+  .alert__body { min-inline-size: 0; display: flex; flex-direction: column; gap: var(--space-xs); }
+  .alert__title { font-weight: 500; }
+  .alert--ok { border-color: color-mix(in srgb, var(--color-ok) 30%, transparent); background: var(--color-ok-soft); .alert__icon { color: var(--color-ok); } }
+  .alert--warn { border-color: color-mix(in srgb, var(--color-warn) 30%, transparent); background: var(--color-warn-soft); .alert__icon { color: var(--color-warn); } }
+  .alert--bad { border-color: color-mix(in srgb, var(--color-bad) 30%, transparent); background: var(--color-bad-soft); .alert__icon { color: var(--color-bad); } }
+
+  /* Code to copy. */
+  .code-block { overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-large); }
+  .code-block__bar { display: flex; align-items: center; justify-content: space-between; padding: 0.375rem var(--space); border-block-end: 1px solid var(--color-line); background: var(--color-surface); font-family: var(--font-mono); font-size: var(--text-s); color: var(--color-ink-muted); }
+  .code-block__copy { border: 0; background: none; font-size: var(--text-s); font-weight: 500; color: var(--color-ink-muted); cursor: pointer; &:hover { color: var(--color-ink); } }
+  .code-block pre { margin: 0; padding: var(--space); overflow-x: auto; background: var(--color-canvas); font-size: var(--text-s); line-height: 1.6; }
+
+  /* A short checklist that ticks itself off. */
+  .steps { display: grid; gap: var(--space-s); @media (min-width: 40rem) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .step { display: flex; gap: var(--space); padding: var(--space); border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent); border-radius: var(--radius-large); }
+  .step__mark { display: grid; place-items: center; flex-shrink: 0; inline-size: 1.5rem; block-size: 1.5rem; border-radius: 50%; background: var(--color-accent); color: var(--color-accent-ink); font-size: var(--text-s); font-weight: 600; }
+  .step__title { font-weight: 500; color: var(--color-ink); }
+  .step__detail { margin-block-start: 0.125rem; font-size: var(--text-s); color: var(--color-ink-muted); }
+  .step--done { border-color: var(--color-line); background: var(--color-surface);
+    .step__mark { background: var(--color-ok-soft); color: var(--color-ok); }
+    .step__title { color: var(--color-ink-muted); text-decoration: line-through; } }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--space); }
+
+  /* Forms */
+  .field { display: flex; flex-direction: column; gap: var(--space-xs); }
+  .field > label, .field > legend { font-size: var(--text-s); font-weight: 500; color: var(--color-ink-muted); }
+  .field__hint { font-size: var(--text-s); color: var(--color-ink-muted); }
+  .field__error { font-size: var(--text-s); color: var(--color-bad); }
+  .fields { display: flex; flex-direction: column; gap: var(--space-m); }
+  .fields--row { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+  .fields--columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+  .check { display: flex; align-items: flex-start; gap: var(--space-s); font-size: var(--text-m); input { margin-block-start: 0.125rem; } }
+
+  /* Dense inline forms: filters, set-a-secret. */
+  .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space);
+    input:where(:not([type=checkbox], [type=radio], [type=submit], [type=hidden])), select { inline-size: auto; block-size: 2rem; font-size: var(--text-s); }
+    label { font-size: var(--text-s); font-weight: 500; color: var(--color-ink-muted); } }
+
+  /* Search results under the search box. */
+  .results { overflow: hidden; padding-block: var(--space-xs); border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-canvas); }
+  .results a { display: flex; align-items: center; gap: var(--space-s); padding: 0.375rem 0.625rem; font-size: var(--text-m); color: var(--color-ink);
+    svg { inline-size: 1rem; block-size: 1rem; color: var(--color-ink-faint); }
+    &:hover, &:focus { background: var(--color-raised); outline: none; } }
+  .results__kind { margin-inline-start: auto; font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .results__none { padding: var(--space-s) 0.625rem; font-size: var(--text-s); color: var(--color-ink-muted); }
+}

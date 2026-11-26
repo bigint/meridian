@@ -1,0 +1,64 @@
+<%# Servers on a world map: places, shared-app links, and Meridian's own
+    traffic in and out. Geometry comes from WorldMap.
+    locals: map, selected (a site) %>
+<% sites, links, flows, hub = map.sites, map.links, map.flows, map.hub %>
+<figure class="world">
+  <div class="world__frame">
+    <svg viewBox="0 0 <%= WorldMap::WIDTH.to_i %> <%= WorldMap::HEIGHT %>" role="img" aria-labelledby="world-title world-desc">
+      <title id="world-title">Servers on a world map</title>
+      <desc id="world-desc"><%= pluralize(sites.size, "place") %>, <%= pluralize(links.size, "shared-app link") %>. Places that need attention are named; the table below lists every place.</desc>
+
+      <use href="<%= image_path("world.svg") %>#land" class="world__land"/>
+
+      <g class="world__links">
+        <% links.each do |link| %>
+          <path d="<%= WorldMap.arc([ link.from.x, link.from.y ], [ link.to.x, link.to.y ]) %>" stroke-width="<%= (1.4 + [ link.weight, 8 ].min * 0.6).round(2) %>">
+            <title><%= link.from.name %> ↔ <%= link.to.name %>: <%= link.apps.map(&:name).to_sentence %></title>
+          </path>
+        <% end %>
+      </g>
+
+      <% if hub %>
+        <g class="world__flows">
+          <% flows.each do |flow| %>
+            <path d="<%= WorldMap.arc(flow.from ? [ flow.from.x, flow.from.y ] : hub, flow.to ? [ flow.to.x, flow.to.y ] : hub, bend: -0.12) %>" class="flow <%= flow.kind %> <%= "live" if flow.live %>">
+              <title><%= flow_title(flow) %></title>
+            </path>
+          <% end %>
+        </g>
+        <g class="world__hub" transform="translate(<%= hub.join(" ") %>)"><rect x="-5" y="-5" width="10" height="10" rx="2"/></g>
+      <% end %>
+
+      <g class="world__sites">
+        <% sites.each do |site| %>
+          <%= link_to map_place_path(site), class: site_class(map, site, selected),
+                data: { controller: "svg-link", action: "svg-link#visit", turbo_prefetch: false },
+                aria: { label: site_title(map, site), current: (site == selected ? "true" : nil) } do %>
+            <g transform="translate(<%= site.x %> <%= site.y %>)">
+              <circle r="<%= map.radius(site) %>"/>
+              <text class="symbol" dy="0.35em"><%= site_text(map, site) %></text>
+            </g>
+            <title><%= site_title(map, site) %></title>
+          <% end %>
+        <% end %>
+      </g>
+
+      <g class="world__labels" aria-hidden="true">
+        <% map_labels(map, selected).each do |label, site| %>
+          <% if label.leader %><line x1="<%= label.leader[0] %>" y1="<%= label.leader[1] %>" x2="<%= label.x %>" y2="<%= label.y %>"/><% end %>
+          <text x="<%= label.x %>" y="<%= label.y %>" dy="0.35em" text-anchor="<%= label.anchor %>" class="<%= site ? "place" : "hub" %>"><%= label.text %></text>
+        <% end %>
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="world__legend">
+    <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 4 H23" class="legend-link"/></svg>Runs the same app (thicker: more apps)</span>
+    <% if hub %>
+      <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 4 H23" class="flow report live"/></svg>Agent reports, flowing in</span>
+      <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 4 H23" class="flow deploy live"/></svg>Deploy in progress, flowing out</span>
+    <% end %>
+    <span>Worst state per place: <% MapsHelper::LEGEND_STATES.each do |state| %><%= state_badge state %><% end %></span>
+    <span>A number is how many servers share the spot. Names show for places that need you; hover for the rest.</span>
+  </figcaption>
+</figure>

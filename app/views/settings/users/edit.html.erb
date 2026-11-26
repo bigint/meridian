@@ -1,7 +1,8 @@
 <% content_for :title, "Edit #{@user.display_name}" %>
-<%= render Ui::PageHeaderComponent.new(title: @user.display_name, subtitle: @user.email_address) do |header| %>
+<%= page_header @user.display_name, meta: @user.email_address do %>
   <% unless @user == current_user %>
-    <% header.with_actions { render Ui::ButtonComponent.new(label: "Remove", href: settings_user_path(@user), method: :delete, variant: :danger, confirm: "Remove #{@user.email_address}?") } %>
+    <%= button_to "Remove", settings_user_path(@user), method: :delete, class: "btn btn--danger",
+          form: { data: { turbo_confirm: "Remove #{@user.email_address}?" } } %>
   <% end %>
 <% end %>
 <%= render "form", user: @user %>

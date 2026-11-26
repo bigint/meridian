@@ -17,5 +17,3 @@
 /.claude
 /lab/.secrets
 
-/app/assets/builds/*
-!/app/assets/builds/.keep

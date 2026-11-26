@@ -6,7 +6,6 @@ ENV["GITHUB_APP_WEBHOOK_SECRET"] ||= "webhook-secret"
 
 require_relative "../config/environment"
 require "rails/test_help"
-require "view_component/test_case"
 require_relative "test_helpers/session_test_helper"
 require_relative "test_helpers/github_helper"
 

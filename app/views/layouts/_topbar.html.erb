@@ -1,0 +1,31 @@
+<%# Search on the left, the person on the right, and on phones the button
+    that opens the navigation drawer. %>
+<div id="topbar" class="topbar">
+  <button type="button" popovertarget="sidebar" class="btn btn--small topbar__menu">Menu</button>
+
+  <div class="search" data-controller="jump">
+    <%= form_with url: jump_path, method: :get, data: { turbo_frame: "jump_results", jump_target: "form" } do |form| %>
+      <%= form.label :q, "Search apps, servers and projects", class: "sr-only" %>
+      <%= icon :search, class: "search__icon" %>
+      <%= form.search_field :q, placeholder: "Search apps, servers and projects", autocomplete: "off",
+            data: { jump_target: "input", action: "input->jump#search keydown->jump#key" } %>
+    <% end %>
+    <turbo-frame id="jump_results" target="_top" class="search__results"></turbo-frame>
+  </div>
+
+  <div class="account">
+    <button type="button" popovertarget="account" class="account__button" aria-label="Account: <%= current_user.display_name %>">
+      <%= avatar current_user.display_name, small: true %>
+      <span class="account__name"><%= current_user.display_name %></span>
+    </button>
+    <div id="account" popover class="account__menu">
+      <div class="account__who">
+        <p class="txt-strong"><%= current_user.display_name %></p>
+        <p class="txt-small txt-muted truncate"><%= current_user.email_address %> · <%= current_user.role %></p>
+      </div>
+      <div class="account__section">
+        <%= button_to session_path, method: :delete, class: "account__item" do %><%= icon :sign_out %> Sign out<% end %>
+      </div>
+    </div>
+  </div>
+</div>

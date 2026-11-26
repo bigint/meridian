@@ -1,43 +1,45 @@
 <% content_for :title, "Activity" %>
-<%= render Ui::PageHeaderComponent.new(title: "Activity", subtitle: "Everything Meridian did, and who asked for it.") %>
+<%= page_header "Activity", meta: "Everything Meridian did, and who asked for it." %>
 
-<%= render Ui::DisclosureComponent.new(summary: "Filters", open: params[:action_name].present? || params[:actor].present?) do %>
-  <%= form_with url: events_path, method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
-    <div><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy", compact: true %></div>
-    <div><%= form.label :actor, "Who" %><%= form.select :actor, @actors.map { [ it.display_name, it.id ] }, { include_blank: "Anyone", selected: params[:actor] }, compact: true %></div>
-    <%= form.submit "Apply", name: nil, variant: :secondary %>
+<%= disclosure "Filters", open: params[:action_name].present? || params[:actor].present? do %>
+  <%= form_with url: events_path, method: :get, class: "filters" do |form| %>
+    <div class="field"><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy" %></div>
+    <div class="field"><%= form.label :actor, "Who" %><%= form.select :actor, @actors.map { [ it.display_name, it.id ] }, { include_blank: "Anyone", selected: params[:actor] } %></div>
+    <%= form.submit "Apply", name: nil, class: "btn" %>
   <% end %>
 <% end %>
 
 <% if @events.empty? %>
-  <%= render Ui::EmptyStateComponent.new(title: "Nothing has happened yet", icon: :activity) %>
+  <%= empty_state "Nothing has happened yet", icon_name: :activity %>
 <% end %>
 
-<div class="space-y-6">
+<div class="stack-l">
   <% @events.group_by { it.created_at.to_date }.each do |date, events| %>
-    <section aria-label="<%= date.to_fs(:long) %>" class="space-y-2">
-      <h2 class="flex items-center gap-2 text-sm font-semibold text-ink">
+    <section aria-label="<%= date.to_fs(:long) %>" class="flex-col gap-s">
+      <h2 class="flex items-center gap-s txt-medium">
         <%= date == Date.current ? "Today" : date == Date.yesterday ? "Yesterday" : date.strftime("%A, %B %-d") %>
-        <span class="font-mono text-xs font-normal text-ink-faint"><%= date.iso8601 %></span>
+        <span class="mono txt-small txt-faint txt-normal"><%= date.iso8601 %></span>
       </h2>
-      <%= render Ui::ListComponent.new do |list| %>
+      <ul class="rows">
         <% events.each do |event| %>
-          <% list.with_item do |item| %>
-            <% item.with_leading { render Ui::AvatarComponent.new(name: event.actor_name, size: :sm) } %>
-            <% item.with_subtitle do %>
-              <%= event.actor_name %> · <code><%= event.action %></code>
-              <% if event.details["commit"] %> · <%= short_sha(event.details["commit"]) %><% end %>
-              <% if event.details["pull_request"] %> · <%= link_to "pull request", event.details["pull_request"], class: "text-accent hover:underline" %><% end %>
-            <% end %>
-            <% item.with_trailing { tag.time(event.created_at.strftime("%H:%M"), datetime: event.created_at.iso8601, class: "font-mono") } %>
-            <%= event.summary %>
-          <% end %>
+          <li class="row">
+            <%= avatar event.actor_name, small: true %>
+            <div class="row__body">
+              <div class="row__title"><%= event.summary %></div>
+              <div class="row__meta">
+                <%= event.actor_name %> · <code><%= event.action %></code>
+                <% if event.details["commit"] %> · <%= short_sha(event.details["commit"]) %><% end %>
+                <% if event.details["pull_request"] %> · <%= link_to "pull request", event.details["pull_request"], class: "link" %><% end %>
+              </div>
+            </div>
+            <div class="row__trail"><%= tag.time(event.created_at.strftime("%H:%M"), datetime: event.created_at.iso8601, class: "mono") %></div>
+          </li>
         <% end %>
-      <% end %>
+      </ul>
     </section>
   <% end %>
 </div>
 
-<%= render Ui::PaginationComponent.new(label: "Page #{@page}", previous_label: "Newer", next_label: "Older",
+<%= pagination label: "Page #{@page}", previous_label: "Newer", next_label: "Older",
       previous_url: (request.query_parameters.merge(page: @page - 1) if @page > 1),
-      next_url: (request.query_parameters.merge(page: @page + 1) if @more)) %>
+      next_url: (request.query_parameters.merge(page: @page + 1) if @more) %>

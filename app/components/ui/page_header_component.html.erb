@@ -1,9 +1,0 @@
-<header class="<%= classes("space-y-3", ("border-b border-line" if tabs?)) %>">
-  <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-    <h1 class="text-lg font-bold tracking-tight text-ink"><%= @title %></h1>
-    <% if @subtitle && !description? %><span class="text-ink-muted"><%= @subtitle %></span><% end %>
-    <% if actions? %><div class="ml-auto flex flex-wrap items-center gap-2"><%= actions %></div><% end %>
-  </div>
-  <% if description? %><div class="text-ink-muted"><%= description %></div><% end %>
-  <% if tabs? %><div class="-mb-px"><%= tabs %></div><% end %>
-</header>

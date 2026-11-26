@@ -1,5 +1,0 @@
-<%= render Ui::PageHeaderComponent.new(title: "Settings") do |header| %>
-  <% header.with_description { "Who can sign in, and where Meridian runs." } %>
-  <% header.with_actions { render Ui::ButtonComponent.new(label: "Add person", variant: :primary, icon: :plus) } %>
-  <% header.with_tabs { render Ui::TabsComponent.new(label: "Settings", items: [ [ "General", "#", true ], [ "People", "#", false ], [ "Jobs", "#", false ] ]) } %>
-<% end %>

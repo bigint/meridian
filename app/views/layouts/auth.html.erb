@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" <%= tag.attributes(data: { theme: theme }) %>>
   <head>
     <title><%= [ content_for(:title), "Meridian" ].compact.join(" · ") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,13 +7,13 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
-  <body class="grid min-h-svh place-items-center bg-surface px-4">
-    <main class="w-full max-w-sm space-y-6 py-12">
-      <%= link_to root_path, class: "flex items-center justify-center gap-2 text-lg font-semibold" do %><%= icon :logo, class: "size-6 text-accent" %> Meridian<% end %>
-      <div class="space-y-5 rounded-lg border border-line bg-canvas p-6">
+  <body class="auth">
+    <main class="auth__column">
+      <%= link_to root_path, class: "auth__brand" do %><%= icon :logo, class: "txt-accent", width: 24, height: 24 %> Meridian<% end %>
+      <div class="auth__card">
         <%= render "shared/flash" %>
         <%= yield %>
       </div>

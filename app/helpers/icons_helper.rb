@@ -22,8 +22,10 @@ module IconsHelper
     logo: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="m4.5 15.5 15-7"/>'
   }.freeze
 
+  # 16px unless the surrounding CSS sizes it (buttons, nav links…) or a
+  # width and height are given.
   def icon(name, **options)
-    tag.svg(ICONS.fetch(name).html_safe, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 1.75,
+    tag.svg(ICONS.fetch(name).html_safe, viewBox: "0 0 24 24", width: 16, height: 16, fill: "none", stroke: "currentColor", "stroke-width": 1.75,
       "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true, **options)
   end
 end

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" <%= tag.attributes(data: { theme: theme }) %>>
   <head>
     <title><%= [ content_for(:title), "Meridian" ].compact.join(" · ") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,28 +8,21 @@
     <%= csp_meta_tag %>
     <%= yield :head %>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-svh">
-    <%# One navigation: a popover drawer on phones; from lg up a sidebar that
-        collapses to an icon rail. The choice lives in a cookie (sidebar_controller.js). %>
-    <div class="group/shell lg:grid lg:min-h-svh lg:grid-cols-[15rem_minmax(0,1fr)] lg:transition-[grid-template-columns] lg:duration-150 lg:data-[collapsed]:grid-cols-[4rem_minmax(0,1fr)] motion-reduce:transition-none"
-      data-controller="sidebar" <%= "data-collapsed" if sidebar_collapsed? %>>
-      <aside id="sidebar" popover aria-label="Navigation"
-        class="fixed inset-y-0 left-0 z-40 h-svh w-64 max-w-[85vw] overflow-y-auto border-r border-line bg-surface backdrop:bg-black/40
-               lg:sticky lg:top-0 lg:z-auto lg:block lg:w-auto lg:max-w-none">
-        <%= render SidebarComponent.new(user: current_user, attention_count: attention_count, collapsed: sidebar_collapsed?) %>
+  <body>
+    <div class="shell" data-controller="sidebar" <%= "data-collapsed" if sidebar_collapsed? %>>
+      <aside id="sidebar" class="sidebar" popover aria-label="Navigation">
+        <%= render "layouts/sidebar" %>
       </aside>
 
       <div class="min-w-0">
-        <%= render TopbarComponent.new(user: current_user) %>
-        <main id="main" class="<%= content_for?(:wide) ? "min-w-0 px-4 py-5 lg:px-6" : "mx-auto w-full min-w-0 max-w-6xl px-4 py-5 lg:px-6" %>">
-          <div class="space-y-5">
-            <%= render "shared/flash" %>
-            <%= yield %>
-          </div>
+        <%= render "layouts/topbar" %>
+        <main id="main" class="<%= content_for?(:wide) ? "main" : "main main--narrow" %>">
+          <%= render "shared/flash" %>
+          <%= yield %>
         </main>
       </div>
     </div>

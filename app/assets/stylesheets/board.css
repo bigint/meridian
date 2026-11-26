@@ -1,0 +1,28 @@
+@layer modules {
+  /* The board: one table, regions as column groups, a version in every cell. */
+  .matrix {
+    font-size: var(--text);
+
+    th, td { border-block-start: 1px solid var(--color-line); padding: 0.375rem var(--space-xs); text-align: center; }
+    thead th, thead td { border-block-start: 0; }
+    .matrix__head { padding: var(--space-s) var(--space); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-ink-muted); text-align: start; }
+    .matrix__region { padding: var(--space-s) var(--space-s) 0; border-inline-start: 1px solid var(--color-line); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; text-align: start; }
+    .matrix__server a { display: inline-block; max-inline-size: 6rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; font-family: var(--font-mono); font-size: 0.625rem; font-weight: 400; color: var(--color-ink-muted); &:hover { color: var(--color-accent); } }
+    .matrix__first { border-inline-start: 1px solid var(--color-line); }
+    .matrix__git { padding-inline: var(--space-s); font-family: var(--font-mono); font-size: var(--text-s); white-space: nowrap; color: var(--color-ink-muted); text-align: start; }
+    .matrix__group th { padding: 0.375rem var(--space); background: var(--color-surface); font-size: var(--text-xs); font-weight: 600; text-align: start; }
+
+    /* The first column stays put while the grid scrolls sideways. */
+    .matrix__name {
+      position: sticky; inset-inline-start: 0; z-index: 1;
+      max-inline-size: 14rem; padding-inline: var(--space); background: var(--color-canvas); font-weight: 400; text-align: start;
+      a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--color-ink); &:hover { color: var(--color-accent); } }
+      a.mono { font-family: var(--font-mono); font-size: var(--text-s); font-weight: 400; }
+    }
+
+    tbody tr:hover, tbody tr:hover .matrix__name { background: var(--color-surface); }
+    tr[aria-selected="true"], tr[aria-selected="true"] .matrix__name { background: var(--color-accent-soft); }
+  }
+
+  .attention-sentence strong { font-weight: 600; }
+}

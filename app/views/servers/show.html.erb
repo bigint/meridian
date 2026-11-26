@@ -4,72 +4,119 @@
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 <% group = @board.groups.first %>
 
-<%= render Ui::PageHeaderComponent.new(title: @server.name) do |header| %>
-  <% header.with_description do %>
-    <div class="flex flex-wrap items-center gap-2">
-      <% if @server.stale? %><%= render Ui::StateComponent.new("stale") %> agent silent
-      <% elsif !@server.reporting? %><%= render Ui::BadgeComponent.new("No agent yet") %>
-      <% else %><%= render Ui::BadgeComponent.new("Reporting", tone: :ok) %><% end %>
-      <span class="text-ink-muted"><%= place(@server) %></span>
-    </div>
-  <% end %>
+<% status = capture do %>
+  <% if @server.stale? %><%= state_badge "stale" %> agent silent
+  <% elsif !@server.reporting? %><%= badge "No agent yet" %>
+  <% else %><%= badge "Reporting", tone: :ok %><% end %>
+  <%= place(@server) %>
 <% end %>
+<%= page_header @server.name, meta: status %>
 
-<div class="flex flex-wrap gap-5">
-<div class="min-w-0 flex-[999_1_560px] space-y-5">
-<%= render Ui::SectionComponent.new(title: "Apps", count: group&.rows&.size || 0) do %>
-  <%= render Ui::TableComponent.new(rows: group ? group.rows : [], empty: "Nothing assigned here.") do |table| %>
-    <% table.with_column("Running") { |app| render VersionCellComponent.new(cell: group.cell(app, @server)) } %>
-    <% table.with_column("App", header: true) { |app| link_to app.name, app, class: "hover:text-accent" } %>
-    <% table.with_column("State") { |app| render Ui::StateComponent.new(group.cell(app, @server).state) } %>
-    <% table.with_column("Roles") { |app| group.cell(app, @server).roles.join(", ") } %>
-  <% end %>
-<% end %>
+<div class="split">
+  <div class="split__main">
+    <%= titled_section "Apps", count: group&.rows&.size || 0 do %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Running</th>
+              <th scope="col">App</th>
+              <th scope="col">State</th>
+              <th scope="col">Roles</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rows = group ? group.rows : [] %>
+            <% rows.each do |app| %>
+              <% cell = group.cell(app, @server) %>
+              <tr>
+                <td><%= version_cell cell %></td>
+                <th scope="row"><%= link_to app.name, app %></th>
+                <td><%= state_badge cell.state %></td>
+                <td><%= cell.roles.join(", ") %></td>
+              </tr>
+            <% end %>
+            <% if rows.none? %>
+              <tr><td colspan="4" class="table__empty">Nothing assigned here.</td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
 
-<%= render Ui::SectionComponent.new(title: "Containers", count: @placements.size) do %>
-  <p class="text-xs text-ink-muted">Everything with Kamal labels, as the agent last reported it.</p>
-  <%= render Ui::TableComponent.new(rows: @placements, empty: "No containers reported.") do |table| %>
-    <% table.with_column("Container", mono: true) { |placement| placement.name } %>
-    <% table.with_column("Service") { |placement| safe_join([ (placement.app ? link_to(placement.service, placement.app, class: "hover:text-accent") : placement.service), (render(Ui::BadgeComponent.new(placement.kind)) unless placement.kind == "app") ].compact, " ") } %>
-    <% table.with_column("Role") { |placement| placement.role } %>
-    <% table.with_column("Version", mono: true) { |placement| placement.short_version } %>
-    <% table.with_column("State") { |placement| placement.state } %>
-    <% table.with_column("Health") { |placement| placement.health == "unhealthy" ? render(Ui::BadgeComponent.new("unhealthy", tone: :bad)) : placement.health } %>
-    <% table.with_column("Started", nowrap: true) { |placement| time_ago(placement.started_at) } %>
-  <% end %>
-<% end %>
+    <%= titled_section "Containers", count: @placements.size do %>
+      <p class="txt-small txt-muted">Everything with Kamal labels, as the agent last reported it.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Container</th>
+              <th scope="col">Service</th>
+              <th scope="col">Role</th>
+              <th scope="col">Version</th>
+              <th scope="col">State</th>
+              <th scope="col">Health</th>
+              <th scope="col">Started</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @placements.each do |placement| %>
+              <tr>
+                <td class="mono txt-small"><%= placement.name %></td>
+                <td><%= safe_join([ (placement.app ? link_to(placement.service, placement.app) : placement.service), (badge(placement.kind) unless placement.kind == "app") ].compact, " ") %></td>
+                <td><%= placement.role %></td>
+                <td class="mono txt-small"><%= placement.short_version %></td>
+                <td><%= placement.state %></td>
+                <td><%= placement.health == "unhealthy" ? badge("unhealthy", tone: :bad) : placement.health %></td>
+                <td class="nowrap"><%= time_ago(placement.started_at) %></td>
+              </tr>
+            <% end %>
+            <% if @placements.none? %>
+              <tr><td colspan="7" class="table__empty">No containers reported.</td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </div>
 
-</div>
+  <aside class="split__aside" aria-label="Machine">
+    <div class="panel">
+      <%= titled_section "Machine" do %>
+        <div class="card">
+          <div class="card__body">
+            <dl class="facts">
+              <dt>Hostname</dt>
+              <dd><code><%= @server.hostname %></code></dd>
+              <dt>Agent</dt>
+              <dd><%= @server.agent_version || "not installed" %></dd>
+              <dt>Last seen</dt>
+              <dd><%= time_ago(@server.last_seen_at) %></dd>
+              <dt>Location</dt>
+              <dd><%= @server.located? ? "#{@server.latitude}, #{@server.longitude}" : tag.span("not set", class: "txt-faint") %></dd>
+              <dt>Projects</dt>
+              <dd><%= safe_join(@server.projects.map { link_to it.name, it }, ", ").presence || tag.span("none", class: "txt-faint") %></dd>
+            </dl>
+          </div>
+        </div>
+      <% end %>
 
-<aside aria-label="Machine" class="min-w-0 flex-[1_1_320px] lg:max-w-sm">
-<div class="space-y-5 rounded-lg border border-line bg-surface p-4">
-  <%= render Ui::SectionComponent.new(title: "Machine") do %>
-    <div class="rounded-lg border border-line bg-canvas p-3">
-      <%= render Ui::DescriptionListComponent.new do |list| %>
-        <% list.with_item("Hostname") { tag.code(@server.hostname) } %>
-        <% list.with_item("Agent") { @server.agent_version || "not installed" } %>
-        <% list.with_item("Last seen") { time_ago(@server.last_seen_at) } %>
-        <% list.with_item("Location") { @server.located? ? "#{@server.latitude}, #{@server.longitude}" : tag.span("not set", class: "text-ink-faint") } %>
-        <% list.with_item("Projects") { safe_join(@server.projects.map { link_to it.name, it, class: "text-accent hover:underline" }, ", ").presence || tag.span("none", class: "text-ink-faint") } %>
+      <% if @server.labels.except(*ApplicationHelper::PLACE_LABELS).any? %>
+        <%= titled_section "Labels" do %>
+          <div class="flex flex-wrap gap-xs"><%= labels_list(@server.labels, except: ApplicationHelper::PLACE_LABELS) %></div>
+        <% end %>
+      <% end %>
+
+      <% if current_user.admin? %>
+        <%= titled_section "Location on the map" do %>
+          <%= form_with model: @server, class: "filters" do |form| %>
+            <div class="field"><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90 %></div>
+            <div class="field"><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180 %></div>
+            <%= form.submit "Save location", name: nil, class: "btn" %>
+          <% end %>
+          <p class="txt-small txt-muted">An agent that reports <code>lat</code> and <code>lng</code> labels overrides this on its next snapshot.</p>
+        <% end %>
       <% end %>
     </div>
-  <% end %>
-
-  <% if @server.labels.except(*ApplicationHelper::PLACE_LABELS).any? %>
-    <%= render Ui::SectionComponent.new(title: "Labels") do %>
-      <div class="flex flex-wrap gap-1.5"><%= labels_list(@server.labels, except: ApplicationHelper::PLACE_LABELS) %></div>
-    <% end %>
-  <% end %>
-<% if current_user.admin? %>
-  <%= render Ui::SectionComponent.new(title: "Location on the map") do %>
-    <%= form_with model: @server, class: "flex flex-wrap items-end gap-3" do |form| %>
-      <div><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90, compact: true %></div>
-      <div><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180, compact: true %></div>
-      <%= form.submit "Save location", name: nil, variant: :secondary %>
-    <% end %>
-    <p class="mt-2 text-xs text-ink-muted">An agent that reports <code>lat</code> and <code>lng</code> labels overrides this on its next snapshot.</p>
-  <% end %>
-<% end %>
-</div>
-</aside>
+  </aside>
 </div>

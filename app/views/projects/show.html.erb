@@ -1,55 +1,83 @@
 <% content_for :title, @project.name %>
-<%= render Ui::PageHeaderComponent.new(title: @project.name) do |header| %>
-  <% header.with_description { link_to @project.repo_full_name, @project.repo_url, class: "font-mono text-xs text-accent hover:underline" } %>
+<%= page_header @project.name, meta: link_to(@project.repo_full_name, @project.repo_url, class: "mono txt-small link") do %>
   <% if current_user.admin? %>
-    <% header.with_actions do %>
-      <%= render Ui::ButtonComponent.new(label: "Sync now", href: project_sync_path(@project), method: :post) %>
-      <%= render Ui::ButtonComponent.new(label: "Add CI workflow", href: project_workflow_path(@project), method: :post,
-            confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} .github/workflows/meridian-deploy.yml?") %>
-      <%= render Ui::ButtonComponent.new(label: "Edit", href: edit_project_path(@project), variant: :ghost) %>
-    <% end %>
+    <%= button_to "Sync now", project_sync_path(@project), method: :post, class: "btn" %>
+    <%= button_to "Add CI workflow", project_workflow_path(@project), method: :post, class: "btn",
+          form: { data: { turbo_confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} .github/workflows/meridian-deploy.yml?" } } %>
+    <%= link_to "Edit", edit_project_path(@project), class: "btn btn--plain" %>
   <% end %>
 <% end %>
 
-<div class="grid gap-6 lg:grid-cols-2">
-  <%= render Ui::SectionComponent.new(title: "Repository") do %>
-    <%= render Ui::CardComponent.new do %>
-      <%= render Ui::DescriptionListComponent.new do |list| %>
-        <% list.with_item("Branch") { tag.code(@project.default_branch) } %>
-        <% list.with_item("Configs") { safe_join(@project.config_globs.map { tag.code(it) }, ", ") } %>
-        <% list.with_item("Synced") { safe_join([ (@project.last_synced_sha ? link_to(@project.last_synced_sha.first(7), "#{@project.repo_url}/commit/#{@project.last_synced_sha}", class: "font-mono text-accent hover:underline") : "never"), time_ago(@project.synced_at) ], " · ") } %>
-        <% list.with_item("Changes") { @project.direct_commits? ? "Admins may commit directly" : "Pull requests" } %>
-      <% end %>
-    <% end %>
+<div class="grid-2">
+  <%= titled_section "Repository" do %>
+    <div class="card">
+      <div class="card__body">
+        <dl class="facts">
+          <dt>Branch</dt>
+          <dd><code><%= @project.default_branch %></code></dd>
+          <dt>Configs</dt>
+          <dd><%= safe_join(@project.config_globs.map { tag.code(it) }, ", ") %></dd>
+          <dt>Synced</dt>
+          <dd><%= safe_join([ (@project.last_synced_sha ? link_to(@project.last_synced_sha.first(7), "#{@project.repo_url}/commit/#{@project.last_synced_sha}", class: "mono") : "never"), time_ago(@project.synced_at) ], " · ") %></dd>
+          <dt>Changes</dt>
+          <dd><%= @project.direct_commits? ? "Admins may commit directly" : "Pull requests" %></dd>
+        </dl>
+      </div>
+    </div>
   <% end %>
 
-  <%= render Ui::SectionComponent.new(title: "Parse errors", count: @project.config_errors.size) do %>
+  <%= titled_section "Parse errors", count: @project.config_errors.size do %>
     <% if @project.config_errors? %>
-      <ul class="space-y-2" data-config-errors>
+      <ul class="flex-col gap-s" data-config-errors>
         <% @project.config_errors.each do |error| %>
           <li>
-            <%= render Ui::AlertComponent.new(tone: :bad) do %>
-              <code class="font-semibold"><%= [ error["file"], error["line"] ].compact.join(":") %></code>
-              <% if error["file"] %>
-                <%= link_to "view", "#{@project.repo_url}/blob/#{@project.last_synced_sha || @project.default_branch}/#{error["file"]}#{"#L#{error["line"]}" if error["line"]}", class: "text-xs underline" %>
-              <% end %>
-              <p><%= error["message"] %></p>
-            <% end %>
+            <div class="alert alert--bad" role="alert">
+              <span class="alert__icon" aria-hidden="true">✕</span>
+              <div class="alert__body">
+                <div>
+                  <code class="txt-strong"><%= [ error["file"], error["line"] ].compact.join(":") %></code>
+                  <% if error["file"] %>
+                    <%= link_to "view", "#{@project.repo_url}/blob/#{@project.last_synced_sha || @project.default_branch}/#{error["file"]}#{"#L#{error["line"]}" if error["line"]}", class: "link txt-small" %>
+                  <% end %>
+                </div>
+                <p><%= error["message"] %></p>
+              </div>
+            </div>
           </li>
         <% end %>
       </ul>
     <% else %>
-      <%= render Ui::EmptyStateComponent.new(title: "No parse errors", icon: :projects) do %>Every config parsed with Kamal <%= KamalConfig::KAMAL_VERSION %>.<% end %>
+      <%= empty_state "No parse errors", icon_name: :projects do %>Every config parsed with Kamal <%= KamalConfig::KAMAL_VERSION %>.<% end %>
     <% end %>
   <% end %>
 </div>
 
-<%= render Ui::SectionComponent.new(title: "Configs found", count: @apps.size) do %>
-  <%= render Ui::TableComponent.new(rows: @apps, empty: "No configs matched.") do |table| %>
-    <% table.with_column("App", header: true) { |app| link_to app.name, app, class: "hover:text-accent" } %>
-    <% table.with_column("Config", mono: true) { |app| app.config_path } %>
-    <% table.with_column("Destination") { |app| app.destination.presence || "–" } %>
-    <% table.with_column("Servers", align: :right) { |app| app.roles.sum { it["hosts"].size } } %>
-    <% table.with_column("Hostnames") { |app| app.hostnames.join(", ") } %>
-  <% end %>
+<%= titled_section "Configs found", count: @apps.size do %>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">App</th>
+          <th scope="col">Config</th>
+          <th scope="col">Destination</th>
+          <th scope="col" class="table__end">Servers</th>
+          <th scope="col">Hostnames</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @apps.each do |app| %>
+          <tr>
+            <th scope="row"><%= link_to app.name, app %></th>
+            <td class="mono txt-small"><%= app.config_path %></td>
+            <td><%= app.destination.presence || "–" %></td>
+            <td class="table__end"><%= app.roles.sum { it["hosts"].size } %></td>
+            <td><%= app.hostnames.join(", ") %></td>
+          </tr>
+        <% end %>
+        <% if @apps.none? %>
+          <tr><td colspan="5" class="table__empty">No configs matched.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
 <% end %>

@@ -1,44 +1,90 @@
 <% content_for :title, "New app" %>
-<%= render Ui::PageHeaderComponent.new(title: "New app", subtitle: "Meridian writes a Kamal config from a template, checks it with Kamal, and opens a pull request on the infra repository. Nothing runs until it is merged.") %>
+<%= page_header "New app", meta: "Meridian writes a Kamal config from a template, checks it with Kamal, and opens a pull request on the infra repository. Nothing runs until it is merged." %>
 
-<%= form_with model: @draft, url: apps_path, scope: :app_draft, class: "space-y-6" do |form| %>
+<%= form_with model: @draft, url: apps_path, scope: :app_draft, class: "stack-l" do |form| %>
   <%= render "shared/errors", record: @draft %>
 
-  <div class="grid gap-6 lg:grid-cols-2">
-    <%= render Ui::CardComponent.new(title: "The app") do %>
-      <div class="space-y-4">
-        <%= form.field :project_id, label: "Infra repository" do %><%= form.select :project_id, Project.order(:name).map { [ "#{it.name} (#{it.repo_full_name})", it.id ] } %><% end %>
-        <%= form.field :service, label: "Name", hint: safe_join([ "Kamal's ", tag.code("service"), ". Lowercase." ]), required: true, placeholder: "shop", pattern: "[a-z0-9][a-z0-9_\\-]*" %>
-        <%= form.field :source_repo, label: "Source repository", hint: "Where the app's code and Dockerfile live. Previews watch its pull requests.", required: true, placeholder: "acme/shop" %>
-        <fieldset class="space-y-1.5">
-          <legend class="mb-1 text-xs font-medium text-ink-muted">Kind</legend>
-          <% App::KINDS.each do |kind| %>
-            <label class="flex items-center gap-2 text-sm"><%= form.radio_button :kind, kind %> <span class="font-medium"><%= kind.capitalize %></span> <span class="text-xs text-ink-muted"><%= AppDraft::DESCRIPTIONS[kind] %>, port <%= AppDraft::PORTS[kind] %></span></label>
-          <% end %>
-        </fieldset>
-        <%= form.field :hostname, required: true, placeholder: "shop.example.com" %>
-      </div>
-    <% end %>
-
-    <%= render Ui::CardComponent.new(title: "Where it runs") do %>
-      <div class="space-y-4">
-        <%= form.field :server_ids, label: "Servers", hint: "Hold ⌘ or Ctrl to choose several." do %>
-          <%= form.select :server_ids, Server.ordered.group_by { it.label("region") || "unlabelled" }.sort.map { |region, servers| [ region, servers.map { [ it.name, it.id ] } ] }, {}, multiple: true, size: 10, grouped: true %>
-        <% end %>
-        <%= form.field :label_selector, label: "…or every server with these labels", placeholder: "role=web,region=sgp" %>
-        <%= form.field :destination, hint: "Optional. Writes a base config plus a destination file.", placeholder: "production" %>
-        <div class="grid gap-4 sm:grid-cols-3">
-          <%= form.field :app_port, label: "Port" do %><%= form.number_field :app_port, placeholder: "by kind" %><% end %>
-          <%= form.field :registry %>
-          <%= form.field :version, label: "First version" %>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card__header">The app</div>
+      <div class="card__body">
+        <div class="field">
+          <%= form.label :project_id, "Infra repository" %>
+          <%= form.select :project_id, Project.order(:name).map { [ "#{it.name} (#{it.repo_full_name})", it.id ] } %>
+          <%= field_errors(form.object, :project_id) %>
         </div>
-        <p class="text-xs text-ink-muted">The first version is the image tag CI deploys once the pull request is merged.</p>
+        <div class="field">
+          <%= form.label :service, "Name" %>
+          <%= form.text_field :service, required: true, placeholder: "shop", pattern: "[a-z0-9][a-z0-9_\\-]*" %>
+          <p class="field__hint">Kamal's <code>service</code>. Lowercase.</p>
+          <%= field_errors(form.object, :service) %>
+        </div>
+        <div class="field">
+          <%= form.label :source_repo, "Source repository" %>
+          <%= form.text_field :source_repo, required: true, placeholder: "acme/shop" %>
+          <p class="field__hint">Where the app's code and Dockerfile live. Previews watch its pull requests.</p>
+          <%= field_errors(form.object, :source_repo) %>
+        </div>
+        <fieldset class="field">
+          <legend>Kind</legend>
+          <div class="flex-col gap-s">
+            <% App::KINDS.each do |kind| %>
+              <label class="check items-center"><%= form.radio_button :kind, kind %> <span class="txt-medium-weight"><%= kind.capitalize %></span> <span class="txt-small txt-muted"><%= AppDraft::DESCRIPTIONS[kind] %>, port <%= AppDraft::PORTS[kind] %></span></label>
+            <% end %>
+          </div>
+        </fieldset>
+        <div class="field">
+          <%= form.label :hostname %>
+          <%= form.text_field :hostname, required: true, placeholder: "shop.example.com" %>
+          <%= field_errors(form.object, :hostname) %>
+        </div>
       </div>
-    <% end %>
+    </div>
+
+    <div class="card">
+      <div class="card__header">Where it runs</div>
+      <div class="card__body">
+        <div class="field">
+          <%= form.label :server_ids, "Servers" %>
+          <%= form.select :server_ids, Server.ordered.group_by { it.label("region") || "unlabelled" }.sort.map { |region, servers| [ region, servers.map { [ it.name, it.id ] } ] }, {}, multiple: true, size: 10, grouped: true %>
+          <p class="field__hint">Hold ⌘ or Ctrl to choose several.</p>
+          <%= field_errors(form.object, :server_ids) %>
+        </div>
+        <div class="field">
+          <%= form.label :label_selector, "…or every server with these labels" %>
+          <%= form.text_field :label_selector, placeholder: "role=web,region=sgp" %>
+          <%= field_errors(form.object, :label_selector) %>
+        </div>
+        <div class="field">
+          <%= form.label :destination %>
+          <%= form.text_field :destination, placeholder: "production" %>
+          <p class="field__hint">Optional. Writes a base config plus a destination file.</p>
+          <%= field_errors(form.object, :destination) %>
+        </div>
+        <div class="fields fields--row">
+          <div class="field">
+            <%= form.label :app_port, "Port" %>
+            <%= form.number_field :app_port, placeholder: "by kind" %>
+            <%= field_errors(form.object, :app_port) %>
+          </div>
+          <div class="field">
+            <%= form.label :registry %>
+            <%= form.text_field :registry %>
+            <%= field_errors(form.object, :registry) %>
+          </div>
+          <div class="field">
+            <%= form.label :version, "First version" %>
+            <%= form.text_field :version %>
+            <%= field_errors(form.object, :version) %>
+          </div>
+        </div>
+        <p class="field__hint">The first version is the image tag CI deploys once the pull request is merged.</p>
+      </div>
+    </div>
   </div>
 
-  <div class="flex gap-2">
-    <%= form.submit "Open pull request" %>
-    <%= render Ui::ButtonComponent.new(label: "Cancel", href: apps_path, variant: :ghost) %>
+  <div class="flex gap-s">
+    <%= form.submit "Open pull request", class: "btn btn--primary" %>
+    <%= link_to "Cancel", apps_path, class: "btn btn--plain" %>
   </div>
 <% end %>

@@ -115,11 +115,7 @@ class Preview < ApplicationRecord
   # deleted directly, and the activity log says which containers are left
   # to remove by hand, and where.
   def abandon
-    existing = begin
-      project.git.file(overlay_path)
-    rescue GitHost::NotFound
-      nil
-    end
+    existing = project.git.file_or_nil(overlay_path)
     hosts = existing ? overlay_hosts(existing.content) : []
     project.git.delete_file(overlay_path, sha: existing.sha, message: "chore(#{app.service}): remove preview pr-#{pr_number}, its config is gone") if existing
     left = "#{app.service} #{destination} containers#{" on #{hosts.to_sentence}" if hosts.any?}"
@@ -133,11 +129,7 @@ class Preview < ApplicationRecord
     result = KamalConfig.parse({ app.config_path => base_config, overlay_path => content }, [ { "path" => app.config_path, "destination" => destination } ]).sole
     raise ArgumentError, "Kamal rejected the preview overlay: #{result.dig("error", "message")}" if result["error"]
 
-    existing = begin
-      project.git.file(overlay_path)
-    rescue GitHost::NotFound
-      nil
-    end
+    existing = project.git.file_or_nil(overlay_path)
     project.git.write_file(overlay_path, content: content, sha: existing&.sha, message: "chore(#{app.service}): preview pr-#{pr_number}")
     Event.record("preview.opened", subject: self, summary: "Preview of #{app.source_repo}##{pr_number} at #{hostname}")
   end
@@ -166,7 +158,7 @@ class Preview < ApplicationRecord
   def server
     account = Account.current
     candidates = if account.preview_selector.blank? then app.servers.ordered.to_a
-    elsif (labels = account.preview_labels).any? then Server.ordered.select { |s| labels.all? { |k, v| s.label(k) == v } }
+    elsif (labels = account.preview_labels).any? then Server.labelled(labels)
     else []
     end
     # Its hostname goes into the overlay, where Kamal evaluates ERB.

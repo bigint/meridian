@@ -1,16 +1,12 @@
 # The single row of install-wide settings.
 class Account < ApplicationRecord
+  include Locatable
+
   enum :preview_hostnames, { nested: "nested", flat: "flat" }, prefix: true, validate: true
 
   validates :name, presence: true
   validates :preview_ttl_days, numericality: { greater_than: 0 }
-  validates :latitude, numericality: { in: -90..90 }, allow_nil: true
-  validates :longitude, numericality: { in: -180..180 }, allow_nil: true
   validate :preview_selector_is_labels
-
-  def located?
-    latitude && longitude
-  end
 
   # Flat names sit one level below the domain, so one wildcard record and
   # Cloudflare's free certificate cover every app. Kamal allows service names

@@ -27,11 +27,7 @@ module Project::Changes
 
   private
     def write(path, content, title, actor, branch: default_branch)
-      existing = begin
-        git.file(path, ref: branch)
-      rescue GitHost::NotFound
-        nil
-      end
-      git.write_file(path, content: content, sha: existing&.sha, branch: branch, message: "#{title}\n\nMeridian-Actor: #{actor.display_name} <#{actor.email_address}>")
+      existing = git.file_or_nil(path, ref: branch)
+      git.write_file(path, content: content, sha: existing&.sha, branch: branch, message: "#{title}\n\n#{actor.commit_trailer}")
     end
 end

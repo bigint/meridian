@@ -30,8 +30,6 @@ module MapsHelper
     placed[:hub] ? list.unshift([ placed[:hub], nil ]) : list
   end
 
-  def place_region(site) = site.servers.filter_map { it.label("region") }.tally.max_by(&:last)&.first
-
   def place_coordinates(site)
     server = site.servers.find(&:located?)
     lat, lng = server.latitude, server.longitude

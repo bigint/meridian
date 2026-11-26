@@ -28,6 +28,9 @@ class User < ApplicationRecord
     name.presence || email_address
   end
 
+  # Ends every commit Meridian makes for this person.
+  def commit_trailer = "Meridian-Actor: #{display_name} <#{email_address}>"
+
   # Hangs up every cable this user has open; each reconnects, or doesn't, as
   # who they are now allows.
   def disconnect

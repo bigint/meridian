@@ -86,6 +86,12 @@ class GitHost::GitHub
     end
   end
 
+  def file_or_nil(path, ref: project.default_branch)
+    file(path, ref: ref)
+  rescue GitHost::NotFound
+    nil
+  end
+
   # Writes one file with the contents API. Passing the blob SHA that was read
   # makes a stale write fail instead of overwriting someone else's change.
   def write_file(path, content:, message:, sha: nil, branch: project.default_branch)

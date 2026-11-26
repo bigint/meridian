@@ -1,6 +1,6 @@
 <%# The map's side panel: one place, what runs on each of its servers, and
     what it shares with other places. locals: map, site %>
-<% region = place_region(site) %>
+<% region = site.label("region") %>
 <% neighbours = map.neighbours(site).sort_by { |other, apps| [ -apps.size, other.name ] } %>
 <div class="stack-l" data-place-inspector>
   <div class="flex-col gap-s">

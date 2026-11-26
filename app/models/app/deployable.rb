@@ -91,9 +91,7 @@ module App::Deployable
     end
 
     def read_version_file
-      project.git.file(version_file_path)
-    rescue GitHost::NotFound
-      nil
+      project.git.file_or_nil(version_file_path)
     end
 
     def newest_release_sha
@@ -101,7 +99,7 @@ module App::Deployable
     end
 
     def commit_message(verb, version, actor, body: nil)
-      [ "#{verb}(#{service}#{"-#{destination}" if destination.present?}): #{version}", body, "Meridian-Actor: #{actor.display_name} <#{actor.email_address}>" ].compact.join("\n\n")
+      [ "#{verb}(#{service}#{"-#{destination}" if destination.present?}): #{version}", body, actor.commit_trailer ].compact.join("\n\n")
     end
 
     def record_deploy(kind, version, commit, actor)

@@ -18,13 +18,9 @@ class WorldMap
     def state = Drift.worst(cells.map(&:state)) || (servers.any?(&:reporting?) ? "in_sync" : "unknown")
     def stale? = servers.all? { !it.reporting? || it.stale? }
     # A "city" label reads best; otherwise the most common region, then a server.
-    def name
-      %w[ city region ].each do |key|
-        common = servers.filter_map { it.label(key) }.tally.max_by(&:last)&.first
-        return common if common
-      end
-      servers.first.short_name
-    end
+    def name = label("city") || label("region") || servers.first.short_name
+    # The value most of its servers have for a label.
+    def label(key) = servers.filter_map { it.label(key) }.tally.max_by(&:last)&.first
     def apps = cells.map(&:app).uniq
   end
 

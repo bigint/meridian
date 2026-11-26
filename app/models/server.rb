@@ -1,4 +1,6 @@
 class Server < ApplicationRecord
+  include Locatable
+
   DEFAULT_INTERVAL = 15.seconds
   # Silent for three of its agent's intervals, and never less than this.
   STALE_AFTER = DEFAULT_INTERVAL * 3
@@ -16,8 +18,6 @@ class Server < ApplicationRecord
   has_many :agent_tokens, dependent: :nullify
 
   validates :name, :hostname, presence: true
-  validates :latitude, numericality: { in: -90..90 }, allow_nil: true
-  validates :longitude, numericality: { in: -180..180 }, allow_nil: true
 
   scope :ordered, -> { order(:name) }
   scope :silent, -> {
@@ -25,6 +25,9 @@ class Server < ApplicationRecord
       .where("julianday(last_seen_at) < julianday(:now) - MAX(:floor, 3 * COALESCE(interval_seconds, :default)) / 86400.0",
         now: Time.current, floor: STALE_AFTER.to_i, default: DEFAULT_INTERVAL.to_i)
   }
+
+  # The servers with every one of these labels, such as { "role" => "preview" }.
+  def self.labelled(labels) = ordered.select { |server| labels.all? { |key, value| server.label(key) == value } }
 
   # Git names servers by the host Kamal SSHes to. Agents report the machine's
   # own hostname. Either finds the same row.
@@ -53,10 +56,6 @@ class Server < ApplicationRecord
 
   def self.ip?(host)
     host.to_s.match?(/\A[\d.:]+\z/)
-  end
-
-  def located?
-    latitude && longitude
   end
 
   def reporting?

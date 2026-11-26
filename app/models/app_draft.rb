@@ -49,7 +49,7 @@ class AppDraft
   def servers
     @servers ||= if label_selector.present?
       wanted = selector_terms.select { it.size == 2 }.to_h
-      wanted.empty? ? [] : Server.ordered.select { |server| wanted.all? { |key, value| server.label(key) == value } }
+      wanted.empty? ? [] : Server.labelled(wanted)
     else
       Server.where(id: Array(server_ids).compact_blank).ordered.to_a
     end

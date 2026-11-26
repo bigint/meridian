@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The CI workflow deploys apps with a destination: a change to `deploy/web.production.version` ran `kamal deploy -c deploy/web.production.yml` without `-d production`, which Kamal rejects. It also finds `.yaml` configs, and deploys every version file a push changed rather than only the last commit's. Press **Add CI workflow** on the project page to get the new workflow.
+
 ## v0.1.0 (2026-11-26)
 
 The first release: the milestones M0 to M6, and everything built on them since.

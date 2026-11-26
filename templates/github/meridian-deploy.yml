@@ -39,9 +39,11 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
+      # The whole history, so a push of several commits can be diffed from
+      # the commit before the push.
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - id: plan
         shell: bash
         run: |
@@ -50,12 +52,27 @@ jobs:
             jq -nc --arg c "${{ inputs.config }}" --arg d "${{ inputs.destination }}" --arg v "${{ inputs.version }}" --arg k "${{ inputs.command }}" \
               '[{config:$c, destination:$d, version:$v, command:$k}]' > matrix.json
           else
+            # Every version file the push changed, from the commit before it
+            # (the parent when that commit is unknown, e.g. a new branch).
+            before="${{ github.event.before }}"
+            if ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+              before="$(git rev-parse -q --verify HEAD~1 || git hash-object -t tree /dev/null)"
+            fi
             : > rows
-            for file in $(git diff --name-only HEAD~1 HEAD -- '*.version'); do
+            git diff --name-only "$before" HEAD -- '*.version' | while IFS= read -r file; do
               [ -f "$file" ] || continue
-              stem="${file%.version}"
-              if [ -f "$stem.yml" ]; then config="$stem.yml"; destination=""
-              else config="${stem%.*}.yml"; destination="${stem##*.}"; fi
+              # <config>.<destination>.version when <config>.yml exists,
+              # otherwise <config>.version; configs may end in .yml or .yaml.
+              stem="${file%.version}" name="${stem##*/}" config="" destination=""
+              for ext in yml yaml; do
+                if [ "$name" != "${name%.*}" ] && [ -f "${stem%.*}.$ext" ]; then
+                  config="${stem%.*}.$ext" destination="${stem##*.}"; break
+                fi
+              done
+              for ext in yml yaml; do
+                if [ -z "$config" ] && [ -f "$stem.$ext" ]; then config="$stem.$ext"; fi
+              done
+              if [ -z "$config" ]; then echo "::warning::No Kamal config for $file"; continue; fi
               jq -nc --arg c "$config" --arg d "$destination" --arg v "$(tr -d '[:space:]' < "$file")" \
                 '{config:$c, destination:$d, version:$v, command:"deploy"}' >> rows
             done

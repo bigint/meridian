@@ -14,9 +14,19 @@ module BoardsHelper
     server = item.server && tag.strong(item.server.short_name, class: "mono", data: { tooltip: item.server.name })
 
     case item.state
-    when "missing" then safe_join([ app, " isn't running on ", server, ", but Git says it should." ])
+    when "missing"
+      if item.cell.role_states.values.all?("missing")
+        safe_join([ app, " isn't running on ", server, ", but Git says it should." ])
+      else
+        safe_join([ app, "'s ", tag.code(item.cell.roles_in("missing").join(", ")), " role isn't running on ", server, ", but Git says it should." ])
+      end
     when "drifted" then safe_join([ app, " on ", server, " runs ", tag.code(item.cell.versions.join(", ")), ", not ", tag.code(item.cell.release), " from Git." ])
-    when "stray" then safe_join([ app, " is running on ", server, ", but Git doesn't put it there." ])
+    when "stray"
+      if item.cell.role_states.values.all?("stray")
+        safe_join([ app, " is running on ", server, ", but Git doesn't put it there." ])
+      else
+        safe_join([ app, " runs its ", tag.code(item.cell.roles_in("stray").compact.join(", ").presence || "unnamed"), " role on ", server, ", but Git doesn't put that role there." ])
+      end
     when "stale"
       server ? safe_join([ server, "'s agent has gone quiet." ]) : safe_join([ tag.strong(pluralize(item.count, "agent")), " have gone quiet." ])
     end
@@ -25,7 +35,7 @@ module BoardsHelper
   # What it probably means.
   def attention_detail(item)
     case item.state
-    when "missing" then "Roles: #{item.cell.roles.join(", ")}. A deploy may have failed, or the container stopped."
+    when "missing" then "#{"Role".pluralize(item.cell.roles_in("missing").size)}: #{item.cell.roles_in("missing").join(", ")}. A deploy may have failed, or the container stopped."
     when "drifted" then "A deploy may still be rolling out, or it stopped part-way."
     when "stray" then "Remove it, or add the server to the app's config."
     when "stale"

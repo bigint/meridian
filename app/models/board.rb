@@ -6,8 +6,13 @@ class Board
   VIEWS = %w[ apps servers ].freeze
   AUTO_GROUP_ABOVE = 30
 
-  Cell = Data.define(:app, :server, :state, :versions, :roles, :health, :release) do
+  # state is the worst of role_states: each role Git assigns here, and each
+  # role running here that Git doesn't assign, has a state of its own.
+  Cell = Data.define(:app, :server, :state, :versions, :roles, :health, :release, :role_states) do
+    def initialize(role_states: {}, **) = super
+
     def version = versions.first || release
+    def roles_in(state) = role_states.select { |_, it| it == state }.keys
   end
 
   Group = Data.define(:name, :rows, :columns, :cells) do
@@ -142,13 +147,18 @@ class Board
 
         (assigned.keys | running.keys).filter_map do |pair|
           app, server = apps[pair.first], servers[pair.last]
-          versions = Array(running[pair]).map { it[3] }.uniq
-          state = Drift.state(assigned: assigned.key?(pair), versions: versions, release: releases[app.id], server: server)
+          wanted = Array(assigned[pair]).map(&:third)
+          by_role = Array(running[pair]).group_by(&:third)
+          role_states = (wanted | by_role.keys).index_with do |role|
+            Drift.state(assigned: wanted.include?(role), versions: Array(by_role[role]).map { it[3] }.uniq, release: releases[app.id], server: server)
+          end.compact
+          state = Drift.worst(role_states.values)
           next unless state
 
-          roles = (Array(assigned[pair]).map(&:third) | Array(running[pair]).map(&:third)).compact.sort
+          versions = Array(running[pair]).map { it[3] }.uniq
           health = Array(running[pair]).map { it[4] }.compact.min_by { %w[ unhealthy starting healthy ].index(it) || 3 }
-          Cell.new(app: app, server: server, state: state, versions: versions, roles: roles, health: health, release: releases[app.id])
+          Cell.new(app: app, server: server, state: state, versions: versions, roles: role_states.keys.compact.sort, health: health,
+            release: releases[app.id], role_states: role_states)
         end
       end
     end

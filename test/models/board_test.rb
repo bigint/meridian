@@ -47,7 +47,35 @@ class BoardTest < ActiveSupport::TestCase
     assert_equal Board.new.summary, missing.summary, "summary ignores the state filter"
   end
 
+  test "each role Git assigns to a server has a state, and the worst one is the cell's" do
+    app = versioned_app("shop", roles: %w[ web job ])
+    start app, role: "web", version: "v2"
+
+    cell = Board.new.cells.sole
+    assert_equal "missing", cell.state, "the job role isn't running"
+    assert_equal({ "web" => "in_sync", "job" => "missing" }, cell.role_states)
+    assert_equal [ "missing" ], Board.new.attention.map(&:state)
+
+    start app, role: "job", version: "v2"
+    start app, role: "cron", version: "v2"
+    cell = Board.new.cells.sole
+    assert_equal "stray", cell.state, "Git doesn't put the cron role here"
+    assert_equal [ "cron" ], cell.roles_in("stray")
+  end
+
   private
+    def versioned_app(service, version: "v2", roles: %w[ web ], server: @server)
+      app = projects(:infra).apps.create!(service: service, config_path: "deploy/#{service}.yml", version_path: "deploy/#{service}.version")
+      app.releases.create!(version: version, commit_sha: SecureRandom.hex(20), committed_at: 1.hour.ago)
+      roles.each { app.assignments.create!(server: server, role: it) }
+      app
+    end
+
+    def start(app, role:, version:, server: @server)
+      Placement.create!(server: server, app: app, container_id: SecureRandom.hex(6), name: "#{app.service}-#{role}-#{version}",
+        service: app.service, role: role, version: version, state: "running", observed_at: Time.current)
+    end
+
     def with_cache(store)
       original, Rails.cache = Rails.cache, store
       yield

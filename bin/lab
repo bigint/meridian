@@ -42,6 +42,21 @@ push_site() {
   echo "$site: pushed ${sha:0:7}"
 }
 
+# Saleor (pg, redis, an API, a Celery worker and a dashboard) at a release
+# tag such as 3.22.77: ghcr.io/saleor/IMAGE labelled for Kamal and pushed
+# as localhost:5555/saleor/IMAGE:VERSION.
+push_saleor() {
+  local image="$1" version="${2:?usage: bin/lab push $1 VERSION (a release tag, e.g. 3.22.77)}" service target
+  case "$image" in
+    saleor) service=saleor-api target=api ;;
+    saleor-dashboard) service=saleor-dashboard target=dashboard ;;
+  esac
+  docker build -q --target "$target" --build-arg IMAGE="ghcr.io/saleor/$image:$version" --build-arg SERVICE="$service" \
+    -t "localhost:5555/saleor/$image:$version" "$LAB/saleor" >/dev/null
+  docker push -q "localhost:5555/saleor/$image:$version" >/dev/null
+  echo "$image: pushed $version"
+}
+
 ensure_secrets() {
   mkdir -p "$SECRETS" && chmod 700 "$SECRETS"
   [ -f "$SECRETS/id_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -C meridian-lab -f "$SECRETS/id_ed25519"
@@ -49,6 +64,10 @@ ensure_secrets() {
   [ -f "$SECRETS/registry_password" ] || (openssl rand -hex 16 > "$SECRETS/registry_password")
   [ -s "$SECRETS/webhook_secret" ] || (openssl rand -hex 32 > "$SECRETS/webhook_secret")
   [ -s "$SECRETS/htpasswd" ] || docker run --rm httpd:2.4-alpine htpasswd -Bbn lab "$(cat "$SECRETS/registry_password")" > "$SECRETS/htpasswd"
+  # Saleor: its database password, Django secret key and JWT signing key (base64 PEM).
+  [ -s "$SECRETS/saleor_postgres_password" ] || (openssl rand -hex 24 > "$SECRETS/saleor_postgres_password")
+  [ -s "$SECRETS/saleor_secret_key" ] || (openssl rand -hex 50 > "$SECRETS/saleor_secret_key")
+  [ -s "$SECRETS/saleor_rsa_private_key_b64" ] || (openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | base64 | tr -d "\n" > "$SECRETS/saleor_rsa_private_key_b64")
 }
 
 registry_login() {
@@ -67,12 +86,15 @@ case "${1:-}" in
     ;;
 
   push)
-    site="${2:?usage: bin/lab push SITE|all [VERSION]}"
+    site="${2:?usage: bin/lab push SITE|all [VERSION] | saleor|saleor-dashboard VERSION}"
     registry_login
     if [ "$site" = all ]; then
       for site in "${SITES[@]}"; do push_site "$site"; done
     else
-      push_site "$site" "${3:-}"
+      case "$site" in
+        saleor|saleor-dashboard) push_saleor "$site" "${3:-}" ;;
+        *) push_site "$site" "${3:-}" ;;
+      esac
     fi
     ;;
 
@@ -112,6 +134,42 @@ case "${1:-}" in
       --url="${MERIDIAN_URL:-http://localhost:3000}/webhooks/github" --secret="$(cat "$SECRETS/webhook_secret")"
     ;;
 
+  secrets)
+    # The repository secrets the infra repo's .kamal/secrets reads. Sets only
+    # those the repository lacks, so it never replaces one set elsewhere.
+    repo="${2:?usage: bin/lab secrets owner/infra-repo}"
+    ensure_secrets
+    have="$(gh secret list --repo "$repo" --json name --jq '.[].name')"
+    while read -r name file; do
+      if grep -qx "$name" <<< "$have"; then echo "$name: already set"
+      else gh secret set "$name" --repo "$repo" < "$SECRETS/$file" && echo "$name: set"; fi
+    done <<'EOF'
+KAMAL_REGISTRY_PASSWORD registry_password
+KAMAL_SSH_PRIVATE_KEY id_ed25519
+SALEOR_POSTGRES_PASSWORD saleor_postgres_password
+SALEOR_SECRET_KEY saleor_secret_key
+SALEOR_RSA_PRIVATE_KEY_B64 saleor_rsa_private_key_b64
+EOF
+    ;;
+
+  kamal)
+    # Kamal against a fresh clone of the infra repo, from inside the lab network,
+    # for what the deploy workflow doesn't do (kamal accessory boot, app exec…).
+    repo="${2:?usage: bin/lab kamal owner/infra-repo KAMAL_ARGS...}"
+    shift 2
+    ensure_secrets
+    clone="$(mktemp -d)"
+    trap 'rm -rf "$clone"' EXIT
+    gh repo clone "$repo" "$clone" -- -q --depth 1
+    docker run --rm -i --network meridian-lab --entrypoint kamal -w /infra -v "$clone:/infra" \
+      -v "$SECRETS/id_ed25519:/root/.ssh/id_ed25519:ro" \
+      -e KAMAL_REGISTRY_PASSWORD="$(cat "$SECRETS/registry_password")" \
+      -e SALEOR_POSTGRES_PASSWORD="$(cat "$SECRETS/saleor_postgres_password")" \
+      -e SALEOR_SECRET_KEY="$(cat "$SECRETS/saleor_secret_key")" \
+      -e SALEOR_RSA_PRIVATE_KEY_B64="$(cat "$SECRETS/saleor_rsa_private_key_b64")" \
+      meridian-lab-runner "$@"
+    ;;
+
   ssh)
     server="${2:-apse1-az1-node-01}"
     docker exec -it "meridian-lab-$server-1" sh
@@ -130,7 +188,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | versions SITE | agents | webhooks owner/repo | ssh [server] | status | down" >&2
+    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | push saleor|saleor-dashboard VERSION | versions SITE | agents | secrets owner/repo | kamal owner/repo ARGS... | webhooks owner/repo | ssh [server] | status | down" >&2
     exit 1
     ;;
 esac

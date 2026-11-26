@@ -449,6 +449,26 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
+// An HTTP_PROXY set for reaching Meridian must not carry Docker traffic:
+// inspect responses hold every container's environment.
+func TestDockerClientNeverUsesAnHTTPProxy(t *testing.T) {
+	for _, host := range []string{"tcp://web-meridian_docker:2375", "unix:///var/run/docker.sock"} {
+		c, err := newDockerClient(host)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, client := range map[string]*http.Client{"one-shot": c.http, "stream": c.stream} {
+			tr, ok := client.Transport.(*http.Transport)
+			if !ok {
+				t.Fatalf("%s %s client uses %T, which honours HTTP_PROXY", host, name, client.Transport)
+			}
+			if tr.Proxy != nil {
+				t.Fatalf("%s %s client has a proxy function", host, name)
+			}
+		}
+	}
+}
+
 func TestNewDockerClientRejectsUnknownScheme(t *testing.T) {
 	if _, err := newDockerClient("ssh://host"); err == nil {
 		t.Fatal("want error for ssh://")

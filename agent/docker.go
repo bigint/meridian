@@ -55,8 +55,11 @@ func newDockerClient(host string) (*dockerClient, error) {
 		}
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.ResponseHeaderTimeout = dockerTimeout
+		// Never through HTTP_PROXY: inspect responses carry every container's
+		// environment, and the socket proxy is a neighbour, not the internet.
+		transport.Proxy = nil
 		return &dockerClient{
-			http:   &http.Client{Timeout: dockerTimeout},
+			http:   &http.Client{Transport: transport, Timeout: dockerTimeout},
 			stream: &http.Client{Transport: transport},
 			base:   "http://" + u.Host,
 		}, nil

@@ -41,6 +41,9 @@ class KamalConfig
 
       unless thread.join(TIMEOUT)
         Process.kill("KILL", -thread.pid)
+        # The pipes close when this block returns; let the readers see EOF
+        # first instead of dying on a stream closed under them.
+        [ output, errors ].each { it.join(1) }
         raise Error, "Parsing timed out after #{TIMEOUT.inspect}"
       end
 

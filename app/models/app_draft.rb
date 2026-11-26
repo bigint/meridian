@@ -108,7 +108,7 @@ class AppDraft
     end
 
     def tunnel_steps
-      setup = Tunnel::Setup.new(App.new(service: service, config_path: config_path, destination: destination))
+      setup = Tunnel::Setup.new(App.new(service: service, config_path: config_path, destination: destination, hostnames: [ hostname ]))
       [
         "In Cloudflare, open Networking → Tunnels, click Create Tunnel and name it #{service}.",
         "On the tunnel's Overview, under Install cloudflared connector, choose Docker and copy the command. Keep only the token, the long value after --token. Don't run the command.",

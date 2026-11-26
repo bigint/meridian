@@ -107,6 +107,33 @@
     .step__mark { background: var(--color-ok-soft); color: var(--color-ok); }
     .step__title { color: var(--color-ink-muted); text-decoration: line-through; } }
 
+  /* A walkthrough: numbered steps joined by a line, grouped by where you
+     do them. A step Meridian can see is done gets a tick. */
+  .walk { display: flex; flex-direction: column; }
+  .walk__phase { margin-block-end: var(--space); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-ink-muted);
+    * + & { margin-block-start: var(--space-xl); } }
+  .walk__where { margin-inline-start: var(--space-xs); font-family: var(--font-mono); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--color-ink-faint); }
+  .walk__step { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--space-m); padding-block-end: var(--space-xl);
+    &::before { content: ""; position: absolute; inset-block: 2.25rem 0.5rem; inset-inline-start: calc(0.875rem - 0.5px); border-inline-start: 1px solid var(--color-line); }
+    &:last-child { padding-block-end: 0; &::before { display: none; } } }
+  .walk__mark { display: grid; place-items: center; inline-size: 1.75rem; block-size: 1.75rem; border: 1px solid var(--color-line-strong); border-radius: 50%; background: var(--color-canvas); font-family: var(--font-mono); font-size: var(--text-s); font-weight: 600; color: var(--color-ink-muted);
+    svg { inline-size: 0.875rem; block-size: 0.875rem; } }
+  .walk__step--done .walk__mark { border-color: var(--color-ok-line); background: var(--color-ok-soft); color: var(--color-ok); }
+  .walk__body { display: flex; flex-direction: column; gap: var(--space-s); padding-block-start: 0.25rem; }
+  .walk__title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-s); font-size: var(--text-m); font-weight: 600; color: var(--color-ink); }
+  .walk__text { max-inline-size: 42rem; color: var(--color-ink-muted); }
+  .walk__note { max-inline-size: 42rem; font-size: var(--text-s); color: var(--color-ink-faint); }
+  .walk__body .facts { margin-block: var(--space-xs); font-size: var(--text); }
+
+  /* A short value to paste elsewhere, with its copy button. */
+  .copyable { display: inline-flex; align-items: center; max-inline-size: 100%; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
+  .copyable__value { padding: 0.125rem var(--space-s); font-size: var(--text-s); color: var(--color-ink); overflow-wrap: anywhere; }
+  .copyable__copy { display: grid; place-items: center; align-self: stretch; padding-inline: 0.375rem; border: 0; border-inline-start: 1px solid var(--color-line); border-radius: 0 var(--radius) var(--radius) 0; background: none; color: var(--color-ink-muted); cursor: pointer;
+    svg { inline-size: 0.8125rem; block-size: 0.8125rem; }
+    &:hover { background: var(--color-raised); color: var(--color-ink); }
+    .copyable__done { display: none; }
+    &[data-copied] { color: var(--color-ok); .copyable__idle { display: none; } .copyable__done { display: block; } } }
+
   .pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--space); }
 
   /* Forms */

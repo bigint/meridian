@@ -25,7 +25,7 @@ It is built the way 37signals builds Rails apps: plain CSS, ERB partials and hel
 | `layout.css` | The shell (sidebar, rail, top bar), page header, sections, the main + side panel split, the sign-in card |
 | `buttons.css` | `.btn` and its variants |
 | `badges.css` | `.badge`, `.chip`, `.cell`, `.avatar` |
-| `blocks.css` | Cards, tables, rows, facts, tabs, segmented controls, empty states, alerts, code blocks, steps, fields, menus, search results |
+| `blocks.css` | Cards, tables, rows, facts, tabs, segmented controls, empty states, alerts, code blocks, steps, walkthroughs, copyable values, fields, menus, search results |
 | `board.css`, `map.css` | The board's matrix, and the world map |
 | `utilities.css` | A short list of single-purpose classes (`flex`, `gap`, `txt-muted`, `mono`, `sr-only`…) |
 
@@ -63,7 +63,7 @@ Neutrals are zinc. Type is the system sans stack at 13px, with `ui-monospace` fo
 
 ## Helpers and partials
 
-Small, repeated pieces are helpers in `ApplicationHelper`: `page_header`, `titled_section`, `badge`, `state_badge`, `chip`, `version_cell`, `avatar`, `tabs`, `segmented`, `disclosure`, `alert_box`, `empty_state`, `pagination`, `field_errors`. A `<details>` keeps the open or closed state the person gave it when a live page morphs (`application.js`). Bigger pieces are partials next to the views that use them: `boards/_matrix`, `boards/_inspector`, `boards/_attention_item`, `apps/_deploy_progress`, `maps/_world`, `maps/_place`, `shared/_code_block`. Board and map wording lives in `BoardsHelper` and `MapsHelper`.
+Small, repeated pieces are helpers in `ApplicationHelper`: `page_header`, `titled_section`, `badge`, `state_badge`, `chip`, `version_cell`, `avatar`, `tabs`, `segmented`, `disclosure`, `alert_box`, `empty_state`, `copyable`, `pagination`, `field_errors`. A `<details>` keeps the open or closed state the person gave it when a live page morphs (`application.js`). Bigger pieces are partials next to the views that use them: `boards/_matrix`, `boards/_inspector`, `boards/_attention_item`, `apps/_deploy_progress`, `maps/_world`, `maps/_place`, `shared/_code_block`. Board and map wording lives in `BoardsHelper` and `MapsHelper`.
 
 **The version cell** is the unit of the whole interface: one app on one server, showing the version actually running, tinted by its drift state (green: what Git says; amber with ≠: another version; red ✕: missing; dotted: stray; dashed: quiet agent or unknown). The state is also a word for screen readers and a different border.
 

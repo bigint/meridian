@@ -1,0 +1,7 @@
+<li class="walk__step<%= " walk__step--done" if done %>">
+  <span class="walk__mark"><%= done ? icon(:copied, aria: { label: "Done" }) : number %></span>
+  <div class="walk__body">
+    <h3 class="walk__title"><%= title %><%= badge("Done", tone: :ok) if done %></h3>
+    <%= yield %>
+  </div>
+</li>

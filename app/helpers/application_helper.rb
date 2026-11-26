@@ -147,6 +147,16 @@ module ApplicationHelper
     end
   end
 
+  # A short value to paste somewhere else, with a copy button beside it.
+  def copyable(text)
+    tag.span class: "copyable", data: { controller: "clipboard" } do
+      tag.code(text, class: "copyable__value", data: { clipboard_target: "source" }) +
+        tag.button(type: "button", class: "copyable__copy", data: { action: "clipboard#copy", clipboard_target: "button" }, aria: { label: "Copy #{text}" }) do
+          icon(:copy, class: "copyable__idle") + icon(:copied, class: "copyable__done") + tag.span("Copy", class: "sr-only", data: { clipboard_target: "label" })
+        end
+    end
+  end
+
   def empty_state(title, icon_name: nil, &body)
     tag.div class: "empty" do
       safe_join([

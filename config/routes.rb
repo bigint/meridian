@@ -21,7 +21,7 @@ Rails.application.routes.draw do
   resources :events, only: :index
   resources :secrets, only: %i[ index create update ]
   resources :previews, only: %i[ index destroy ]
-  resources :tunnels, only: :index
+  resources :tunnels, only: %i[ index new ]
   resources :agent_tokens, only: %i[ index create destroy ], path: "agents"
 
   namespace :webhooks do

@@ -17,12 +17,31 @@ class Tunnel
     end
   end
 
-  # What it takes to put one app behind a tunnel, in that app's own names.
-  Setup = Data.define(:app) do
-    def secret_name = Tunnel.secret_name(app.service)
+  # What it takes to put one app behind a tunnel, in that app's own names,
+  # and which of those steps Meridian can see are done: the token set from
+  # its Secrets page, the connector in the config, the connector running.
+  # The steps in Cloudflare and in .kamal/secrets it can't see.
+  class Setup
+    attr_reader :app, :tunnel, :secret
+
+    def self.for(app, tunnels: Tunnel.all)
+      tunnel = tunnels.find { it.app == app }
+      new(app, tunnel: tunnel, secret: app.project.secret_names.find_by(name: tunnel&.secret_name || Tunnel.secret_name(app.service)))
+    end
+
+    def initialize(app, tunnel: nil, secret: nil)
+      @app, @tunnel, @secret = app, tunnel, secret
+    end
+
+    def secret_name = tunnel&.secret_name || Tunnel.secret_name(app.service)
     def secrets_line = "#{secret_name}=$#{secret_name}"
     def snippet = Tunnel.snippet(secret_name)
-    def boot_command = Tunnel.boot_command(app, LEGACY_NAME)
+    def boot_command = Tunnel.boot_command(app, tunnel&.name || LEGACY_NAME)
+    def hostname = app.hostnames.first
+
+    def token_saved? = secret&.last_set_at.present?
+    def in_config? = tunnel.present?
+    def running? = tunnel&.state == :running
   end
 
   attr_reader :app, :accessory, :connectors, :secret

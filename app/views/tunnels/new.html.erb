@@ -1,0 +1,105 @@
+<% content_for :title, "Set up a tunnel" %>
+<%= page_header "Set up a tunnel", meta: "Serve an app through Cloudflare Tunnel. Its servers need no open ports, and Cloudflare serves HTTPS." do %>
+  <%= link_to "All tunnels", tunnels_path, class: "btn" %>
+<% end %>
+
+<% if @setup.nil? %>
+  <%= empty_state "No apps yet", icon_name: :apps do %>
+    <p>Add an app first. A tunnel serves an app Meridian already knows from Git.</p>
+  <% end %>
+<% else %>
+  <% app = @setup.app %>
+
+  <div class="split">
+    <div class="split__main">
+      <section aria-labelledby="phase-cloudflare">
+        <h2 id="phase-cloudflare" class="walk__phase">In Cloudflare</h2>
+        <ol class="walk">
+          <%= render layout: "tunnels/step", locals: { number: 1, title: "Create the tunnel", done: false } do %>
+            <p class="walk__text">Open <strong>Networking → Tunnels</strong> and click <strong>Create Tunnel</strong>.</p>
+            <dl class="facts"><dt>Tunnel name</dt><dd><%= copyable app.service %></dd></dl>
+          <% end %>
+
+          <%= render layout: "tunnels/step", locals: { number: 2, title: "Copy its token", done: false } do %>
+            <p class="walk__text">On the tunnel's <strong>Overview</strong>, under <strong>Install cloudflared connector</strong>, choose <strong>Docker</strong> and copy the command. You need only the long value after <code>--token</code>.</p>
+            <p class="walk__note">Don't run the command. Kamal runs the connector in step 6.</p>
+          <% end %>
+
+          <%= render layout: "tunnels/step", locals: { number: 3, title: "Add a route", done: false } do %>
+            <p class="walk__text">On the <strong>Routes</strong> tab, click <strong>Add route</strong>, then <strong>Published application</strong>. Cloudflare creates the DNS record.</p>
+            <dl class="facts">
+              <dt>Hostname</dt><dd><%= @setup.hostname ? copyable(@setup.hostname) : tag.span("one the app's proxy answers to", class: "txt-faint") %></dd>
+              <dt>Service URL</dt><dd><%= copyable "http://kamal-proxy:80" %></dd>
+            </dl>
+            <% if @setup.hostname %>
+              <p class="walk__note">Serving a different hostname? Also set <strong>HTTP Host Header</strong> to <code><%= @setup.hostname %></code> under <strong>Additional application settings → HTTP</strong>, or kamal-proxy and the app answer 404. Keep it one level below the domain: Cloudflare's free certificate covers <code>app.example.com</code>, not <code>app.team.example.com</code>.</p>
+            <% end %>
+          <% end %>
+        </ol>
+      </section>
+
+      <section aria-labelledby="phase-git">
+        <h2 id="phase-git" class="walk__phase">In Git <span class="walk__where"><%= app.project.repo_full_name %></span></h2>
+        <ol class="walk">
+          <%= render layout: "tunnels/step", locals: { number: 4, title: "Save the token", done: @setup.token_saved? } do %>
+            <p class="walk__text">Set it on the <%= link_to "Secrets", secrets_path(anchor: "project-#{app.project_id}") %> page, and add the line below to <code>.kamal/secrets</code> so Kamal can read it.</p>
+            <dl class="facts">
+              <dt>Secret</dt><dd><%= copyable @setup.secret_name %></dd>
+              <dt>.kamal/secrets</dt><dd><%= copyable @setup.secrets_line %></dd>
+            </dl>
+          <% end %>
+
+          <%= render layout: "tunnels/step", locals: { number: 5, title: "Add the connector to the config", done: @setup.in_config? } do %>
+            <p class="walk__text">Append this to <code><%= app.config_path %></code> and commit it.</p>
+            <%= render "shared/code_block", code: @setup.snippet, label: app.config_path %>
+          <% end %>
+        </ol>
+      </section>
+
+      <section aria-labelledby="phase-servers">
+        <h2 id="phase-servers" class="walk__phase">On the servers</h2>
+        <ol class="walk">
+          <%= render layout: "tunnels/step", locals: { number: 6, title: "Start the connector", done: @setup.running? } do %>
+            <p class="walk__text">Run this once, from a machine that can SSH to the app's servers, with <code><%= @setup.secret_name %></code> in its environment. <code>kamal deploy</code> doesn't start accessories.</p>
+            <%= render "shared/code_block", code: @setup.boot_command, label: "Terminal" %>
+          <% end %>
+
+          <%= render layout: "tunnels/step", locals: { number: 7, title: "Check it", done: @setup.running? } do %>
+            <p class="walk__text">Every server shows <em>running</em> on the <%= link_to "Tunnels", tunnels_path %> page, and Cloudflare shows the tunnel as <strong>Healthy</strong>.</p>
+          <% end %>
+        </ol>
+      </section>
+    </div>
+
+    <aside class="split__aside">
+      <div class="panel">
+        <div>
+          <p class="panel__kicker">APP</p>
+          <%= form_with url: new_tunnel_path, method: :get, data: { controller: "autosubmit" } do |form| %>
+            <%= form.label :app, "App", class: "sr-only" %>
+            <%= form.select :app, @apps.map { [ it.name, it.id ] }, { selected: app.id }, data: { action: "autosubmit#submit" } %>
+            <noscript><%= form.submit "Show", name: nil, class: "btn" %></noscript>
+          <% end %>
+        </div>
+
+        <dl class="facts">
+          <dt>Config</dt><dd class="mono txt-small"><%= app.config_path %></dd>
+          <dt>Hostnames</dt><dd class="mono txt-small"><%= app.hostnames.any? ? safe_join(app.hostnames, tag.br) : "none" %></dd>
+          <dt>Servers</dt><dd class="mono txt-small"><%= app.servers.any? ? safe_join(app.servers.map { link_to(it.name, it) }, tag.br) : "none" %></dd>
+          <dt>Token</dt><dd><%= @setup.token_saved? ? badge("set", tone: :ok) : badge("not set here") %></dd>
+          <dt>Connectors</dt>
+          <dd>
+            <% if @setup.tunnel %>
+              <% running = @setup.tunnel.connectors.count { it.state == :running } %>
+              <%= badge("#{running} of #{@setup.tunnel.connectors.size} running", tone: running == @setup.tunnel.connectors.size ? :ok : :warn) %>
+            <% else %>
+              <span class="txt-faint">not in the config yet</span>
+            <% end %>
+          </dd>
+        </dl>
+
+        <p class="txt-small txt-muted">Give each app its own tunnel. Cloudflare spreads a tunnel's requests over all its connectors, so a tunnel shared by apps on different servers would reach servers that don't run the app.</p>
+      </div>
+    </aside>
+  </div>
+<% end %>

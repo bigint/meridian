@@ -92,6 +92,14 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select ".page-header", text: /everywhere/, count: 0
   end
 
+  test "a server page lists every app on the server, past one board page" do
+    server = Server.create!(name: "big-1.example.com", hostname: "big-1.example.com", last_seen_at: Time.current)
+    (Board::PER_PAGE + 5).times { |i| @project.apps.create!(service: "app-#{i}", config_path: "deploy/app-#{i}.yml").assignments.create!(server: server, role: "web") }
+
+    get server_path(server)
+    assert_select "section table tbody th a[href^='/apps/']", Board::PER_PAGE + 5
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]

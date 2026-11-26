@@ -2,7 +2,8 @@
 <% content_for :wide, true %>
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
-<% group = @board.groups.first %>
+<%# Every app here, not one board page of them. %>
+<% cells = @board.cells.sort_by { it.app.name } %>
 
 <% status = capture do %>
   <% if @server.stale? %><%= state_badge "stale" %> agent silent
@@ -16,7 +17,7 @@
   <div class="split__main" data-controller="live-stats" data-live-stats-server-id-value="<%= @server.id %>" data-action="turbo:morph@document->live-stats#apply">
     <%= render "live", server: @server %>
 
-    <%= titled_section "Apps", count: group&.rows&.size || 0 do %>
+    <%= titled_section "Apps", count: cells.size do %>
       <div class="table-wrap">
         <table class="table">
           <thead>
@@ -28,17 +29,15 @@
             </tr>
           </thead>
           <tbody>
-            <% rows = group ? group.rows : [] %>
-            <% rows.each do |app| %>
-              <% cell = group.cell(app, @server) %>
+            <% cells.each do |cell| %>
               <tr>
                 <td><%= version_cell cell %></td>
-                <th scope="row"><%= link_to app.name, app %></th>
+                <th scope="row"><%= link_to cell.app.name, cell.app %></th>
                 <td><%= state_badge cell.state %></td>
                 <td><%= cell.roles.join(", ") %></td>
               </tr>
             <% end %>
-            <% if rows.none? %>
+            <% if cells.none? %>
               <tr><td colspan="4" class="table__empty">Nothing assigned here.</td></tr>
             <% end %>
           </tbody>

@@ -1,0 +1,57 @@
+require "test_helper"
+
+class TunnelsTest < ActionDispatch::IntegrationTest
+  setup { sign_in_as users(:viewer) }
+
+  test "lists apps behind a tunnel with each connector's state and the boot command" do
+    project = projects(:infra)
+    running = Server.create!(name: "a.example.com", hostname: "a.example.com", last_seen_at: 1.second.ago)
+    Server.create!(name: "b.example.com", hostname: "b.example.com", last_seen_at: 1.second.ago)
+    running.placements.create!(container_id: "c1", name: "shop-cloudflared", kind: "accessory", service: "shop-cloudflared", state: "running", observed_at: Time.current)
+    project.apps.create!(service: "shop", destination: "production", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ],
+      accessories: [ { "name" => "cloudflared", "service" => "shop-cloudflared", "image" => "cloudflare/cloudflared:2026", "hosts" => %w[ a.example.com b.example.com ] } ])
+
+    get tunnels_path
+
+    assert_response :success
+    assert_select "tbody th a", text: "shop · production"
+    assert_select "tbody td", text: /shop\.example\.com/
+    assert_select ".badge", text: "running"
+    assert_select ".badge", text: "not booted"
+    assert_select "code", text: "kamal accessory boot cloudflared -c deploy/shop.yml -d production"
+    assert_select ".code-block", text: /cloudflare\/cloudflared/
+  end
+
+  test "says so when no app runs behind a tunnel" do
+    get tunnels_path
+
+    assert_response :success
+    assert_select ".table__empty", text: /No app runs behind a tunnel yet/
+  end
+
+  test "warns about nested preview hostnames and links admins to settings" do
+    Account.current.update!(preview_domain: "preview.example.com", preview_hostnames: "nested")
+
+    get tunnels_path
+    assert_select "code", text: "pr-12.shop.preview.example.com"
+    assert_select ".alert", text: /one level/
+    assert_select ".alert a[href=?]", settings_account_path, count: 0
+
+    sign_in_as users(:admin)
+    get tunnels_path
+    assert_select ".alert a[href=?]", settings_account_path
+  end
+
+  test "flat preview hostnames need no warning" do
+    Account.current.update!(preview_domain: "preview.example.com", preview_hostnames: "flat")
+
+    get tunnels_path
+    assert_select "code", text: "pr-12-shop.preview.example.com"
+    assert_select ".alert", count: 0
+  end
+
+  test "the sidebar links to the page" do
+    get tunnels_path
+    assert_select "nav[aria-label=Manage] a[href=?]", tunnels_path, text: "Tunnels"
+  end
+end

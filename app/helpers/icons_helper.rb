@@ -3,7 +3,7 @@
 module IconsHelper
   ICONS = {
     board: "layout-grid", map: "map", apps: "box", servers: "server", activity: "activity", previews: "eye",
-    agents: "radio-tower", secrets: "key-round", projects: "folder-git-2", settings: "settings", jobs: "list-checks",
+    agents: "radio-tower", tunnels: "waypoints", secrets: "key-round", projects: "folder-git-2", settings: "settings", jobs: "list-checks",
     search: "search", plus: "plus", menu: "menu", chevron: "chevron-down", previous: "chevron-left", next: "chevron-right",
     collapse: "panel-left-close", expand: "panel-left-open", sign_out: "log-out", copy: "copy", copied: "check",
     info: "info", ok: "circle-check", warn: "triangle-alert", bad: "circle-x",

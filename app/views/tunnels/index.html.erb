@@ -1,0 +1,81 @@
+<% content_for :title, "Tunnels" %>
+<%= page_header "Tunnels", meta: "Apps that reach the internet through a Cloudflare Tunnel, and whether each server's connector runs. Meridian reads this from Git and the agents. It never calls Cloudflare." %>
+
+<div class="split">
+  <%= titled_section "Apps behind a tunnel", count: @tunnels.size, class: "split__main" do %>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">App</th>
+            <th scope="col">Hostnames</th>
+            <th scope="col">Connectors</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @tunnels.each do |tunnel| %>
+            <tr>
+              <th scope="row"><%= link_to tunnel.app.name, tunnel.app %></th>
+              <td class="mono txt-small"><%= safe_join(tunnel.app.hostnames, tag.br) %></td>
+              <td>
+                <ul class="stack">
+                  <% tunnel.connectors.each do |connector| %>
+                    <li>
+                      <span class="mono txt-small"><%= connector.server ? link_to(connector.host, connector.server) : connector.host %></span>
+                      <%= case connector.state
+                          when :running then badge("running", tone: :ok)
+                          when :stopped then badge(connector.placement.state, tone: :warn)
+                          when :missing then badge("not booted", tone: :bad)
+                          else badge("unknown", data: { tooltip: "No agent is reporting from this server" })
+                          end %>
+                    </li>
+                  <% end %>
+                </ul>
+                <% if tunnel.missing? %>
+                  <p class="txt-small txt-muted">Boot the missing connector with <code class="mono"><%= tunnel.boot_command %></code></p>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+          <% if @tunnels.none? %>
+            <tr><td colspan="3" class="table__empty">No app runs behind a tunnel yet. Tick <strong>Behind a Cloudflare Tunnel</strong> on the <%= current_user.admin? ? link_to("New app", new_app_path) : "New app" %> form, or add the snippet to an app's config.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <div class="split__aside">
+    <div class="card">
+      <div class="card__header">Set up a tunnel</div>
+      <div class="card__body">
+        <ol class="list-numbered txt-muted">
+          <li>Create a tunnel in Cloudflare with a public hostname that points at <code>http://kamal-proxy:80</code>.</li>
+          <li>Add the accessory below to the app's config.</li>
+          <li>Add the tunnel's token as the <code>TUNNEL_TOKEN</code> secret.</li>
+          <li>After the first deploy, run <code>kamal accessory boot cloudflared</code> once. <code>kamal deploy</code> doesn't boot accessories.</li>
+        </ol>
+        <%= render "shared/code_block", code: Templates.render("kamal/cloudflared.yml"), label: "config/deploy.yml" %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">Previews</div>
+      <div class="card__body stack">
+        <% if @account.preview_domain.present? %>
+          <p class="txt-muted">Previews are named like <code><%= @account.preview_hostname("shop", 12) %></code>.</p>
+          <% if @account.preview_hostnames_nested? %>
+            <%= alert_box :warn, title: "Nested names need a paid certificate" do %>
+              <p>Cloudflare's free certificate covers one level below the domain. Tunnelled previews need flat hostnames.
+              <% if current_user.admin? %><%= link_to "Change it in settings", settings_account_path %>.<% else %>An admin can change it in settings.<% end %></p>
+            <% end %>
+          <% end %>
+        <% else %>
+          <p class="txt-muted">No preview domain is set, so previews have no hostname yet.</p>
+        <% end %>
+      </div>
+    </div>
+
+    <p class="txt-small txt-muted">To put Meridian itself behind a tunnel, see <code>docs/cloudflare-tunnel.md</code>.</p>
+  </div>
+</div>

@@ -22,6 +22,17 @@ class WebhooksTest < ActionDispatch::IntegrationTest
     assert_equal "a" * 40, @project.reload.last_synced_sha
   end
 
+  test "webhooks find the project whatever the case of its name" do
+    @project.update!(repo_full_name: "Example/Infra")
+    stub_github_repo(@project)
+
+    perform_enqueued_jobs do
+      github_webhook "push", { ref: "refs/heads/main", repository: { full_name: "example/infra" } }
+    end
+
+    assert_equal "a" * 40, @project.reload.last_synced_sha
+  end
+
   test "workflow runs create deploys for the apps a commit released" do
     stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ] ] })
 

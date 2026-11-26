@@ -5,10 +5,16 @@ class Project < ApplicationRecord
   has_many :secret_names, dependent: :delete_all
 
   validates :name, :default_branch, presence: true
-  validates :repo_full_name, presence: true, uniqueness: true, format: { with: %r{\A[\w.-]+/[\w.-]+\z}, message: "must look like owner/name" }
+  validates :repo_full_name, presence: true, uniqueness: { case_sensitive: false }, format: { with: %r{\A[\w.-]+/[\w.-]+\z}, message: "must look like owner/name" }
   validate :config_globs_present
 
   normalizes :config_globs, with: ->(globs) { Array(globs).flat_map { it.to_s.split(/[\s,]+/) }.compact_blank.uniq }
+
+  # GitHub names repositories without regard to case, and its webhooks use
+  # its own spelling, which may differ from the one typed in.
+  def self.for_repo(full_name)
+    find_by("LOWER(repo_full_name) = ?", full_name.to_s.downcase)
+  end
 
   # The Git host adapter for this project's repository.
   def git

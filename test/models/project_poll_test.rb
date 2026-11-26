@@ -47,6 +47,9 @@ class ProjectPollTest < ActiveSupport::TestCase
     webhook = GitHubEventJob.new("workflow_run", { "repository" => { "full_name" => @project.repo_full_name } })
 
     assert_equal sync.concurrency_key, webhook.concurrency_key
+
+    @project.repo_full_name = "Example/Infra"
+    assert_equal ProjectSyncJob.new(@project).concurrency_key, webhook.concurrency_key, "GitHub's spelling may differ from the one typed in"
   end
 
   private

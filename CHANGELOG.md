@@ -14,6 +14,7 @@
 - Versions must be Docker image tags (letters, digits, `_`, `.` and `-`, not starting with `.` or `-`). A version such as `--skip-hooks` reached Kamal as a flag in CI, and ones with `+`, `:` or `@` always failed there, since Kamal names containers after the version.
 - When GitHub refuses a deploy or rollback commit for a reason other than a stale file, such as branch protection or a repository rule, Meridian shows GitHub's reason. Every 409 and 422 used to read "The version file changed in Git since this page loaded".
 - An accessories-only config, such as a tunnel's `deploy/edge.yml`, can no longer be deployed, rolled back or redeployed. Its page offered all three, and CI then ran `kamal deploy` on a file that says never to.
+- Webhooks find their project whatever the case of its name. A project added as `Example/Infra` ignored GitHub's `example/infra` webhooks and waited for the 30-second poll.
 
 ## v0.1.0 (2026-11-26)
 

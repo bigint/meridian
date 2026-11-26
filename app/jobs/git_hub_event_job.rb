@@ -1,7 +1,7 @@
 # Acts on one GitHub webhook. Only fields Meridian uses are kept in arguments.
 class GitHubEventJob < ApplicationJob
   queue_as :default
-  limits_concurrency key: ->(_event, payload) { payload.dig("repository", "full_name") }, group: "github_repository"
+  limits_concurrency key: ->(_event, payload) { payload.dig("repository", "full_name").to_s.downcase }, group: "github_repository"
 
   def perform(event, payload)
     repo = payload.dig("repository", "full_name")
@@ -15,12 +15,12 @@ class GitHubEventJob < ApplicationJob
 
   private
     def pushed(repo, payload)
-      project = Project.find_by(repo_full_name: repo) or return
+      project = Project.for_repo(repo) or return
       project.sync if payload["ref"] == "refs/heads/#{project.default_branch}"
     end
 
     def workflow_run(repo, run)
-      Project.find_by(repo_full_name: repo)&.track_workflow_run(run) if run
+      Project.for_repo(repo)&.track_workflow_run(run) if run
     end
 
     # Previews follow pull requests in an app's source repository.

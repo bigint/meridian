@@ -115,6 +115,23 @@ class DeployableTest < ActiveSupport::TestCase
     assert_equal [ 49, "success" ], [ @app.current_deploy.ci_run_id, @app.current_deploy.conclusion ]
   end
 
+  test "redeploy dispatches the version in the file now, not the last synced one" do
+    stub_request(:get, "#{GitHubHelper::API}/repos/example/infra/contents/deploy/web.production.version?ref=main")
+      .to_return_json(body: { content: Base64.encode64("v43\n"), sha: blob_sha("v43\n"), encoding: "base64" })
+    dispatch = stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).with(body: hash_including(inputs: hash_including(version: "v43"))).to_return(status: 204)
+
+    assert_equal "v43", @app.redeploy(actor: @actor)
+    assert_requested dispatch
+  end
+
+  test "an app without a version file has nothing to redeploy" do
+    blog = @project.apps.find_by!(service: "blog")
+
+    error = assert_raises(ArgumentError) { blog.redeploy(actor: @actor) }
+    assert_match "no version file", error.message
+    assert_not_requested :post, %r{/dispatches}
+  end
+
   test "redeploys are tracked from dispatched runs named after the config" do
     run = { "id" => 31, "event" => "workflow_dispatch", "display_title" => "deploy deploy/web.yml production", "head_sha" => "c" * 40, "status" => "in_progress" }
     deploy = Deploy.from_dispatch(@project, run)

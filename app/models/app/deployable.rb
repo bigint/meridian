@@ -44,12 +44,18 @@ module App::Deployable
     record_deploy("rollback", previous, commit, actor)
   end
 
-  # Runs the CI workflow again for the current version, e.g. after a secret
-  # was rotated. CI still runs Kamal; Meridian only asks it to.
+  # Runs the CI workflow again for the version in the version file, e.g.
+  # after a secret was rotated. CI still runs Kamal; Meridian only asks it to.
+  # The file is read now, not from the last sync, so a version that just
+  # landed is never replaced by the one before it. Without a version file
+  # there is no image tag to give Kamal. Returns the version.
   def redeploy(actor:)
-    version = latest_release&.version or raise ArgumentError, "Nothing to redeploy yet"
+    version = read_version_file&.content.to_s.strip.presence
+    raise ArgumentError, "#{name} has no version file yet: deploy a version first" unless version
+
     project.git.dispatch_workflow(Project::Changes::WORKFLOW_FILE, inputs: { config: config_path, destination: destination, version: version, command: "deploy" })
     Event.record("app.redeploy", subject: self, actor: actor, summary: "Redeployed #{name} at #{version}", version: version)
+    version
   end
 
   def current_deploy

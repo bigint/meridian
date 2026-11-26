@@ -57,7 +57,7 @@
   <% end %>
 
   <div class="flex flex-wrap gap-s">
-    <% if current_user.can_deploy? && app.latest_release %>
+    <% if current_user.can_deploy? && app.versioned? && app.latest_release %>
       <%= button_to "Redeploy", app_redeploy_path(app), class: "btn btn--small",
             form: { data: { turbo_confirm: "Run the deploy workflow again for #{app.latest_release.version}? Use this after rotating a secret." } } %>
     <% end %>

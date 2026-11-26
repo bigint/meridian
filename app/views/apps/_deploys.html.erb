@@ -10,7 +10,7 @@
         </div>
         <div><%= form.submit "Deploy", class: "btn btn--primary", data: { turbo_confirm: "Commit this version to #{app.version_file_path}?" } %></div>
       <% end %>
-      <% if app.latest_release %>
+      <% if app.versioned? && app.latest_release %>
         <hr>
         <div>
           <%= button_to "Redeploy #{app.latest_release.short_version}", app_redeploy_path(app), class: "btn btn--small",

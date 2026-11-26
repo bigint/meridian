@@ -4,8 +4,8 @@ class Apps::RedeploysController < ApplicationController
 
   def create
     app = App.find(params[:app_id])
-    app.redeploy(actor: current_user)
-    redirect_to app, notice: "Asked CI to deploy #{app.latest_release.version} again."
+    version = app.redeploy(actor: current_user)
+    redirect_to app, notice: "Asked CI to deploy #{version} again."
   rescue ArgumentError => error
     redirect_to app, alert: error.message
   rescue GitHost::Error => error

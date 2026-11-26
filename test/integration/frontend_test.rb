@@ -53,4 +53,17 @@ class FrontendTest < ActionDispatch::IntegrationTest
     get jump_path(q: "nothing-like-this")
     assert_select "turbo-frame#jump_results p.results__none[data-query=?]", "nothing-like-this"
   end
+
+  test "the too-old-browser page is styled under the CSP it is served with" do
+    get root_path, headers: { "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15" }
+
+    assert_response :not_acceptable
+    assert_match(/style-src 'self'/, response.headers["Content-Security-Policy"])
+    assert_no_match(/<style|style=/, response.body)
+    assert_select "link[rel=stylesheet][href='/error-pages.css']"
+
+    get "/error-pages.css"
+    assert_response :success
+    assert_match(/prefers-color-scheme: dark/, response.body)
+  end
 end

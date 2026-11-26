@@ -55,7 +55,8 @@ The documentation is a [Mintlify](https://mintlify.com) site in [`docs/`](docs),
 - Guides: [deploy and roll back](docs/guides/deploy.mdx), [new apps](docs/guides/new-app.mdx), [previews](docs/guides/previews.mdx), [the agent](docs/guides/agent.mdx), [Cloudflare Tunnel](docs/guides/cloudflare-tunnel.mdx)
 - Reference: [environment variables](docs/reference/environment.mdx), [the infra repository](docs/reference/infra-repository.mdx), [the CI workflow](docs/reference/ci-workflow.mdx)
 - Operate: [security](docs/operate/security.mdx), [backups with Litestream](docs/operate/backups.mdx)
-- Internals: [architecture](docs/internals/architecture.mdx), [decisions](docs/internals/decisions.mdx), [design](docs/internals/design.mdx)
+
+For working on Meridian itself: [development](contributing/development.md), [architecture](contributing/architecture.md), [decisions](contributing/decisions.md), [design](contributing/design.md) and the [local lab](lab/README.md).
 
 ## Development
 

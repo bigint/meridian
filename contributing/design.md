@@ -1,17 +1,13 @@
----
-title: "Design"
-description: "How Meridian's Inspector interface looks and is built: plain CSS with cascade layers, light-dark() themes, ERB partials and helpers, and no build step."
-icon: "palette"
----
+# Design
 
 Meridian's interface is called **Inspector**: a dense grid of what runs where, and a side panel for the thing you picked. It should read like a well-made instrument panel. It is neutral, precise about versions and hosts, and quiet everywhere else. It has one accent colour, no shadows, and no decoration that carries no information.
 
-It is built the way 37signals builds Rails apps: plain CSS, ERB partials and helpers, Stimulus for the little behaviour there is, and no build step. The direction, the map and the sidebar were each picked from mockups drawn side by side first. [Decisions 25 to 29](/internals/decisions#25-the-inspector-layout-picked-from-three-mockups) record why.
+It is built the way 37signals builds Rails apps: plain CSS, ERB partials and helpers, Stimulus for the little behaviour there is, and no build step. The direction, the map and the sidebar were each picked from mockups drawn side by side first. [Decisions 25 to 29](decisions.md#25-the-inspector-layout-picked-from-three-mockups) record why.
 
-<Frame>
-  <img className="block dark:hidden" src="/screenshots/board.png" alt="The board: Needs attention sentences above a grid of apps and servers, each cell showing the version that runs there" />
-  <img className="hidden dark:block" src="/screenshots/board-dark.png" alt="The board in the dark theme: Needs attention sentences above a grid of apps and servers, each cell showing the version that runs there" />
-</Frame>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/screenshots/board-dark.png">
+  <img alt="The board: Needs attention sentences above a grid of apps and servers, each cell showing the version that runs there" src="../docs/screenshots/board.png">
+</picture>
 
 ## Principles
 
@@ -44,9 +40,7 @@ The styles live in `app/assets/stylesheets/`, served as they are by Propshaft (`
 
 Class names follow a light BEM: a block (`.sidebar`), its parts (`.sidebar__link`) and variants (`.btn--primary`). State lives in attributes the markup needs anyway: `aria-current`, `aria-selected`, `data-state`, `data-collapsed`, `[open]`. For example, `live_stats_controller.js` sets `data-state` on `.live` to `connecting`, `live` or `paused`, and `logs_controller.js` sets it on `.logs`. Modern CSS does the rest: nesting, `:has()`, `color-mix()`, logical properties. Inputs, selects and tables are styled by element, so forms need no classes.
 
-<Warning>
-Never use an inline `style` attribute. The Content Security Policy blocks it, and `test/integration/frontend_test.rb` fails if one appears on a page.
-</Warning>
+> **Warning:** Never use an inline `style` attribute. The Content Security Policy blocks it, and `test/integration/frontend_test.rb` fails if one appears on a page.
 
 ## Colour and themes
 

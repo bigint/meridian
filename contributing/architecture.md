@@ -1,10 +1,4 @@
----
-title: "Architecture"
-description: "How Meridian reads what should run from Git and what does run from agents, works out drift, and writes every change back to Git."
-icon: "network"
----
-
-import DriftStates from "/snippets/drift-states.mdx";
+# Architecture
 
 Meridian is one Rails application. It reads Kamal configs from Git, and it reads running containers from a small agent on each server. It writes only to Git. The CI provider runs Kamal, and nothing else does.
 
@@ -73,13 +67,22 @@ sequenceDiagram
 4. If anything changed, the job asks for a board refresh for the server's region, and for the region it left if its `region` label changed. The refresh is throttled to about one per region per second with two Solid Cache keys. The first change in a second refreshes at once. Later changes in the same second share one refresh when the second ends, so the last change always reaches open pages.
 5. `SilentAgentsJob` runs every minute and refreshes the regions of servers whose agents have gone quiet, so they turn stale on screen without a snapshot.
 
-The agent also holds a WebSocket to `/cable`, authenticated with the same token, and subscribes to `AgentChannel` with its machine ID. Meridian sends watch and tail leases down it while someone has a server page, logs or traffic open, and the agent sends stats frames and log batches back. Snapshots stay the only writer. Frames and lines are relayed to browsers and never stored. See [Agent protocol](/reference/agent-protocol) for the frames and their limits.
+The agent also holds a WebSocket to `/cable`, authenticated with the same token, and subscribes to `AgentChannel` with its machine ID. Meridian sends watch and tail leases down it while someone has a server page, logs or traffic open, and the agent sends stats frames and log batches back. Snapshots stay the only writer. Frames and lines are relayed to browsers and never stored. See [Agent protocol](../docs/reference/agent-protocol.mdx) for the frames and their limits.
 
 ## Drift is the difference between the two
 
 Drift is computed when it is read, never stored. `Board` calls `Drift.state` for each app, server and role that Git assigns, and for each running container that Git doesn't assign. A cell shows its worst role, so a stopped `job` container isn't hidden by a running `web` one.
 
-<DriftStates />
+| State | Mark | Means |
+| --- | --- | --- |
+| In sync | `✓` | Running exactly the version Git says. |
+| Drifted | `≠` | Running, but not the version Git says. A deploy may be rolling out, or stopped part-way. |
+| Missing | `✕` | Git says it should run here, but nothing is running. |
+| Stray | `?` | Running here, but Git doesn't put it here. |
+| Stale | `…` | The server's agent has gone quiet, so Meridian can't tell what runs there right now. |
+| Unknown | `–` | Nothing to compare yet: no agent on the server, or no version file for the app. |
+
+In the board's grid a cell shows the version it runs. A missing cell shows `✕`, a drifted one `≠` and the version, and an unknown one `–`. A stray cell has a dotted border, and a stale or unknown one a dashed border.
 
 `Drift.state` decides in this order:
 
@@ -177,7 +180,7 @@ Meridian pins **kamal 2.12.0** and has been checked against **kamal-proxy 0.10.3
 - **Where it lives.** Kamal mounts that directory from the **named volume `kamal-proxy-config`** ([K commands/proxy.rb#L18](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/commands/proxy.rb#L18)). The directory has mode 0700.
 - **Partial writes.** The file is rewritten in place, not atomically ([P router.go#L407-L429](https://github.com/basecamp/kamal-proxy/blob/v0.10.3/internal/server/router.go#L407-L429)), so a reader can see half a file.
 - **Other ways to list routes.** `kamal-proxy list` uses a unix socket inside the container ([P cmd/list.go](https://github.com/basecamp/kamal-proxy/blob/v0.10.3/internal/cmd/list.go#L20-L60)), so reaching it requires `docker exec`. kamal-proxy has no HTTP endpoint that lists routes.
-- **Conclusion.** Route reporting is possible read-only, by mounting `kamal-proxy-config` read-only into an agent running as root so it can read the 0700 directory. The agent did this until Meridian found it never used the routes. See [decision 35](/internals/decisions#35-agents-no-longer-report-kamal-proxy-routes). The agent ignores `MERIDIAN_PROXY_STATE` now.
+- **Conclusion.** Route reporting is possible read-only, by mounting `kamal-proxy-config` read-only into an agent running as root so it can read the 0700 directory. The agent did this until Meridian found it never used the routes. See [decision 35](decisions.md#35-agents-no-longer-report-kamal-proxy-routes). The agent ignores `MERIDIAN_PROXY_STATE` now.
 
 ### Destination files
 

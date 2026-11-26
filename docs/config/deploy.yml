@@ -2,7 +2,7 @@
 #
 # Not deployed yet. The site needs a Dockerfile in docs/ that builds it and
 # serves it on port 80 with /up answering 200; it lands once the build is
-# chosen (see docs/internals/development.mdx). Then, from docs/:
+# chosen (see contributing/development.md). Then, from docs/:
 #
 #   kamal setup
 service: meridian-docs

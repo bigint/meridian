@@ -2,7 +2,7 @@
 #
 # The parse happens in a fresh Ruby process with an empty environment, inside
 # a temporary directory holding only those files, so ERB in a config cannot
-# read Meridian's credentials. See docs/internals/decisions.mdx.
+# read Meridian's credentials. See contributing/decisions.md.
 class KamalConfig
   SCRIPT = Rails.root.join("bin/kamal-parse").to_s
   KAMAL_VERSION = Gem.loaded_specs.fetch("kamal").version.to_s

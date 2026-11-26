@@ -1,12 +1,8 @@
----
-title: "Decisions"
-description: "A numbered log of the choices made where the spec was ambiguous, newest last."
-icon: "scale"
----
+# Decisions
 
 Each entry records one choice made where the spec was ambiguous. Meridian takes the simplest option that keeps Git as the record. Entries are newest last and keep their numbers for good, so code and commits can cite them. A later entry that reverses an earlier one says so, and the earlier one stays.
 
-To add one, follow the [contributing rules](/internals/development#contributing): one short entry at the end, with the next number.
+To add one, follow the [contributing rules](development.md#contributing): one short entry at the end, with the next number.
 
 ## 1. Configs are parsed in a clean subprocess
 
@@ -42,7 +38,7 @@ It is `<config base>.pr-<n>.yml`, because Kamal resolves destination files as si
 
 ## 9. kamal-proxy routes are read from the state file in its volume
 
-<Note>Reversed by [35](#35-agents-no-longer-report-kamal-proxy-routes).</Note>
+> **Note:** Reversed by [35](#35-agents-no-longer-report-kamal-proxy-routes).
 
 Reporting them is opt-in. Meridian never uses `docker exec`.
 
@@ -92,17 +88,19 @@ The workflow names dispatched runs `<command> <config> <destination>`, because `
 
 ## 21. A preview inherits the destination file of its app
 
+> **Note:** Its own `service` was reversed by [42](#42-a-preview-keeps-its-apps-service).
+
 It inherits everything except `service` and the proxy host, so settings such as `app_port` carry over. Each role keeps its settings from the base config and the destination file, and only its hosts change (a role's own proxy host becomes the preview hostname). The base config is shared through Kamal's own merge.
 
 ## 22. Tailwind replaces hand-written CSS
 
-<Note>Reversed by [28](#28-back-to-vanilla-plain-css-partials-and-helpers-no-build-step).</Note>
+> **Note:** Reversed by [28](#28-back-to-vanilla-plain-css-partials-and-helpers-no-build-step).
 
 This supersedes the spec's "no Tailwind" and "no build step". `tailwindcss-rails` ships Tailwind 4 as a standalone binary, so there is still no Node. It builds before `test:prepare` and `assets:precompile`, so CI and the Docker image need no extra step. The theme is semantic tokens redefined for dark mode, so views never use `dark:` variants.
 
 ## 23. Views are built from ViewComponent components, browsed in Lookbook
 
-<Note>Reversed by [28](#28-back-to-vanilla-plain-css-partials-and-helpers-no-build-step).</Note>
+> **Note:** Reversed by [28](#28-back-to-vanilla-plain-css-partials-and-helpers-no-build-step).
 
 A component is a Ruby class with a template, so it can be unit-tested and previewed in every state. Lookbook is mounted at `/lookbook` in development only. It turns off CSP for its own pages, and the app keeps its strict CSP.
 
@@ -124,7 +122,7 @@ Toggle (« and »), Peek (a rail that slides out on hover) and Sections (folding
 
 ## 28. Back to vanilla: plain CSS, partials and helpers, no build step
 
-This reverses [22](#22-tailwind-replaces-hand-written-css) and [23](#23-views-are-built-from-viewcomponent-components-browsed-in-lookbook) and restores the spec's "no Tailwind, no build step, no component libraries". Tailwind and ViewComponent worked, but they bent the code around them: about 200 arbitrary-value and group variants, `!important` overrides, a form builder that injected class strings, components that couldn't see the controller's form builder, and link-building lambdas passed into components. Meridian now follows how 37signals builds Rails apps: one small CSS file per concern with cascade layers, nesting and custom properties, `light-dark()` for themes, ERB partials and helpers, and inputs styled by element. Lookbook went with ViewComponent. Helpers and partials are covered by helper and integration tests instead. See [Design](/internals/design).
+This reverses [22](#22-tailwind-replaces-hand-written-css) and [23](#23-views-are-built-from-viewcomponent-components-browsed-in-lookbook) and restores the spec's "no Tailwind, no build step, no component libraries". Tailwind and ViewComponent worked, but they bent the code around them: about 200 arbitrary-value and group variants, `!important` overrides, a form builder that injected class strings, components that couldn't see the controller's form builder, and link-building lambdas passed into components. Meridian now follows how 37signals builds Rails apps: one small CSS file per concern with cascade layers, nesting and custom properties, `light-dark()` for themes, ERB partials and helpers, and inputs styled by element. Lookbook went with ViewComponent. Helpers and partials are covered by helper and integration tests instead. See [Design](design.md).
 
 ## 29. The theme is a per-browser cookie, not a user setting
 
@@ -150,15 +148,15 @@ A tunnel serves every app. An accessories-only config (`deploy/edge.yml`, labell
 
 A tunnel per app was tried first and dropped. It multiplied tunnels, tokens and connectors to work around apps spread unevenly, where the honest fix is to run them on the connector servers. The tunnel, its routes and its token are made in Cloudflare by a person. Calling the API would need a credential that can change DNS, which breaks "Git is the record" and "Secrets are write-only".
 
-Preview hostnames can be flat, `pr-<n>-<app>.<domain>`, as an opt-in account setting, because Cloudflare's free certificate covers one level below the domain. Nested stays the default so existing DNS keeps working. See [Cloudflare Tunnel](/guides/cloudflare-tunnel).
+Preview hostnames can be flat, `pr-<n>-<app>.<domain>`, as an opt-in account setting, because Cloudflare's free certificate covers one level below the domain. Nested stays the default so existing DNS keeps working. See [Cloudflare Tunnel](../docs/guides/cloudflare-tunnel.mdx).
 
 ## 34. App traffic is the kamal-proxy logs, filtered by Meridian
 
-kamal-proxy already logs every request as JSON, with the service it routed to and the container that answered, so traffic needs no new collector. The Traffic page tails `kamal-proxy` on each of the app's servers with the live-logs lease and its locks. Meridian, not the agent, drops other apps' lines, as each batch arrives and only while someone reads that app's traffic. The agent follows a container once however many people read it, so filtering there would mean one stream per filter, and the agent stays a dumb, read-only pipe. Lines are relayed, never stored. See [Traffic](/guides/traffic).
+kamal-proxy already logs every request as JSON, with the service it routed to and the container that answered, so traffic needs no new collector. The Traffic page tails `kamal-proxy` on each of the app's servers with the live-logs lease and its locks. Meridian, not the agent, drops other apps' lines, as each batch arrives and only while someone reads that app's traffic. The agent follows a container once however many people read it, so filtering there would mean one stream per filter, and the agent stays a dumb, read-only pipe. Lines are relayed, never stored. See [Traffic](../docs/guides/traffic.mdx).
 
 ## 35. Agents no longer report kamal-proxy routes
 
-This reverses [9](#9-kamal-proxy-routes-are-read-from-the-state-file-in-its-volume). The agent read the state file and sent `proxy_routes`, but nothing in Meridian ever used them. Git says which hosts an app should answer, and Traffic reads kamal-proxy's logs ([34](#34-app-traffic-is-the-kamal-proxy-logs-filtered-by-meridian)). The feature asked for a root agent and an extra volume for nothing, so it is gone, and `MERIDIAN_PROXY_STATE` is ignored. The research stays in [Architecture](/internals/architecture#kamal-proxy-routes-read-only) in case routes are ever worth showing.
+This reverses [9](#9-kamal-proxy-routes-are-read-from-the-state-file-in-its-volume). The agent read the state file and sent `proxy_routes`, but nothing in Meridian ever used them. Git says which hosts an app should answer, and Traffic reads kamal-proxy's logs ([34](#34-app-traffic-is-the-kamal-proxy-logs-filtered-by-meridian)). The feature asked for a root agent and an extra volume for nothing, so it is gone, and `MERIDIAN_PROXY_STATE` is ignored. The research stays in [Architecture](architecture.md#kamal-proxy-routes-read-only) in case routes are ever worth showing.
 
 ## 36. A server is stale after three agent intervals
 
@@ -183,3 +181,7 @@ They would all share `<config>.pr-<n>.yml`. The preview inherits the destination
 ## 41. CI removes a preview with kamal app remove, not kamal remove
 
 A preview shares the base config's accessories, registry login and kamal-proxy, which `kamal remove` takes down too. `kamal app remove` takes only the preview's containers, images and proxy route.
+
+## 42. A preview keeps its app's service
+
+A preview runs the app's image, and `kamal deploy --skip-push` checks that the image's `service` label matches the config's service before it boots anything. A preview renamed to `<service>-pr-<n>` therefore never deployed. Kamal already tells destinations apart in container names, labels, proxy routes and `kamal app remove`, so the `pr-<n>` destination is enough. Tried in the lab on Kamal 2.12.0: the preview and the app run side by side on one server, and removing the preview leaves the app's containers, image and route alone.

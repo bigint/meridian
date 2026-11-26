@@ -39,6 +39,14 @@ class JumpTest < ActionDispatch::IntegrationTest
     assert_select ".row__title", text: "Created a token"
   end
 
+  test "the best match survives the limit, however many names sort before it" do
+    JumpsController::LIMIT.times { |i| Server.create!(name: "a#{i}-db-1.example.com", hostname: "a#{i}-db-1.example.com") }
+    Server.create!(name: "db-1", hostname: "db-1")
+
+    get jump_path(q: "db-1")
+    assert_equal "db-1", css_select("#jump_results a span.truncate").first.text
+  end
+
   test "says so when nothing matches" do
     get jump_path(q: "zzz")
     assert_select "#jump_results", text: /Nothing called “zzz”/

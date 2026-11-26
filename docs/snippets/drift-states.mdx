@@ -1,10 +1,10 @@
 | State | Mark | Means |
 | --- | --- | --- |
 | In sync | `✓` | Running exactly the version Git says. |
-| Drifted | `≠` | Running, but not the version Git says. A deploy may be rolling out, or stopped part-way. |
+| Drifted | `≠` | Running, but not the version Git says. For example, a deploy is still rolling out, or it stopped part-way. |
 | Missing | `✕` | Git says it should run here, but nothing is running. |
 | Stray | `?` | Running here, but Git doesn't put it here. |
 | Stale | `…` | The server's agent has gone quiet, so Meridian can't tell what runs there right now. |
-| Unknown | `–` | Nothing to compare yet: no agent on the server, or no version file for the app. |
+| Unknown | `–` | Nothing to compare yet: the server has no agent, or the app has no version file. |
 
-In the board's grid a cell shows the version it runs. A missing cell shows `✕`, a drifted one `≠` and the version, and an unknown one `–`. A stray cell has a dotted border, and a stale or unknown one a dashed border.
+On the board, each cell shows the version it runs. A missing cell shows `✕`, a drifted cell shows `≠` and the version, and an unknown cell shows `–`. A stray cell has a dotted border, and a stale or unknown cell has a dashed border.

@@ -1,10 +1,12 @@
 ---
 title: "Infra repository"
-description: "Every file Meridian reads or writes in your infra repository, the conventions it adds to Kamal, and the commits and branches it makes."
+description: "Every file Meridian reads or writes in your infra repository, the rules it adds to Kamal, and the commits and branches it makes."
 icon: "folder-tree"
 ---
 
-A project in Meridian is one Git repository that holds Kamal configs. Meridian reads it on every sync and writes to it for every deploy. This page lists every file and convention involved.
+The [infra repository](/reference/glossary#infra-repository) is the Git repository that holds your Kamal configs. Meridian reads it on every sync and writes to it for every deploy. This page lists every file and rule involved.
+
+A [project](/reference/glossary#project) is one infra repository added to Meridian.
 
 ## A typical repository
 
@@ -39,7 +41,7 @@ With the config path `deploy/*.yml`, Meridian sees four apps and one accessories
 | `web · production` | `deploy/web.yml` | `production` | `deploy/web.production.version` |
 | `edge` | `deploy/edge.yml` | none | none. It runs only accessories. |
 
-`deploy/web.pr-42.yml` is the overlay of a running preview, not an app. See [Preview overlays](#preview-overlays).
+`deploy/web.pr-42.yml` is not an app. It is the file for a running preview. See [Preview overlays](#preview-overlays).
 
 ## Files Meridian reads and writes
 
@@ -48,14 +50,17 @@ With the config path `deploy/*.yml`, Meridian sees four apps and one accessories
 | Configs that match the project's config paths | On every sync | When **New app** creates one, and when **Edit connectors** changes an edge config |
 | `<config>.<destination>.yml` | On every sync | When **New app** creates an app with a destination |
 | `<config>[.<destination>].version` | Its content and history, whenever it changed | On every deploy and rollback, and when **New app** creates an app |
-| `<config>.pr-<n>.yml` | Never as a config | When a pull request opens, and deleted when its preview is removed |
+| `<config>.pr-<n>.yml` | Never as a config | When a pull request opens. Meridian deletes it when its preview is removed. |
 | `.github/workflows/meridian-deploy.yml` | Only to replace it | When an admin presses **Add CI workflow** |
 
 ## Config paths
 
-Each project has a list of config paths, globs separated by commas. The default is `config/deploy*.yml`. Globs match whole path segments, so `*` stops at `/` and `**` crosses folders. Only files that end in `.yml` or `.yaml` count.
+Config paths tell Meridian which files are [configs](/reference/glossary#config). Each project has a list of them: file patterns (globs), separated by commas. The default is `config/deploy*.yml`.
 
-**New app** writes a new config at the first glob with exactly one `*`, with the service name in place of the `*`. A `**/` in that glob is dropped first.
+- Patterns match whole folder names. `*` stops at `/`, and `**` matches across folders.
+- Only files that end in `.yml` or `.yaml` count.
+
+**New app** writes a new config at the first pattern with exactly one `*`, with the service name in place of the `*`. It drops any `**/` in that pattern first.
 
 | Config paths | New app `shop` goes to |
 | --- | --- |
@@ -63,19 +68,19 @@ Each project has a list of config paths, globs separated by commas. The default 
 | `deploy/*.yml` | `deploy/shop.yml` |
 | `deploy/**/*.yml` | `deploy/shop.yml` |
 
-When no glob has one `*`, **New app** refuses the app, because sync would never find its config.
+When no pattern has one `*`, **New app** refuses to create the app, because sync would never find its config.
 
 ## Destinations
 
-A file named `x.<destination>.yml` is the `<destination>` destination of `x.yml`, or of `x.yaml`, when both match the config paths. Kamal reads it with `-d <destination>` on top of the base config.
+A [destination](/reference/glossary#destination) is a variant of a config, such as `staging` or `production`. A file named `x.<destination>.yml` is the `<destination>` destination of `x.yml`, or of `x.yaml`, when both match the config paths. Kamal reads it with `-d <destination>`, on top of the base config.
 
 - A config with destination files becomes one app per destination. The base config on its own is then not an app.
-- Only `.yml` destination files count, as in Kamal. `web.staging.yaml` beside `web.yml` is a config of its own.
-- A destination named `pr-<n>` is a preview overlay, never an app.
+- Only `.yml` destination files count, as in Kamal. `web.staging.yaml` next to `web.yml` is a config of its own.
+- A destination named `pr-<n>` is a preview, never an app.
 
 ## Version files
 
-A version file sits next to its config and holds one line: the image tag CI deploys.
+A [version file](/reference/glossary#version-file) sits next to its config and holds one line: the image tag that CI deploys.
 
 | Config | Destination | Version file |
 | --- | --- | --- |
@@ -87,10 +92,11 @@ A version file sits next to its config and holds one line: the image tag CI depl
 3f2a9c1e
 ```
 
-- A version must be a Docker image tag: letters, digits, `_`, `.` and `-`, at most 128 characters, and not starting with `.` or `-`.
+- A version must be a Docker image tag: letters, digits, `_`, `.` and `-`. It can be at most 128 characters, and can't start with `.` or `-`.
 - Deploy and Roll back change only this file. CI deploys whatever it holds.
 - Each commit that changed the file is a release of the version it wrote. Meridian reads the last 20.
-- Without a version file, each commit to the config (or to its destination file) is a release named by its short SHA. The board shows such an app as unknown, because there is no version to compare, and it has no **Redeploy**.
+- Without a version file, each commit to the config, or to its destination file, is a release. Its name is the commit's short ID (SHA).
+- The board shows an app with no version file as unknown, because there is no version to compare. It also has no **Redeploy**.
 
 See [Versions and releases](/concepts/versions-and-releases).
 
@@ -105,28 +111,30 @@ labels:
 ```
 
 <ResponseField name="meridian.kind" type="string" default="other">
-  The app's kind: `static`, `node`, `rails`, `other` or `accessories`. Any other value, or none, reads as `other`. `accessories` marks a config that runs only accessories, such as a Cloudflare Tunnel's edge config. The board leaves it out, and Meridian never deploys, rolls back or redeploys it.
+  What the app is built with: `static`, `node`, `rails`, `other` or `accessories`. Any other value, or none, reads as `other`.
+
+  `accessories` marks a config that runs only accessories, such as a Cloudflare Tunnel's edge config. The board leaves it out, and Meridian never deploys, rolls back or redeploys it.
 </ResponseField>
 
 <ResponseField name="meridian.source" type="string">
-  The app's source repository, as `owner/name`. Pull requests there get previews. Without it, the app has no previews.
+  The repository the app is built from, as `owner/name`. Pull requests there get previews. Without it, the app has no previews.
 </ResponseField>
 
-Git is the record. Taking a label out of the config clears it in Meridian on the next sync.
+Git is the record. If you take a label out of the config, Meridian clears it on the next sync.
 
 ## Secret names
 
-Meridian lists the secrets each config names, so the Secrets page can set them. It reads names, never values, from:
+Meridian lists the secrets each config names, so you can set them on the **Secrets** page. It reads names, never values, from:
 
-- `env.secret`, at the top, under each role in `servers`, and under each accessory,
-- `env.tags.<tag>.secret` in each of those,
+- `env.secret`, at the top, under each role in `servers`, and under each accessory.
+- `env.tags.<tag>.secret` in each of those.
 - `registry.password`, when it is a list.
 
-For `KEY:ALIAS`, Meridian takes `ALIAS`, the name the secret has in the environment. Names that start with `GITHUB_` are skipped, because GitHub can't store them.
+For `KEY:ALIAS`, Meridian takes `ALIAS`, the name the secret has in the environment. It skips names that start with `GITHUB_`, because GitHub can't store them.
 
 ## Preview overlays
 
-When a pull request opens in an app's source repository, Meridian commits an overlay next to the base config, as the `pr-<n>` destination:
+A [preview](/reference/glossary#preview) is a temporary copy of an app for one pull request. When a pull request opens in an app's source repository, Meridian commits a preview file next to the base config. This file is the overlay: the `pr-<n>` destination, laid over the base config.
 
 ```yaml deploy/web.pr-42.yml
 # Preview of acme/web#42. Generated by Meridian.
@@ -139,8 +147,10 @@ proxy:
   host: pr-42.web.preview.example.com
 ```
 
-- The service is the app's, because Kamal checks it against the image's `service` label. The `pr-<n>` destination keeps the preview's containers and proxy route apart from the app's.
-- Kamal reads the overlay on top of the base config, so the base config's settings still apply. Settings from the app's destination file are copied in, except where and under which name it runs.
+- The service is the app's own, because Kamal checks it against the image's `service` label.
+- The `pr-<n>` destination keeps the preview's containers and proxy route apart from the app's.
+- Kamal reads the overlay on top of the base config, so the base config's settings still apply.
+- Meridian copies in the settings from the app's destination file, except where it runs and under which name.
 - Each role keeps its own `cmd`, `env` and options, and runs on the preview server.
 - A config with several destinations gets one preview per pull request.
 
@@ -148,7 +158,7 @@ Meridian deletes the overlay once CI has removed the preview. See [Previews](/gu
 
 ## Commits
 
-Every commit Meridian makes on a person's behalf ends in a `Meridian-Actor:` trailer with their name and email address.
+Every commit Meridian makes for a person ends in a `Meridian-Actor:` line, called a trailer. It holds their name and email address.
 
 <CodeGroup>
 ```text Deploy
@@ -174,13 +184,15 @@ chore(web): remove preview pr-42
 ```
 </CodeGroup>
 
-The scope is the service, with `-<destination>` when the app has one. A rollback writes the version that the file held before the newest release, and names that release's commit. Preview commits come from webhooks, not from a person, so they carry no trailer.
+- The part in brackets is the service, plus `-<destination>` when the app has one.
+- A rollback writes the version the file held before the newest release, and names that release's commit.
+- Preview commits come from webhooks, not from a person, so they have no trailer.
 
 Commits made outside Meridian count the same. A `git push` that changes a version file is a deploy, and Meridian shows it as one.
 
 ## Proposals
 
-Structural changes go through a pull request by default:
+By default, Meridian opens a pull request for these three changes:
 
 | Change | Title | Branch |
 | --- | --- | --- |
@@ -188,16 +200,20 @@ Structural changes go through a pull request by default:
 | Add CI workflow | `ci: deploy with Kamal when a version file changes` | `meridian/ci-<hex>` |
 | Edit connectors | `feat(<tunnel>): add …; remove … as Cloudflare Tunnel connectors` | `meridian/tunnel-<tunnel>-<hex>` |
 
-`<hex>` is six random hexadecimal characters. Meridian creates the branch from the head of the project's branch, writes each file as its own commit, with the title and the `Meridian-Actor:` trailer as its message, and opens the pull request against the project's branch.
+`<hex>` is six random hexadecimal characters. Meridian creates the branch from the newest commit on the project's branch. It writes each file as its own commit, with the title and the `Meridian-Actor:` trailer as the message. Then it opens the pull request against the project's branch.
 
-When the project has **Direct commits** on, an admin's change is committed straight to the project's branch instead, one commit per file. Deploys, rollbacks and preview overlays are always direct commits.
+When the project has **Direct commits** on, Meridian commits an admin's change straight to the project's branch, one commit per file. Deploys, rollbacks and preview files are always direct commits.
 
 ## What Meridian never reads
 
-- `.kamal/secrets` and any other `.kamal/secrets*` file. The CI workflow exports every repository secret as an environment variable, and `.kamal/secrets` reads them as `$NAME`.
+- `.kamal/secrets`, or any other `.kamal/secrets*` file. The CI workflow passes every repository secret in as an environment variable, and `.kamal/secrets` reads them as `$NAME`.
 - `.kamal/hooks`, Dockerfiles, and source code.
 - Any file outside the config paths, apart from version files.
 
-Meridian lists every path and blob SHA in the tree on each sync. It fetches the content of configs and destination files only when their SHA changed, and reads version files only when they changed. A tree GitHub cuts short, at about 100,000 files, stops the sync with an error rather than being read as whole.
+Kamal itself parses your configs, in a separate process with an empty environment. See [Security](/operate/security).
 
-Configs are parsed by Kamal itself, in a separate process with an empty environment. See [Security](/operate/security).
+<Accordion title="How sync reads the repository">
+  On each sync, Meridian lists every path in the tree with its blob SHA, a hash of the file's content. It fetches configs and destination files only when their SHA changed, and reads version files only when they changed.
+
+  GitHub cuts a tree short at about 100,000 files. When that happens, the sync stops with an error, so Meridian never treats a partial tree as whole.
+</Accordion>

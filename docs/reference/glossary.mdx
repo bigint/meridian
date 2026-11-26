@@ -1,74 +1,268 @@
 ---
 title: "Glossary"
-description: "Short definitions of every term Meridian's pages use, with links to where each is explained."
+description: "What each word on Meridian's pages means, in a sentence or two, with a link to the page that explains it."
 icon: "book"
 ---
 
 import DriftStates from "/snippets/drift-states.mdx";
 
-| Term | Meaning |
-| --- | --- |
-| Accessory | A Kamal accessory: a database, a cache or a tunnel connector that a config runs beside its app. An app's page lists them with their state and the command that starts one. |
-| Accessories-only config | A config labelled `meridian.kind: accessories`, such as a tunnel's edge config. It runs no app, so the board leaves it out and Meridian never deploys it. See [Infra repository](/reference/infra-repository#labels). |
-| Activity | The page that lists every event: each change Meridian made, and each look at logs or traffic. See [Activity events](/reference/activity-events). |
-| Admin | The role that may do everything: projects, new apps, secrets, agent tokens, settings and people. See [Roles](/concepts/roles). |
-| Agent | `meridian-agent`, a small read-only program on each server. It reports the server's Kamal containers to Meridian and never changes anything. See [Servers and agents](/concepts/servers-and-agents). |
-| Agent token | The bearer token an agent sends. A per-server token binds to the first server that reports with it. A fleet token works on many servers. Only its SHA-256 digest is stored. |
-| App | One Kamal config, or one destination of a config. Its name is the service, with `· <destination>` when it has one, as in `web · production`. See [Apps and destinations](/concepts/apps-and-destinations). |
-| Assignment | Git saying an app runs on a server, in a role. Assignments come from configs. |
-| Board | The home page: every app on every server, each cell showing the version it runs and its drift state. See [Board and map](/guides/board-and-map). |
-| Config | A Kamal config file in the infra repository, such as `deploy/web.yml`. |
-| Config paths | A project's globs that say which files are configs. `config/deploy*.yml` by default. |
-| Connector | A `cloudflared` accessory that runs a Cloudflare Tunnel on one server. See [Cloudflare Tunnel](/guides/cloudflare-tunnel). |
-| Deploy | Writing a version to an app's version file. CI sees the commit and runs `kamal deploy`. Also the record of that rollout, with its CI status: `pending`, `queued`, `in_progress` or `completed`. See [Deploy](/guides/deploy). |
-| Deployer | The role that may also deploy, redeploy, roll back, read logs and traffic, and destroy previews. |
-| Destination | A Kamal destination: `x.<destination>.yml` beside `x.yml`, read with `-d <destination>`. Each destination is its own app. |
-| Direct commits | A project setting. When on, an admin's structural changes are committed to the branch instead of opened as pull requests. |
-| Drift | The difference between what Git says should run and what agents report. Computed, never stored. See [Drift](/concepts/drift). |
-| Edge config | The accessories-only config that runs a tunnel's connectors, `deploy/edge.yml` or wherever the config paths put it. |
-| Event | One entry on the Activity page. |
-| Fleet token | An agent token that works on any number of servers. Each server is known by its machine ID. |
-| Infra repository | The Git repository that holds your Kamal configs. Meridian reads and writes it. See [Infra repository](/reference/infra-repository). |
-| Inspector | The side panel that opens when you pick an app on the board. It has the app's servers, releases, a deploy form, **Redeploy** and **Roll back**. |
-| Kind | What an app is built with: `static`, `node`, `rails` or `other`, from the `meridian.kind` label. **New app** uses it to pick a port and a Dockerfile. |
-| kamal-proxy | Kamal's reverse proxy on each server. Meridian reads its request lines for **Traffic**. |
-| Labels | Key and value pairs an agent reports for its server, from `MERIDIAN_LABELS`, such as `region=sgp`. The board groups and filters by them. Configs have labels too: `meridian.kind` and `meridian.source`. |
-| Label selector | Labels a server needs to match, such as `role=preview`. **New app** and the preview settings use one. |
-| Live line | The WebSocket an agent holds open to `/cable`. Live stats, logs and traffic travel over it. See [Agent protocol](/reference/agent-protocol#the-live-line). |
-| Live stats | A server's CPU, memory, load and disk, and each container's, every second while its page is open. Never stored. See [Live stats and logs](/guides/live-stats-and-logs). |
-| Machine ID | A host's stable ID, from `/etc/machine-id`. Meridian tells servers apart by it. |
-| Map | The page that places servers on a world map, merged into places when close together. |
-| Meridian-Actor | The trailer on every commit Meridian makes for a person, naming who asked. |
-| Needs attention | The board's list of cells that are missing, drifted, stray or stale, most urgent first, each as a plain sentence. |
-| Never seen | A server Git lists whose agent has never reported. The **Agents** page lists them. |
-| Overlay | See preview overlay. |
-| Place | A spot on the map. Servers within 60 km of each other share one. Also the name of where Meridian runs, set in **Settings**. |
-| Placement | A container an agent reports on a server. Placements are replaced on every snapshot. |
-| Preview | A pull request's code, running as the `pr-<n>` destination of an app, at its own hostname. States: `deploying`, `active`, `failed`, `removing`, `removed`. See [Previews](/guides/previews). |
-| Preview overlay | `<config>.pr-<n>.yml`, the destination file Meridian commits for a preview, and deletes when the preview is removed. |
-| Project | One infra repository, with its branch, config paths and GitHub App installation. See [Projects](/guides/projects). |
-| Proposal | A pull request Meridian opens on a branch named `meridian/<slug>-<hex>`, for **New app**, **Add CI workflow** or **Edit connectors**. |
-| Redeploy | Running CI again for the version already in the version file, for example after a secret changed. Meridian dispatches the workflow and changes no file. |
-| Region | The `region` label. The board groups servers by it above 30 servers, or when more than one region is in use. |
-| Release | A commit that changed an app's version file, named by the version it wrote. Without a version file, a commit to the config, named by its short SHA. See [Versions and releases](/concepts/versions-and-releases). |
-| Roll back | Reverting the newest release: the version file goes back to what it held before. Only the newest release can be rolled back. |
-| Role | A person's access: viewer, deployer or admin. Also a Kamal role, such as `web` or `job`. |
-| Secret name | A secret a config references in `env.secret` or `registry.password`. The **Secrets** page lists names. Values go to GitHub and are never shown. See [Secrets](/guides/secrets). |
-| Server | A host Git lists, an agent reports, or both. |
-| Service | A config's `service:`, the name Kamal gives its containers. |
-| Setup code | The code `/first_run` asks for before it creates the first admin. It is in Meridian's log, or printed by `bin/rails meridian:setup_code`. |
-| Silent | A server whose agent has gone quiet for three of its intervals, and at least 45 seconds. Its cells turn stale. |
-| Snapshot | What one agent saw on one server at one moment, sent to `POST /agent/snapshots`. |
-| Source repository | The repository an app is built from, named by `meridian.source`. Its pull requests get previews. |
-| Sync | Reading a project's configs and version files from Git. It runs on each push, every 30 seconds, and when an admin presses **Sync now**. |
-| Tail lease | Meridian asking an agent to follow one container's logs for 30 seconds, renewed while someone reads them. |
-| Traffic | An app's requests, read live from kamal-proxy on every server it runs on. See [Traffic](/guides/traffic). |
-| Tunnel | A Cloudflare Tunnel that serves apps through connectors on your servers. |
-| Version | A Docker image tag, the one line in a version file. |
-| Version file | `<config>[.<destination>].version`, the file Deploy and Roll back change. |
-| Viewer | The default role. Viewers see everything except logs and traffic, and change nothing. |
-| Watch lease | Meridian asking an agent to stream live stats for 30 seconds, renewed while someone has the server's page open. |
-| Workspace | The install's name, set in **Settings**. |
+This page explains each word Meridian's pages use. Each entry is a sentence or two, with a link to the page that covers it in full.
+
+## Accessories-only config
+
+A config labelled `meridian.kind: accessories`, such as a tunnel's edge config. It runs no app, so the board leaves it out and Meridian never deploys it. See [Infra repository](/reference/infra-repository#labels).
+
+## Accessory
+
+A Kamal accessory: a database, a cache or a tunnel connector that a config runs beside its app. An app's page lists its accessories, their state and the command that starts each one.
+
+## Activity
+
+The page that lists every event. That is each change Meridian made, and each time someone read logs or traffic. See [Activity events](/reference/activity-events).
+
+## Admin
+
+The role that can do everything: projects, new apps, secrets, agent tokens, settings and people. See [Roles](#roles).
+
+## Agent
+
+A small program on each server that tells Meridian what is running there. It only reads, and it only connects out to Meridian. Its name is `meridian-agent`. See [Servers and agents](/concepts/servers-and-agents).
+
+## Agent token
+
+The secret an agent sends to prove who it is. A per-server token belongs to the first server that reports with it, and a fleet token works on many servers. Meridian stores only a SHA-256 hash of each token.
+
+## App
+
+One config plus one destination. A config with no destinations is one app. Its name is the service, plus `· <destination>` when it has one, as in `web · production`. See [Apps and destinations](/concepts/apps-and-destinations).
+
+## Assignment
+
+Git saying that an app runs on a server, in a given Kamal role. Assignments come from configs.
+
+## Board
+
+The home page. It shows every app on every server, and each cell shows the version that runs there and its drift state. See [Board and map](/guides/board-and-map).
+
+## CI workflow
+
+The GitHub Actions workflow `.github/workflows/meridian-deploy.yml`. It runs Kamal when a version file changes. See [CI workflow](/reference/ci-workflow).
+
+## Config
+
+A Kamal file, such as `config/deploy.yml`, that says what an app is and which servers run it. It lives in the infra repository. See [Infra repository](/reference/infra-repository).
+
+## Config paths
+
+A project's file patterns that say which files are configs. The default is `config/deploy*.yml`. See [Infra repository](/reference/infra-repository#config-paths).
+
+## Connector
+
+A `cloudflared` accessory that runs a Cloudflare Tunnel on one server. See [Cloudflare Tunnel](/guides/cloudflare-tunnel).
+
+## Deploy
+
+To deploy, Meridian writes a version to an app's version file, and CI sees the commit and runs `kamal deploy`. A deploy is also the record of that rollout, with its CI status: `pending`, `queued`, `in_progress` or `completed`. See [Deploy](/guides/deploy).
+
+## Deployer
+
+The role that can also deploy, redeploy, roll back, read logs and traffic, and remove previews. See [Roles](#roles).
+
+## Destination
+
+A variant of a config, such as `staging` or `production`, kept in a file like `config/deploy.staging.yml`. Kamal reads it with `-d <destination>`, and each destination is its own app. See [Apps and destinations](/concepts/apps-and-destinations).
+
+## Direct commits
+
+A project setting. When it is on, Meridian commits an admin's changes to the branch instead of opening pull requests.
+
+## Drift
+
+The difference between what Git says should run and what the agent sees running. Meridian works it out each time and never stores it. See [Drift](/concepts/drift).
+
+## Edge config
+
+The accessories-only config that runs a tunnel's connectors. It is `deploy/edge.yml`, or wherever the config paths put it.
+
+## Event
+
+One entry on the Activity page.
+
+## Fleet token
+
+An agent token that works on any number of servers. Meridian tells those servers apart by their machine ID.
+
+## Infra repository
+
+The Git repository that holds your Kamal configs. Meridian reads it and writes to it. See [Infra repository](/reference/infra-repository).
+
+## Inspector
+
+The side panel that opens when you pick an app on the board. It shows the app's servers and releases, a deploy form, and the **Redeploy** and **Roll back** buttons.
+
+## Kamal
+
+A tool that deploys apps as Docker containers to your own servers over SSH. Meridian never deploys with Kamal itself. Your CI workflow runs it. See the [Kamal docs](https://kamal-deploy.org).
+
+## kamal-proxy
+
+Kamal's web proxy on each server. It sends each request to the right app. Meridian reads its request log to show **Traffic**. See [Traffic](/guides/traffic).
+
+## Kind
+
+What an app is built with: `static`, `node`, `rails` or `other`, from the `meridian.kind` label. **New app** uses it to pick a port and a Dockerfile.
+
+## Label selector
+
+The labels a server needs to have, such as `role=preview`. **New app** and the preview settings use one to pick servers.
+
+## Labels
+
+Key and value pairs an agent reports for its server, such as `region=sgp`. They come from `MERIDIAN_LABELS`, and the board groups and filters by them. Configs have labels too: `meridian.kind` and `meridian.source`.
+
+## Live line
+
+The WebSocket connection an agent keeps open to `/cable`. Live stats, logs and traffic travel over it. See [Agent protocol](/reference/agent-protocol#the-live-line).
+
+## Live stats
+
+A server's CPU, memory, load and disk, and each container's, sent every second while its page is open. Meridian never stores them. See [Live stats and logs](/guides/live-stats-and-logs).
+
+## Machine ID
+
+A host's ID that never changes, read from `/etc/machine-id`. Meridian tells servers apart by it.
+
+## Map
+
+The page that shows servers on a world map. Servers close together share one place.
+
+## Meridian-Actor
+
+A line at the end of every commit Meridian makes for a person. It names who asked for the change. See [Infra repository](/reference/infra-repository#commits).
+
+## Needs attention
+
+The board's list of cells that are missing, drifted, stray or stale, most urgent first. Each one is a plain sentence.
+
+## Never seen
+
+A server that Git lists but whose agent has never reported. The **Agents** page lists these servers.
+
+## Overlay
+
+See [Preview overlay](#preview-overlay).
+
+## Place
+
+A spot on the map. Servers within 60 km of each other share one place. It is also the name of where Meridian itself runs, set in **Settings**.
+
+## Placement
+
+A container that an agent reports on a server. Meridian replaces a server's placements with each new snapshot.
+
+## Preview
+
+A temporary copy of an app for one pull request. It runs as the `pr-<n>` destination of the app, at its own hostname. Its states are `deploying`, `active`, `failed`, `removing` and `removed`. See [Previews](/guides/previews).
+
+## Preview overlay
+
+The destination file `<config>.pr-<n>.yml` that Meridian commits for a preview. Meridian deletes it when the preview is removed.
+
+## Project
+
+One infra repository added to Meridian. It has a branch, config paths and a GitHub App installation. See [Projects](/guides/projects).
+
+## Proposal
+
+A pull request that Meridian opens for **New app**, **Add CI workflow** or **Edit connectors**. Its branch is named `meridian/<slug>-<hex>`.
+
+## Redeploy
+
+Running CI again for the version already in the version file, for example after a secret changed. Meridian starts the workflow and changes no file.
+
+## Region
+
+The `region` label. The board groups servers by it when there are more than 30 servers, or when more than one region is in use.
+
+## Release
+
+A commit that changed an app's version file. Meridian names it by the version it wrote. With no version file, a release is a commit to the config, named by its short commit ID (SHA). See [Versions and releases](/concepts/versions-and-releases).
+
+## Roles
+
+The three roles are viewer, deployer and admin. Viewers look, deployers also deploy and roll back, admins do everything. Kamal uses "role" too, for a group of servers in a config such as `web` or `job`. See [Roles](/concepts/roles).
+
+## Roll back
+
+Undoing the newest release: the version file goes back to what it held before. You can roll back only the newest release.
+
+## Secret name
+
+The name of a secret that a config uses in `env.secret` or `registry.password`. The **Secrets** page lists names, and the values go to GitHub and are never shown. See [Secrets](/guides/secrets).
+
+## Server
+
+A host that Git lists, that an agent reports, or both.
+
+## Service
+
+A config's `service:` value, the name Kamal gives its containers.
+
+## Setup code
+
+The code `/first_run` asks for before it creates the first admin. Find it in Meridian's log, or print it with `bin/rails meridian:setup_code`.
+
+## Silent
+
+A server whose agent has gone quiet for three of its intervals, and for at least 45 seconds. Its cells turn stale.
+
+## Snapshot
+
+What one agent saw on one server at one moment. The agent sends it to `POST /agent/snapshots`. See [Agent protocol](/reference/agent-protocol#snapshots).
+
+## Source repository
+
+The repository an app is built from, named by the `meridian.source` label. Its pull requests get previews.
+
+## Sync
+
+Meridian reading a project's configs and version files from Git. It runs on each push, every 30 seconds, and when an admin presses **Sync now**.
+
+## Tail lease
+
+A 30-second request from Meridian asking an agent to follow one container's logs. Meridian renews it while someone is reading them.
+
+## Traffic
+
+An app's requests, read live from kamal-proxy on every server the app runs on. See [Traffic](/guides/traffic).
+
+## Tunnel
+
+A Cloudflare Tunnel that serves apps through connectors on your servers. See [Cloudflare Tunnel](/guides/cloudflare-tunnel).
+
+## Version
+
+The name of the build to run, such as `v42` or a commit SHA. It is a Docker image tag, and it is the one line in a version file. See [Versions and releases](/concepts/versions-and-releases).
+
+## Version file
+
+A one-line file next to a config, such as `config/deploy.version`, that holds the version to run. Meridian deploys by changing it. Its name is `<config>[.<destination>].version`. See [Infra repository](/reference/infra-repository).
+
+## Viewer
+
+The default role. Viewers see everything except logs and traffic, and change nothing. See [Roles](#roles).
+
+## Watch lease
+
+A 30-second request from Meridian asking an agent to stream live stats. Meridian renews it while someone has the server's page open.
+
+## Webhook
+
+A message GitHub sends to Meridian when something changes. GitHub sends them to `POST /webhooks/github`, and Meridian reacts at once. See [GitHub App](/reference/github-app#webhook).
+
+## Workspace
+
+The name of this Meridian install, set in **Settings**.
 
 ## Drift states
 

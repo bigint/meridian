@@ -1,10 +1,10 @@
 ---
 title: "Endpoints"
-description: "The few endpoints machines call, the pages people use, and why Meridian has no general API."
+description: "The five endpoints that machines call, every page people use, and why Meridian has no general API."
 icon: "route"
 ---
 
-Meridian has five endpoints for machines. Everything else is an HTML page behind the session cookie.
+This page lists every address Meridian answers. Five are endpoints for machines. Everything else is an HTML page that needs you to be signed in, through the session cookie.
 
 | Endpoint | Caller | Auth |
 | --- | --- | --- |
@@ -16,32 +16,47 @@ Meridian has five endpoints for machines. Everything else is an HTML page behind
 
 ## POST /agent/snapshots
 
-What runs on one server. The agent sends one every 15 seconds or so. Meridian validates it, queues it, and answers `202`. Bodies over 1 MiB are refused with `413` before Rails parses them, and each token may send 120 a minute. A fleet token may send 120 a minute for each machine ID, and 12,000 a minute in all.
+A snapshot: what runs on one server. The [agent](/reference/glossary#agent) sends one every 15 seconds by default. Meridian checks it, queues it, and answers `202`.
 
-See [Agent protocol](/reference/agent-protocol#snapshots) for the payload and every status code.
+- Meridian refuses a body over 1 MiB with `413`, before Rails reads it.
+- Each token can send 120 a minute.
+- A fleet token can send 120 a minute for each machine ID, and 12,000 a minute in all.
+
+See [Agent protocol](/reference/agent-protocol#snapshots) for the fields and every status code.
 
 ## POST /webhooks/github
 
-GitHub's webhook deliveries. Meridian verifies the HMAC-SHA256 signature against `GITHUB_APP_WEBHOOK_SECRET`, queues `push`, `workflow_run` and `pull_request` events, and answers `202`. A bad signature, or no secret configured, gets `401`. A body that is not JSON gets `400`.
+Where GitHub sends [webhooks](/reference/glossary#webhook), the messages it sends when something changes. Meridian checks each one's HMAC-SHA256 signature against `GITHUB_APP_WEBHOOK_SECRET`. It queues `push`, `workflow_run` and `pull_request` events, and answers `202`.
+
+- A bad signature, or no secret set, gets `401`.
+- A body that is not JSON gets `400`.
 
 See [GitHub App](/reference/github-app#webhook).
 
 ## GET /cable
 
-Action Cable's WebSocket. Two kinds of client connect to it:
+Rails' Action Cable WebSocket, a connection that stays open so Meridian can push updates. Two kinds of client connect to it:
 
 | Client | Auth | Channels |
 | --- | --- | --- |
 | The agent | `Authorization: Bearer <agent token>`. A connection with this header never falls back to a cookie. | `AgentChannel` |
 | A browser | The signed `session_id` cookie | Turbo Streams for live pages, `ServerStatsChannel`, `LogsChannel`, `TrafficChannel` |
 
-Live pages (the board, the map, an app, previews) refresh through Turbo Streams. Stats, logs and traffic stream through their own channels. Logs and traffic need the deployer role and a grant that the page created when it recorded the viewing in Activity. A role change or a sign-out hangs up that person's open cables.
+Live pages refresh through Turbo Streams: the board, the map, an app's page and previews. Stats, logs and traffic stream through their own channels.
+
+Logs and traffic need the deployer role, plus a grant. The page creates that grant when it records the viewing in Activity. When a person's role changes or they sign out, Meridian closes their open connections.
 
 See [Agent protocol](/reference/agent-protocol#the-live-line).
 
 ## GET /up
 
-Rails' health check. It answers `200` when the app has booted and `500` when it raised on boot. It needs no sign-in, is exempt from forced HTTPS and from the `MERIDIAN_URL` host check, and is left out of the logs. kamal-proxy calls it by IP before it sends traffic to a new container.
+Rails' health check. It answers `200` when the app has started, and `500` when it failed to start.
+
+- It needs no sign-in.
+- It skips forced HTTPS and the `MERIDIAN_URL` host check.
+- Meridian leaves it out of the logs.
+
+[kamal-proxy](/reference/glossary#kamal-proxy) calls it by IP address before it sends traffic to a new container.
 
 ```bash
 curl -fsS https://meridian.example.com/up
@@ -49,11 +64,16 @@ curl -fsS https://meridian.example.com/up
 
 ## /jobs
 
-Mission Control Jobs, the dashboard for Solid Queue: queues, running, failed and scheduled jobs, and recurring tasks. Admins only. Others are sent back with **You don't have permission to do that.** The sidebar links to it as **Jobs**.
+Mission Control Jobs, the dashboard for Meridian's background jobs in Solid Queue. It shows queues, running, failed and scheduled jobs, and recurring tasks.
+
+Only admins can open it. Anyone else is sent back with **You don't have permission to do that.** The sidebar links to it as **Jobs**.
 
 ## Pages
 
-Every other route is a page for people. A request without a session is sent to `/session/new`. A request that needs a higher role is sent back with an alert, or gets `403` when it does not ask for HTML.
+Every other address is a page for people. The rate limits in the **What it is** column count requests from one IP address.
+
+- A request from someone not signed in goes to `/session/new`.
+- A request that needs a higher role is sent back with an alert. If it does not ask for HTML, it gets `403`.
 
 | Path | What it is | Role |
 | --- | --- | --- |
@@ -87,11 +107,11 @@ Every other route is a page for people. A request without a session is sent to `
 | `/session/new` | Sign in. 10 tries in 3 minutes. | None |
 | `/first_run` | Create the first admin, with the setup code. Gone once a user exists. | None |
 
-See [Roles](/concepts/roles) for what each role may do.
+See [Roles](/concepts/roles) for what each role can do.
 
 ## No general API
 
-Meridian has no REST or GraphQL API, and no API tokens for people. This is a choice:
+Meridian has no REST or GraphQL API, and no API tokens for people. This is on purpose:
 
 - Git is the interface for changes. To deploy from a script, commit the version file. Meridian sees the commit and CI deploys it, exactly as if someone pressed **Deploy**.
 - Agent tokens work only on `/agent/snapshots` and `/cable`. They can't read or change anything else.

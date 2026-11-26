@@ -1,15 +1,17 @@
 ---
 title: "Activity events"
-description: "Every action Meridian records on the Activity page, what triggers it, and what it keeps."
+description: "Every event on the Activity page: its name, what records it, and what it keeps."
 icon: "history"
 ---
 
-Every change Meridian makes, and every look at logs or traffic, is an event on the **Activity** page (`/events`). Events are never edited or deleted. The page shows 50 at a time, newest first, grouped by day.
+This page lists every event Meridian records. Each change Meridian makes, and each time someone reads logs or traffic, is an event on the **Activity** page (`/events`).
+
+Meridian never edits or deletes an event. The page shows 50 at a time, newest first, grouped by day.
 
 Each event keeps:
 
 - **Action**, a dotted name such as `app.deploy`.
-- **Who**, the person who acted. Events from webhooks and scheduled jobs have no person and show as **Meridian**. When someone is removed, their events keep their name, marked `(removed)`.
+- **Who**, the person who acted. Events from webhooks and scheduled jobs have no person, so they show as **Meridian**. When someone is removed, their events keep their name, marked `(removed)`.
 - **Summary**, the sentence the page shows, such as `Deployed web · production to 3f2a9c1e`.
 - **Details**, such as the commit, the version, the pull request URL or the files changed. The page links the commit and the pull request.
 
@@ -18,17 +20,17 @@ Each event keeps:
 - **Action starts with** matches the start of the action name. `app.` shows every deploy, rollback and redeploy. `preview.` shows every preview change.
 - **Who** shows one person's events.
 
-Both are URL parameters, so a filtered view can be bookmarked: `/events?action_name=app.&actor=3`.
+Both are URL parameters, so you can bookmark a filtered view: `/events?action_name=app.&actor=3`.
 
 ## Apps
 
 | Action | Recorded when | Details |
 | --- | --- | --- |
 | `app.deploy` | A deployer presses **Deploy** and Meridian commits the version file | `commit`, `version` |
-| `app.rollback` | A deployer presses **Roll back** and Meridian commits the previous version | `commit`, `version` |
-| `app.redeploy` | A deployer presses **Redeploy** and Meridian dispatches the CI workflow | `version` |
+| `app.rollback` | A deployer presses **Roll back** and Meridian commits the version from before the newest release | `commit`, `version` |
+| `app.redeploy` | A deployer presses **Redeploy** and Meridian starts the [CI workflow](/reference/glossary#ci-workflow) | `version` |
 
-A version file changed by a `git push` outside Meridian records no event. It shows on the app's page as a release, and as a deploy once CI runs.
+A `git push` outside Meridian that changes a version file records no event. It shows on the app's page as a release, and as a deploy once CI runs.
 
 ## Projects
 
@@ -44,19 +46,19 @@ A version file changed by a `git push` outside Meridian records no event. It sho
 
 | Action | Recorded when | Who |
 | --- | --- | --- |
-| `preview.opened` | A pull request opens, or reopens after its preview was removed, and Meridian commits its overlay | Meridian |
+| `preview.opened` | A pull request opens, or reopens after its preview was removed, and Meridian commits its preview file | Meridian |
 | `preview.removing` | Meridian asks CI to remove a preview. The summary gives the reason: `closed`, `merged`, `expired`, or `destroyed by <name>`. | The deployer who pressed **Destroy**, or Meridian |
-| `preview.removal_failed` | CI failed to remove a preview three times, so expiry stops asking. The summary says what to remove by hand. | Meridian |
-| `preview.abandoned` | The app's config left Git, so CI can't remove its preview. Meridian deletes the overlay, and the summary names the containers to remove by hand. | Meridian |
+| `preview.removal_failed` | CI failed to remove a preview three times, so Meridian stops asking. The summary says what to remove by hand. | Meridian |
+| `preview.abandoned` | The app's config left Git, so CI can't remove its preview. Meridian deletes the preview file, and the summary names the containers to remove by hand. | Meridian |
 | `preview.skipped` | A pull request from a fork opens or reopens. Fork code never runs on your servers. | Meridian |
 
-New commits pushed to an open pull request redeploy its preview without a new event. The preview's state on the **Previews** page changes instead.
+A new commit pushed to an open pull request redeploys its [preview](/reference/glossary#preview) with no new event. The preview's state on the **Previews** page changes instead.
 
 ## Secrets
 
 | Action | Recorded when |
 | --- | --- |
-| `secret.set` | An admin sets or rotates a secret's value. The value is never recorded. |
+| `secret.set` | An admin sets or changes a secret's value. Meridian never records the value. |
 
 Adding a secret name without a value records no event.
 
@@ -65,9 +67,9 @@ Adding a secret name without a value records no event.
 | Action | Recorded when |
 | --- | --- |
 | `logs.viewed` | A deployer opens an app's logs or one container's logs. The summary names the app or container, and how many containers and servers. |
-| `traffic.viewed` | A deployer opens an app's **Traffic** page. The summary says on how many servers kamal-proxy is read. |
+| `traffic.viewed` | A deployer opens an app's **Traffic** page. The summary says how many servers' kamal-proxy Meridian reads. |
 
-The page records the event before it streams anything. Logs and traffic channels stream only what a page recorded, so no one can read logs without leaving an event.
+The page records the event before it streams anything. The logs and traffic channels stream only what a page recorded. So no one can read logs without leaving an event.
 
 ## Agents and servers
 
@@ -88,11 +90,11 @@ The page records the event before it streams anything. Logs and traffic channels
 
 ## Not recorded
 
-Some things happen without an event:
+These record no event:
 
 - Signing in and out.
 - Syncs, whether from a webhook, the 30-second poll or **Sync now**. The project page shows when it last synced and any parse errors.
 - Deploy progress. The app's page shows each deploy's CI status, from `pending` to `completed`.
 - Snapshots and live stats.
 
-Git has a record of its own. Every commit Meridian makes for a person carries a `Meridian-Actor:` trailer. See [Infra repository](/reference/infra-repository#commits).
+Git keeps its own record. Every commit Meridian makes for a person ends in a `Meridian-Actor:` line that names them. See [Infra repository](/reference/infra-repository#commits).

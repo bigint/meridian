@@ -1,10 +1,10 @@
 ---
 title: "Commands"
-description: "Every rake task, bin script and Kamal alias that ships with Meridian, with what each one does."
+description: "Every rake task, bin script and Kamal alias that comes with Meridian, and what each one does."
 icon: "terminal"
 ---
 
-Run these from the root of a Meridian checkout, or inside the running container through Kamal.
+This page lists every command that comes with Meridian, and what it does. Run them from the root of a Meridian checkout, or inside the running container through [Kamal](/reference/glossary#kamal).
 
 ## Kamal aliases
 
@@ -13,9 +13,9 @@ Meridian's `config/deploy.yml` defines two aliases:
 | Command | Runs |
 | --- | --- |
 | `kamal console` | `kamal app exec --interactive --reuse "bin/rails console"`, a Rails console in the running container |
-| `kamal logs` | `kamal app logs -f`, Meridian's log, followed |
+| `kamal logs` | `kamal app logs -f`, which shows Meridian's log and keeps following it |
 
-Any task below runs in production the same way:
+To run any task below in production, wrap it in `kamal app exec`:
 
 ```bash
 kamal app exec --reuse "bin/rails meridian:setup_code"
@@ -24,11 +24,11 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 ## Rake tasks
 
 <ResponseField name="bin/rails meridian:setup_code" type="task">
-  Prints the code that creating the first admin on `/first_run` asks for. The code is derived from `SECRET_KEY_BASE`, so it needs no storage. Meridian also logs it each time someone opens `/first_run`, as `Meridian setup code: …`.
+  Prints the setup code that `/first_run` asks for before it creates the first admin. Meridian derives the code from `SECRET_KEY_BASE`, so it stores nothing. Meridian also logs it as `Meridian setup code: …` each time someone opens `/first_run`.
 </ResponseField>
 
 <ResponseField name="bin/rails meridian:demo" type="task">
-  Seeds a demo fleet with realistic drift: 500 servers and 200 apps by default. `SERVERS=` and `APPS=` change the sizes. It can run again over an existing demo fleet.
+  Fills the database with a demo fleet: 500 servers and 200 apps by default. Most cells are in sync, and the rest are drifted, missing, stray or stale. `SERVERS=` and `APPS=` change the numbers. You can run it again over an existing demo fleet.
 
   ```bash
   bin/rails meridian:demo SERVERS=50 APPS=20
@@ -36,24 +36,24 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 </ResponseField>
 
 <ResponseField name="bin/rails db:prepare" type="task">
-  Creates or migrates every database. The image's entrypoint runs it before the server starts. See [Upgrading](/operate/upgrading).
+  Creates every database, or brings it up to date with the newest migrations. The image runs it before the server starts. See [Upgrading](/operate/upgrading).
 </ResponseField>
 
 ## Scripts in bin
 
 <ResponseField name="bin/setup" type="script">
-  Installs gems, prepares the database, clears logs and temporary files, then starts the development server. It is safe to run again.
+  Installs gems, prepares the database, clears logs and temporary files, then starts the development server. You can run it again safely.
 
   - `--skip-server` stops before the server.
   - `--reset` also resets the database.
 </ResponseField>
 
 <ResponseField name="bin/dev" type="script">
-  Starts the development server, `bin/rails server`, on port 3000. Arguments pass through.
+  Starts the development server, `bin/rails server`, on port 3000. It passes any arguments on to `bin/rails server`.
 </ResponseField>
 
 <ResponseField name="bin/ci" type="script">
-  Runs every check a change must pass, as `config/ci.rb` lists them: setup, RuboCop, `bundler-audit`, the importmap audit, Brakeman, and the agent's `go vet`, `staticcheck` and `go test -race`.
+  Runs every check a change must pass, as `config/ci.rb` lists them. They are setup, RuboCop, `bundler-audit`, the importmap audit, Brakeman, and the agent's `go vet`, `staticcheck` and `go test -race`.
 </ResponseField>
 
 <ResponseField name="bin/jobs" type="script">
@@ -61,7 +61,9 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 </ResponseField>
 
 <ResponseField name="bin/kamal-parse" type="script">
-  Parses Kamal configs with Kamal's own code and prints what Meridian needs as JSON: service, image, roles, accessories, hostnames, secret names and labels, or an error with its file and line. Meridian runs it in a separate process with an empty environment, inside a temporary folder that holds only the files fetched from Git.
+  Reads Kamal configs with Kamal's own code, and prints what Meridian needs as JSON. That is the service, image, roles, accessories, hostnames, secret names and labels, or an error with its file and line.
+
+  Meridian runs it in a separate process with an empty environment. It runs inside a temporary folder that holds only the files Meridian fetched from Git.
 
   ```bash
   echo '{"configs":[{"path":"config/deploy.yml","destination":null}]}' | bin/kamal-parse
@@ -69,7 +71,7 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 </ResponseField>
 
 <ResponseField name="bin/icons" type="script">
-  Vendors Lucide icons into `vendor/lucide`, pinned to one release. With no arguments, it downloads every icon already vendored again. With names, it adds those icons.
+  Copies Lucide icons into `vendor/lucide`, all from one pinned Lucide release. With no arguments, it downloads every icon already in `vendor/lucide` again. With icon names, it adds those icons.
 
   ```bash
   bin/icons bell x
@@ -77,25 +79,25 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 </ResponseField>
 
 <ResponseField name="bin/docs" type="script">
-  The documentation site in `docs/`, with Mintlify's CLI. Needs Node 20.17 or later.
+  Runs the documentation site in `docs/` with Mintlify's command-line tool. It needs Node 20.17 or later.
 
   | Subcommand | What it does |
   | --- | --- |
   | `bin/docs` or `bin/docs dev` | Previews the site at `http://localhost:3333`. `PORT=` changes the port. |
   | `bin/docs check` | Runs what CI checks: `mint validate`, `mint broken-links` and `mint a11y`. |
-  | `bin/docs changelog` | Writes `docs/changelog.mdx` from `CHANGELOG.md`, which `bin/docs` also does before every preview and check. The page is never committed. |
+  | `bin/docs changelog` | Writes `docs/changelog.mdx` from `CHANGELOG.md`. `bin/docs` also does this before every preview and check. Nobody commits the page. |
 </ResponseField>
 
 <ResponseField name="bin/lab" type="script">
-  A local fleet: Docker-in-Docker servers, a registry and a self-hosted GitHub Actions runner, deploying real sites end to end on one machine. See [`lab/README.md`](https://github.com/bigint/meridian/blob/main/lab/README.md).
+  Runs a test fleet on your own machine: servers in Docker containers, an image registry and a self-hosted GitHub Actions runner. It deploys real sites from start to finish. See [`lab/README.md`](https://github.com/bigint/meridian/blob/main/lab/README.md).
 
   | Subcommand | What it does |
   | --- | --- |
   | `up owner/repo` | Starts the registry and servers, and registers the runner on the infra repository. Needs `gh`. |
   | `push SITE [VERSION]` | Builds a site from `ghcr.io/bigint/<site>` and pushes it to the lab registry. `all` pushes every site. `push umami VERSION` pushes an Umami release. |
-  | `versions SITE` | Lists a site's published versions, as short SHAs. |
+  | `versions SITE` | Lists a site's published versions, as short commit IDs. |
   | `agents` | Builds the agent, creates a token per server and starts an agent on each, with `MERIDIAN_INTERVAL=5s` and `MERIDIAN_LOGS=1`. `MERIDIAN_URL` defaults to `http://host.docker.internal:3000`. |
-  | `webhooks owner/repo` | Forwards the repository's webhooks to the dev server with `gh webhook forward`, until stopped. |
+  | `webhooks owner/repo` | Forwards the repository's webhooks to the dev server with `gh webhook forward`, until you stop it. |
   | `secrets owner/repo` | Sets the repository secrets the lab's `.kamal/secrets` reads, skipping any already set. |
   | `kamal owner/repo ARGS...` | Runs Kamal against a fresh clone of the infra repository, inside the lab network. |
   | `ssh [server]` | Opens a shell on a lab server. The default is `apse1-az1-node-01`. |
@@ -103,14 +105,14 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
   | `down` | Stops the lab. |
 </ResponseField>
 
-The other files in `bin/` are the standard Rails and gem binstubs: `bin/rails`, `bin/rake`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `bin/importmap` and `bin/thrust`. `bin/docker-entrypoint` is the image's entrypoint.
+The other files in `bin/` are the standard Rails and gem launchers: `bin/rails`, `bin/rake`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `bin/importmap` and `bin/thrust`. `bin/docker-entrypoint` is the script the image runs at start.
 
 ## Scripts in script
 
 | Command | What it does |
 | --- | --- |
 | `ruby script/error_pages.rb` | Writes the static error pages in `public/` (`400`, `404`, `406-unsupported-browser`, `422`, `500`) and `public/error-pages.css`. |
-| `bin/rails runner script/world_map.rb ne_110m_land.geojson` | Regenerates `app/assets/images/world.svg` from Natural Earth's land outlines. |
+| `bin/rails runner script/world_map.rb ne_110m_land.geojson` | Rebuilds `app/assets/images/world.svg` from Natural Earth's land outlines. |
 | `ruby script/docs_changelog.rb` | Writes `docs/changelog.mdx` from `CHANGELOG.md`. `bin/docs` runs it. |
 
 ## The agent
@@ -118,9 +120,9 @@ The other files in `bin/` are the standard Rails and gem binstubs: `bin/rails`, 
 | Command | What it does |
 | --- | --- |
 | `meridian-agent` | Runs the agent with the configuration in [Environment variables](/reference/environment#agent). |
-| `meridian-agent -print` | Collects one snapshot, prints it as JSON and exits. Needs no URL or token. |
+| `meridian-agent -print` | Collects one snapshot, prints it as JSON and exits. It needs no URL or token. |
 
-Inside a running agent accessory:
+To run it inside a running agent accessory:
 
 ```bash
 kamal accessory exec --reuse meridian_agent "/meridian-agent -print"

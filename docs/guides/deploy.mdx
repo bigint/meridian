@@ -1,11 +1,11 @@
 ---
 title: "Deploy, redeploy and roll back"
 sidebarTitle: "Deploy"
-description: "Ship a version by committing it to the app's version file, run the same version again, or revert the newest release."
+description: "Ship a version, run the same version again, or undo the newest release. Meridian does each one through Git and CI, never by connecting to your servers."
 icon: "rocket"
 ---
 
-A deploy in Meridian is a commit. Meridian writes the new image tag to the app's version file in the infra repository, and the CI workflow runs `kamal deploy`. Meridian never connects to your servers. It watches the agents to see each server pick up the new version.
+To deploy, you pick a version and click **Deploy**. Meridian writes that version into the app's [version file](/reference/glossary#version-file), a one-line file in your [infra repository](/reference/glossary#infra-repository). The [CI workflow](/reference/glossary#ci-workflow) in GitHub Actions sees the change and runs `kamal deploy`. [Kamal](/reference/glossary#kamal) is the tool that puts your app's containers on your servers. Meridian never connects to your servers itself.
 
 ```mermaid
 sequenceDiagram
@@ -26,9 +26,9 @@ sequenceDiagram
 ## Before you start
 
 - You are a deployer or an admin. Viewers see the deploy panel without its form. See [Roles](/concepts/roles).
-- The infra repository has the CI workflow, `.github/workflows/meridian-deploy.yml`. An admin adds it from the project page with **Add CI workflow**. See [Projects](/guides/projects#add-the-ci-workflow).
-- The image tag already exists in your registry. The workflow runs `kamal deploy --skip-push`, so it never builds or pushes an image. Your source repository's CI does that.
-- The servers run the agent, if you want to watch progress per server. See [Install the agent](/guides/agent).
+- The infra repository has the CI workflow, `.github/workflows/meridian-deploy.yml`. An admin adds it with **Add CI workflow** on the project page. See [Projects](/guides/projects#add-the-ci-workflow).
+- The image for the version is already in your registry. The workflow runs `kamal deploy --skip-push`, so it never builds or pushes an image. Your source repository's CI does that.
+- To watch each server pick up the version, it runs the [agent](/reference/glossary#agent), a small program that reports what runs there. See [Install the agent](/guides/agent).
 
 ## Deploy a version
 
@@ -37,17 +37,17 @@ sequenceDiagram
     Open **Apps** and pick the app, or click the app's name on the board.
   </Step>
   <Step title="Type the version">
-    Under **Ship a version**, type the image tag in **Version**. The field suggests the versions of the last 20 releases, and its placeholder is the newest one. A past release goes back to that version. A new tag ships new code.
+    Under **Ship a version**, type the image tag in **Version**. The field suggests the versions of the last 20 releases. Pick an old one to go back to it, or type a new tag to ship new code.
   </Step>
   <Step title="Deploy">
-    Click **Deploy** and confirm `Commit this version to config/deploy.version?`. Meridian commits the tag and says `Committed. CI will deploy it.`
+    Click **Deploy** and confirm `Commit this version to config/deploy.version?`. Meridian says `Committed. CI will deploy it.`
   </Step>
   <Step title="Watch it roll out">
-    **Current deploy** shows the CI run's state and one row per server. A row turns to `✓ Running v1.4.2` when that server's agent reports the new version running.
+    **Current deploy** shows the CI run and one row per server. A row turns to `✓ Running v1.4.2` when that server's agent reports the new version running.
   </Step>
 </Steps>
 
-You can deploy from the board too. Click an app's name in the grid to open the side panel, type a tag under **Ship a version**, and click **Deploy**. **Open app page** takes you to the full page.
+The board's side panel has the same form. Click an app's name in the grid to open it.
 
 <Frame>
   <img className="block dark:hidden" src="/screenshots/app.png" alt="An app page with its servers, releases, and the Ship a version form" />
@@ -56,7 +56,7 @@ You can deploy from the board too. Click an app's name in the grid to open the s
 
 ### What Meridian commits
 
-The version file sits next to the app's Kamal config. It holds one line, the tag, and a newline.
+The version file sits next to the app's Kamal [config](/reference/glossary#config) and holds one line, the tag. The first deploy creates it. A [destination](/reference/glossary#destination) is a variant of a config, such as `staging`.
 
 | Config | Destination | Version file |
 | --- | --- | --- |
@@ -64,9 +64,9 @@ The version file sits next to the app's Kamal config. It holds one line, the tag
 | `config/deploy.yml` | `staging` | `config/deploy.staging.version` |
 | `deploy/shop.yml` | `production` | `deploy/shop.production.version` |
 
-The first deploy creates the file. Until one exists, the board can't compare versions, and the app's cells show **Unknown**. See [Versions and releases](/concepts/versions-and-releases).
+Until it exists, the app's cells on the board show **Unknown**. See [Versions and releases](/concepts/versions-and-releases).
 
-Meridian commits straight to the project's branch, never through a pull request. The commit message names the service, the destination when there is one, the version, and who asked:
+The commit goes straight to the project's branch, never through a pull request. Its message names the service, the destination if there is one, the version, and who asked:
 
 ```text Deploy commit
 deploy(shop-production): v1.4.2
@@ -74,11 +74,11 @@ deploy(shop-production): v1.4.2
 Meridian-Actor: Ada Lovelace <ada@example.com>
 ```
 
-The push matches the workflow's `**/*.version` filter, so CI starts a run with one Kamal job for each version file the push changed. Jobs for one config and destination go one at a time. Jobs for different apps never wait on each other. See [CI workflow](/reference/ci-workflow).
+The push starts the CI workflow, with one Kamal job per changed version file. See [CI workflow](/reference/ci-workflow) for how jobs queue.
 
 ### Version format
 
-A version is a Docker image tag. It starts with a letter, a digit or `_`, then has up to 127 more letters, digits, `_`, `.` or `-`. Kamal names containers after it, and CI passes it as `--version`, so it can't start with `-`.
+A version is a Docker image tag. It starts with a letter, a digit or `_`. After that it has up to 127 more letters, digits, `_`, `.` or `-`.
 
 | Version | Accepted |
 | --- | --- |
@@ -94,39 +94,41 @@ A version is a Docker image tag. It starts with a letter, a digit or `_`, then h
 | Message | Why |
 | --- | --- |
 | `v1.4.2 is already in config/deploy.version. Use Redeploy to run it again.` | The commit would change nothing, so the workflow would never run. |
-| `The version file changed in Git since this page loaded. ...` | Someone changed the file between Meridian reading it and writing it. Meridian re-reads the repository. Check the new state and try again. |
-| `GitHub refused the commit: ...` | GitHub said no, often because of a branch protection rule or a missing permission. See [GitHub App](/reference/github-app). |
-| `shop only runs accessories: start them with kamal accessory boot, not a deploy` | The config runs only accessories, such as a tunnel's connectors. Neither its page nor the board's side panel has a deploy form. |
+| `The version file changed in Git since this page loaded. ...` | Someone changed the file after the page loaded. Meridian re-reads the repository. Check the new state and try again. |
+| `GitHub refused the commit: ...` | Often a branch protection rule or a missing permission. See [GitHub App](/reference/github-app). |
+| `shop only runs accessories: start them with kamal accessory boot, not a deploy` | The config runs only accessories, such as a tunnel's connectors. It has no deploy form. |
 
 ## Redeploy the current version
 
-**Redeploy** asks CI to run the deploy workflow again for the version in the version file. Meridian makes no commit. It dispatches the workflow with `command=deploy` and the app's config, destination and version. Use it after you rotate a secret, or after a run failed for a reason outside Git, such as a server that was down.
+**Redeploy** runs the deploy workflow again for the version already in the version file, with no commit. Use it after you rotate a secret, or after a run failed for a reason outside Git, such as a server that was down.
 
 <Steps>
   <Step title="Find the button">
-    On the app page, **Redeploy** is under **Ship a version**. The board's side panel has **Redeploy** too. The button appears only when the app has a version file and at least one release.
+    On the app page, **Redeploy** is under **Ship a version**. The board's side panel has it too. It shows only when the app has a version file and at least one release.
   </Step>
   <Step title="Confirm">
     Confirm `Run the deploy workflow again for the version in config/deploy.version? Use this after rotating a secret.`. Meridian says `Asked CI to deploy v1.4.2 again.`
   </Step>
 </Steps>
 
-Meridian reads the version file when you click, not from its last sync. A version that landed a moment ago is never replaced by the one before it. An app without a version file can't be redeployed: `shop has no version file yet: deploy a version first`.
+<Accordion title="How this works under the hood">
+  Meridian asks GitHub to run the workflow with `command=deploy` and the app's config, destination and version. It reads the version file when you click, so it never redeploys an older version over a newer one. Without a version file, it says `shop has no version file yet: deploy a version first`.
+</Accordion>
 
 ## Roll back
 
-**Roll back** reverts the newest release. Meridian reads the version file as it was just before that release's commit, and commits that value back.
+**Roll back** undoes the newest [release](/reference/glossary#release), the newest commit that changed the version file. Meridian commits back the version the file held right before it.
 
 <Steps>
   <Step title="Find the newest release">
-    On the app page, the newest entry under **Releases** carries the `newest` badge and a **Roll back** button. The board's side panel has **Roll back** too, for the same release.
+    On the app page, the newest entry under **Releases** has the `newest` badge and a **Roll back** button. The board's side panel has **Roll back** too. It shows only when the app has a version file and more than one release.
   </Step>
   <Step title="Confirm">
     Confirm `Revert 3f2a9c1 so the version file goes back to its previous value? CI deploys the result.`. Meridian says `Committed a revert to v1.4.1. CI will deploy it.`
   </Step>
 </Steps>
 
-The commit says which commit it reverts:
+The commit names the commit it reverts:
 
 ```text Rollback commit
 rollback(shop-production): v1.4.1
@@ -136,40 +138,43 @@ This reverts commit 3f2a9c1e5b7d...
 Meridian-Actor: Ada Lovelace <ada@example.com>
 ```
 
-**Roll back** shows only when the app has a version file and more than one release. Meridian checks two things before it commits:
+Meridian refuses a rollback in three cases:
 
-- **The release is the newest one Meridian knows.** Otherwise it says `Only the newest release can be rolled back`.
-- **Git agrees.** The newest commit that touched the version file must be that release's commit. If Git has moved on since the last sync, reverting would throw away the newer change, so Meridian refuses, re-reads the repository and asks you to check the new state.
-
-If the version file didn't exist before the release, there is nothing to go back to: `Nothing to roll back to: ... Deploy a version instead.`
+| Message | Why |
+| --- | --- |
+| `Only the newest release can be rolled back` | Meridian knows a newer release. |
+| `The version file changed in Git since this page loaded. ...` | Git has a newer change to the version file than Meridian's last sync. Reverting would throw it away. Meridian re-reads the repository. Check the new state and try again. |
+| `Nothing to roll back to: ... Deploy a version instead.` | The version file didn't exist before this release. |
 
 <Tip>
-To go back further than one release, deploy the older version by name. The **Version** field suggests the last 20. Roll back a rollback, and you return to where you were. The rollback commit is now the newest release, and reverting it restores the version before it.
+To go back more than one release, deploy the older version by name. Roll back a rollback, and you return to where you were.
 </Tip>
 
 ## Follow a deploy
 
 **Current deploy** on the app page shows the newest deploy Meridian knows:
 
-- A heading such as **Deploy of** `v1.4.2`, **Rollback to** `v1.4.1` or **Redeploy of** `v1.4.2`.
-- Who asked, or **Git** when someone changed the version file outside Meridian. Their push still runs the workflow, and Meridian tracks that run like its own.
+- A heading, such as **Deploy of** `v1.4.2`, **Rollback to** `v1.4.1` or **Redeploy of** `v1.4.2`.
+- Who asked. **Git** means someone changed the version file outside Meridian. Meridian follows that run like its own.
 - The commit, and a **CI run** link once GitHub reports a run.
-- One row per server, with the versions its agent reports and a badge: `✓ Running v1.4.2` or `… Waiting`.
+- One row per server, with the versions its agent reports, and `✓ Running v1.4.2` or `… Waiting`.
 
-The badge follows the CI run through four statuses. GitHub reports them through `workflow_run` webhooks, and Meridian also polls the runs every 30 seconds, so a missed webhook only delays the update.
+The badge follows the CI run:
 
 | Status | Means |
 | --- | --- |
-| Pending | Meridian made the commit. No CI run has been reported yet. |
+| Pending | Meridian made the commit. GitHub hasn't reported a CI run yet. |
 | Queued | GitHub has queued the run. |
 | In progress | The run has started. |
-| Completed | The run finished. The badge shows its conclusion instead, such as **Success**, **Failure** or **Cancelled**. |
+| Completed | The run finished. The badge shows its result instead, such as **Success**, **Failure** or **Cancelled**. |
 
-Progress per server comes from the agents, never from the CI run's steps. A server counts as done when its agent reports a running container at the new version. A server without an agent stays at `… Waiting`, even after CI succeeds. While a deploy is not completed, the map marks its servers' places as **Deploying**.
+Each server's row comes from its agent, never from CI. A server without an agent stays at `… Waiting`, even after CI succeeds. During a deploy, the map marks its servers' places as **Deploying**.
 
 <Note>
-A completed run with **Success** means Kamal finished. It doesn't mean every server runs the version. The rows say that, and the board's cells turn **In sync** once every container matches. See [Drift](/concepts/drift).
+**Success** means Kamal finished, not that every server runs the version. The rows tell you that. The board's cells turn **In sync** once every container matches Git. See [Drift](/concepts/drift).
 </Note>
+
+GitHub reports each status with a [webhook](/reference/glossary#webhook), a message it sends Meridian. Meridian also checks every 30 seconds, so a missed webhook only delays the update.
 
 ## Rate limits
 
@@ -185,16 +190,16 @@ Each action allows a few requests a minute from one IP address. Past that, Merid
 
 <AccordionGroup>
   <Accordion title="The deploy stays at Pending">
-    No CI run has started for the commit. Check that the infra repository has `.github/workflows/meridian-deploy.yml` on its branch, that GitHub Actions is turned on, and that the push changed a file ending in `.version`. Open the commit's checks on GitHub to see whether a run started.
+    No CI run has started for the commit. Check that the branch has `.github/workflows/meridian-deploy.yml`, that GitHub Actions is on, and that the push changed a file ending in `.version`. Then open the commit's checks on GitHub to see whether a run started.
   </Accordion>
   <Accordion title="CI succeeded, but servers stay at Waiting">
-    The agents don't report the new version. Either the server has no agent, the agent has gone quiet, or Kamal didn't start the new container there. Open the server's page to see what its agent last reported, and the CI run's log to see what Kamal did.
+    The agents don't report the new version. There are three causes: the server has no agent, its agent has gone quiet, or Kamal didn't start the container. The server's page shows what its agent last reported. The CI run's log shows what Kamal did.
   </Accordion>
   <Accordion title="The run fails with an image that can't be found">
     The workflow never builds images. Push `<registry>/<image>:<version>` from the source repository's CI first, then deploy that tag.
   </Accordion>
   <Accordion title="GitHub refused the commit">
-    The GitHub App, or the token Meridian uses, needs **Contents: Read and write** on the infra repository, and branch protection must let it push to the branch. See [GitHub App](/reference/github-app).
+    The GitHub App, or the token Meridian uses, needs **Contents: Read and write** on the infra repository. Branch protection must also let it push to the branch. See [GitHub App](/reference/github-app).
   </Accordion>
 </AccordionGroup>
 

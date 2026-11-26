@@ -1,11 +1,11 @@
 ---
 title: "Watch live stats and read logs"
 sidebarTitle: "Live stats and logs"
-description: "See a server's CPU, memory, load and disk as they change, and read a container's logs, or an app's across every server, as they are written."
+description: "See a server's CPU, memory, load and disk once a second, and read a container's logs, or an app's across every server, as they are written."
 icon: "activity"
 ---
 
-A server's page shows its numbers once a second while you look at it. A container's logs, or an app's merged across its servers, stream into the page as they are written. Both come from the agent over one outbound WebSocket, flow only while someone is looking, and are never stored.
+A server's page shows its CPU, memory, load and disk once a second while you look at it. A logs page shows a container's log lines, or an app's lines from every server, as they are written. Both come from the [agent](/reference/glossary#agent) on each server, flow only while a page is open, and are never stored.
 
 ## Who can see what
 
@@ -14,11 +14,11 @@ A server's page shows its numbers once a second while you look at it. A containe
 | Live stats on a server's page | Everyone who can sign in |
 | A container's logs, an app's logs | Deployers and admins |
 
-Logs can hold secrets, so viewers can't open them. The **Logs** buttons don't show for viewers, and the pages answer them with `You don't have permission to do that.`. See [Roles](/concepts/roles).
+Logs can hold secrets, so viewers can't open them. Viewers don't see the **Logs** buttons, and the logs pages answer them with `You don't have permission to do that.`. See [Roles](/concepts/roles).
 
 ## Live stats
 
-Open a server from **Servers**, the board, or the map. Its page shows two live parts.
+Open a server from **Servers**, the board, or the map. Its page has two live parts, **Host** and **Containers**.
 
 <Frame>
   <img className="block dark:hidden" src="/screenshots/server.png" alt="A server page with live host tiles above the apps and containers tables" />
@@ -34,57 +34,30 @@ Open a server from **Servers**, the board, or the map. Its page shows two live p
 | **Load** `1m` | The one-minute load average | the host's cores |
 | **Disk** | Bytes used on the host's root filesystem, and the share | its size |
 
-Each tile has a sparkline and `avg · peak` over the last 120 frames, about two minutes. A tile turns amber at 75% of its capacity and red at 90%.
+Each tile has a small chart and `avg · peak` over the last 120 frames, about two minutes. A tile turns amber at 75% of its capacity and red at 90%.
 
-**Containers** lists every container with Kamal labels, as the agent last reported it. Each running one gets live **CPU**, **Memory**, and **Network** in and out per second. Hover a value for the exact figure, such as the cores in use or the container's memory limit.
+**Containers** lists every container with Kamal labels, as the agent last reported it. Each running container gets live **CPU**, **Memory**, and **Network** in and out per second. Hover a value for the exact figure, such as the cores in use or the container's memory limit.
 
-The pill next to **Host** says where the stream stands:
+The pill next to **Host** shows the stream's state:
 
 | Pill | Means |
 | --- | --- |
-| `Connecting…` | The page is subscribing, or no frame has come yet. |
+| `Connecting…` | The page is connecting, or no frame has come yet. |
 | `Live` | Frames are arriving. |
 | `Paused, the agent stopped sending` | No frame for 5 seconds. |
 
-Two notes can show under the tiles:
+### If the tiles stay empty
 
-- `Host numbers need the agent's /proc mount.` The agent sends container numbers, but it can't read the host's `/proc`. Mount `/proc:/host/proc:ro` on the agent. The accessory template does.
-- `Nothing yet. The agent needs a version with live stats and a reachable /cable.` No frame came in 15 seconds. Check that the agent is a version with live stats, that `MERIDIAN_LIVE` isn't `0`, and that your proxy passes WebSockets through to Meridian's `/cable`.
+| Note under the tiles | Fix |
+| --- | --- |
+| `Host numbers need the agent's /proc mount.` | The agent can't read the host's `/proc`, so it sends only container numbers. Mount `/proc:/host/proc:ro` on the agent. The accessory template on the **Agents** page does this. |
+| `Nothing yet. The agent needs a version with live stats and a reachable /cable.` | No frame came in 15 seconds. Check three things: the agent is a version with live stats, `MERIDIAN_LIVE` isn't `0`, and your proxy passes WebSockets through to Meridian's `/cable`. |
 
 ## Logs
 
-Open logs from either place:
-
-- **One container.** On a server's page, click the logs icon at the end of the container's row in **Containers**.
-- **One app, every server.** On an app's page, click **Logs**. The page merges the app's containers on every server, running ones first, up to 20 containers.
-
-Each source starts with its last 200 lines, then new lines as they are written. Lines from several containers interleave by time, each with a coloured chip for its source.
-
-The bar above the lines has:
-
-- **Filter lines**: show only lines that contain the text, with each match marked.
-- **Both**, **stdout** and **stderr**: pick the streams.
-- **Wrap**: wrap long lines, or scroll them.
-- **Follow**: stay at the newest line. Scroll up and the page holds still, and a button counts the new lines below.
-- **Clear**: empty the page.
-- On a merged page, one chip per container. Click a chip to hide or show that container's lines.
-
-JSON lines read as their level, message and first fields, with the rest one click away. The page keeps the newest 5,000 lines and drops the oldest.
-
-The status at the end of the bar is `Connecting…`, `Live`, `Waiting for new lines` after 10 quiet seconds, or `Not streaming` when no source will stream. A logs page's grant to stream lasts 12 hours. A page still open after that is turned down the next time it reconnects, and the status says `Stopped: reload the page to keep reading`.
-
-Notices appear in the lines themselves:
-
-| Notice | Means |
-| --- | --- |
-| `Logs are off on web-1's agent. Set MERIDIAN_LOGS=1 there to turn them on.` | That agent doesn't have logs turned on. |
-| `Logs refused: ...` | The agent won't follow that container, with its reason. It follows only Kamal's containers, never its own, and at most 20 at a time. |
-| `120 lines skipped: logged faster than the agent sends` | The container logged faster than the agent sends: more than 512 KB in a second (each line counts 64 bytes on top of its text), or, for live lines, more than 500 in 250 ms. The count says how many lines were dropped. |
-| `Container stopped` | The container is no longer running. |
-
 ### Turn logs on
 
-Logs are off until you turn them on in each agent:
+Logs are off until you turn them on in each agent. Set `MERIDIAN_LOGS: 1` in the agent's accessory:
 
 ```yaml config/deploy.yml
   meridian_agent:
@@ -93,42 +66,88 @@ Logs are off until you turn them on in each agent:
         MERIDIAN_LOGS: 1
 ```
 
-The accessory template on the **Agents** page sets `MERIDIAN_LOGS: 1`. Remove the line to keep logs on the server. Then reboot the accessory with `kamal accessory reboot meridian_agent`. Logs ride the same line as live stats, so `MERIDIAN_LIVE=0` turns them off too. See [Install the agent](/guides/agent).
+Then reboot the accessory with `kamal accessory reboot meridian_agent`. The accessory template on the **Agents** page sets `MERIDIAN_LOGS: 1` already. Remove the line to keep a server's logs off Meridian. `MERIDIAN_LIVE=0` turns logs off too, because logs use the same connection as live stats. See [Install the agent](/guides/agent).
 
-The agent checks every container it is asked for against Kamal's labels itself. Even a Meridian that someone has taken over can't read the logs of anything else on the host.
-
-## How the stream works
-
-The agent keeps one WebSocket open to Meridian's `/cable`. It connects out, like its snapshots, with the same token. Nothing streams while nobody looks.
+### Open logs
 
 <Steps>
-  <Step title="You open the page">
-    Meridian sends the server's agent a lease: 30 seconds of stats for a server page, or 30 seconds of one container's logs for a logs page, with the last 200 lines.
+  <Step title="Pick what to read">
+    - **One container**: on a server's page, click the logs icon at the end of the container's row in **Containers**.
+    - **One app, every server**: on an app's page, click **Logs**. The page merges up to 20 of the app's containers, from every server, running ones first.
   </Step>
-  <Step title="The agent streams">
-    Stats go out once a second. Log lines go out in batches, at most one a container every 250 ms. Meridian relays each one to the open pages.
-  </Step>
-  <Step title="The page renews">
-    Every 10 seconds the page tells Meridian it is still open, and Meridian renews the lease. It renews only for a page it has heard from in the last 75 seconds.
-  </Step>
-  <Step title="You leave">
-    The lease runs out, and the agent stops within 30 seconds. A page that went to sleep or lost its network stops it within about two minutes.
+  <Step title="Read">
+    Each container starts with its last 200 lines, then new lines as they are written. Lines from several containers are merged by time. Each line has a coloured chip for its container.
   </Step>
 </Steps>
 
-Limits keep the stream small:
+The bar above the lines has:
 
-- The agent caps any lease at 120 seconds, whatever it is sent.
-- Meridian drops stats frames that come faster than two a second.
-- The agent follows at most 20 containers at once, cuts lines at 8 KB, and sends at most 512 KB a second per container. Each line counts 64 bytes on top of its text, so even blank lines are bounded.
+- **Filter lines**: show only lines that contain the text, with each match marked.
+- **Both**, **stdout** and **stderr**: pick the streams.
+- **Wrap**: wrap long lines, or scroll them.
+- **Follow**: stay at the newest line. Scroll up and the page holds still, and a button counts the new lines below.
+- **Clear**: empty the page.
+- On an app's page, one chip per container. Click a chip to hide or show that container's lines.
 
-The wire format is in [Agent protocol](/reference/agent-protocol).
+A JSON line shows its level, message and first fields. Click it for the rest. The page keeps the newest 5,000 lines and drops older ones.
+
+The status at the end of the bar reads:
+
+| Status | Means |
+| --- | --- |
+| `Connecting…` | The page is connecting. |
+| `Live` | Lines are arriving. |
+| `Waiting for new lines` | No new line for 10 seconds. |
+| `Not streaming` | No container on the page will stream. |
+| `Stopped: reload the page to keep reading` | The page was open more than 12 hours, so Meridian turned it down when it reconnected. Reload it. |
+
+Notices appear among the lines:
+
+| Notice | Means |
+| --- | --- |
+| `Logs are off on web-1's agent. Set MERIDIAN_LOGS=1 there to turn them on.` | That agent doesn't have logs turned on. See [Turn logs on](#turn-logs-on). |
+| `Logs refused: ...` | The agent won't follow that container, and says why. It follows only Kamal's containers, never its own, and at most 20 at a time. |
+| `120 lines skipped: logged faster than the agent sends` | The container logged more than 512 KB in a second, or more than 500 live lines in 250 ms. The number is how many lines were dropped. |
+| `Container stopped` | The container is no longer running. |
+
+The agent itself checks every container it is asked for against Kamal's labels. So even a Meridian that someone has taken over can't read the logs of anything else on the host.
+
+## How the stream works
+
+The agent keeps one WebSocket open to Meridian's `/cable`. It connects out to Meridian, with the same token as its reports. It streams only while a page asks for it, in 30-second turns that the page keeps renewing.
+
+<Accordion title="How this works under the hood">
+  <Steps>
+    <Step title="You open the page">
+      Meridian sends the server's agent a lease, a time-limited request to stream. A server page asks for 30 seconds of stats. A logs page asks for 30 seconds of one container's logs, starting with the last 200 lines.
+    </Step>
+    <Step title="The agent streams">
+      Stats go out once a second. Log lines go out in batches, at most one batch per container every 250 ms. Meridian passes each one on to the open pages.
+    </Step>
+    <Step title="The page renews">
+      Every 10 seconds the page tells Meridian it is still open, and Meridian renews the lease. It renews only for a page it has heard from in the last 75 seconds.
+    </Step>
+    <Step title="You leave">
+      The lease runs out, and the agent stops within 30 seconds. If the page went to sleep or lost its network, the agent stops within about two minutes.
+    </Step>
+  </Steps>
+
+  Limits keep the stream small:
+
+  - The agent caps any lease at 120 seconds, whatever Meridian asks for.
+  - Meridian drops stats frames that come faster than two a second.
+  - The agent follows at most 20 containers at once and cuts lines at 8 KB.
+  - The agent sends at most 512 KB a second per container. Each line counts 64 bytes on top of its text, so even blank lines are limited.
+  - A logs page's grant to stream lasts 12 hours. After that, Meridian turns the page down the next time it reconnects.
+
+  The message format is in [Agent protocol](/reference/agent-protocol).
+</Accordion>
 
 ## Nothing is stored
 
-Stats and log lines are relayed to the open pages and kept nowhere else. They pass through the cable database, which keeps each message for about a minute. Leave the page, and the lines are gone.
+Meridian passes stats and log lines on to the open pages and keeps them nowhere else. They go through the cable database, which keeps each message for about a minute. Leave the page, and the lines are gone.
 
-What is stored is the fact that someone looked. Each time someone opens a logs page, Activity records `logs.viewed`, with who, and which container or app. See [Activity](/guides/activity).
+Meridian does store the fact that someone looked. Each time someone opens a logs page, Activity records `logs.viewed`, with who, and which container or app. See [Activity](/guides/activity).
 
 ## Related
 

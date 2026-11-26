@@ -1,13 +1,13 @@
 ---
 title: "Add a new app"
 sidebarTitle: "New app"
-description: "Fill in the New app form, and Meridian writes a Kamal config, checks it with Kamal, and proposes it to the infra repository."
+description: "Answer a few questions, and Meridian writes a Kamal config for a new app, checks it, and opens a pull request on your infra repository."
 icon: "square-plus"
 ---
 
-The **New app** form turns a few answers into a Kamal config, a version file, and a pull request on the infra repository. Nothing runs until you merge it. Once merged, CI deploys the first version and the app appears on the board.
+The **New app** form turns a few answers into a [Kamal](/reference/glossary#kamal) [config](/reference/glossary#config), the file that says what an app is and where it runs. Meridian checks it and opens a pull request on your [infra repository](/reference/glossary#infra-repository). Nothing runs until you merge. Then CI deploys the first version.
 
-You need the admin role. The form is at **Apps** → **New app**, or **New app** on the board.
+You need the admin role. The form is at **Apps** → **New app**, or **New app** on the board. See [Roles](/concepts/roles).
 
 ## Fill in the form
 
@@ -15,20 +15,20 @@ You need the admin role. The form is at **Apps** → **New app**, or **New app**
   <Step title="The app">
     - **Infra repository**: the project the config goes into.
     - **Name**: Kamal's `service`. Lowercase letters, digits, `-` and `_`, starting with a letter or digit, at most 63 characters.
-    - **Source repository**: where the app's code and Dockerfile live, as `owner/name`. The image is named after it, lowercased, and previews watch its pull requests.
-    - **Kind**: what the app is. It sets the default port, the Dockerfile guidance, and the `meridian.kind` label. See [Kinds](#kinds).
+    - **Source repository**: where the app's code and Dockerfile live, as `owner/name`. The image is named after it, in lowercase. Previews watch its pull requests.
+    - **Kind**: what the app is. It sets the default port and the Dockerfile guidance. See [Kinds](#kinds).
     - **Hostname**: the domain the app answers on, such as `shop.example.com`.
   </Step>
   <Step title="Where it runs">
     - **Servers**: pick one or more, grouped by their `region` label. Hold ⌘ or Ctrl to pick several.
-    - **…or every server with these labels**: a label selector such as `role=web,region=sgp`. When you fill it in, it replaces the servers picked above, and the config lists every server whose labels match all the terms.
-    - **Destination**: optional, such as `production`. Meridian then writes a base config plus a destination file.
-    - **Port**: the port the app listens on in its container. Leave it blank for the kind's default.
+    - **…or every server with these labels**: a label selector such as `role=web,region=sgp`. It replaces the servers picked above. The config lists every server whose labels match all the terms.
+    - **Destination**: optional, such as `production`. Meridian then writes a base config plus a [destination](/reference/glossary#destination) file, a variant of the config.
+    - **Port**: the port the app listens on inside its container. Leave it blank for the kind's default.
     - **Registry**: the registry host, `ghcr.io` by default. A port and a path are allowed, such as `registry.example.com:5000/team`.
-    - **First version**: the image tag CI deploys when the pull request is merged, `latest` by default. It follows the [version format](/guides/deploy#version-format).
+    - **First version**: the image tag CI deploys when you merge, `latest` by default. It follows the [version format](/guides/deploy#version-format).
   </Step>
   <Step title="Open the pull request">
-    Click **Open pull request**. Meridian runs its checks. If one fails, the form comes back with every reason listed at the top, and each next to its field when it has one. If all pass, you land on the proposal page.
+    Click **Open pull request**. If a check fails, the form comes back with every reason at the top, and each one next to its field. See [If a check fails](#if-a-check-fails). If all pass, you land on the proposal page.
   </Step>
 </Steps>
 
@@ -41,11 +41,53 @@ You need the admin role. The form is at **Apps** → **New app**, or **New app**
 | Rails | a Rails app, behind Thruster | `80` |
 | Other | any container | `3000` |
 
-A Rails app also gets `RAILS_MASTER_KEY` under `env.secret`. Meridian reads the kind back from the `meridian.kind` label on every sync. A config without the label counts as **Other**.
+A Rails app also gets `RAILS_MASTER_KEY` under `env.secret`. Meridian stores the kind in the config as the label `meridian.kind`. A config without the label counts as **Other**.
 
-## The checks Meridian runs
+## The proposal
 
-Meridian never proposes a config that would clash with another app or that Kamal would reject. Each check stops the form with a message.
+Meridian opens a pull request on the infra repository. Its branch is `meridian/new-shop-<6 hex digits>`, and its title is `feat(shop): add node app`. The body lists the config, hosts, URL and first version, a **Before merging** checklist, and the Dockerfile guidance.
+
+The proposal page says `shop is ready for review`, with **Open pull request #12**. Its sections are:
+
+- **Still to do by hand**: the same checklist as the pull request.
+- **Files**: every file Meridian wrote, in full.
+- **Dockerfile for acme/shop**: the guidance for the kind.
+
+If the project lets admins commit directly, Meridian commits the files to the default branch instead. The page then says `shop is committed`, with **View commit**. See [Projects](/guides/projects#direct-commits).
+
+<Warning>
+A direct commit deploys the first version straight away. On such a project, do the steps in [Before you merge](#before-you-merge) before you click **Open pull request**.
+</Warning>
+
+## Before you merge
+
+Merging is the deploy. It puts the [version file](/reference/glossary#version-file) on the branch, so CI runs `kamal deploy` with the first version. Do these steps first. The pull request's checklist names them with your values.
+
+<Steps>
+  <Step title="Point DNS at the servers">
+    Point the hostname at the servers, or at the tunnel or load balancer in front of them. If the servers are behind NAT, route the hostname through your tunnel to port 80 or 443 on them.
+  </Step>
+  <Step title="Add a Dockerfile and push an image">
+    Add a Dockerfile to the source repository, following the [guidance](#dockerfile-guidance) below. Have its CI push `ghcr.io/acme/shop:<tag>`. The deploy workflow never builds, so the first version must already be in the registry.
+  </Step>
+  <Step title="Check the secrets">
+    The infra repository needs the `KAMAL_REGISTRY_PASSWORD` secret, plus `RAILS_MASTER_KEY` for a Rails app. Set them on the [Secrets](/guides/secrets) page. `.kamal/secrets` must read them, such as `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD`.
+  </Step>
+  <Step title="Serve it through the tunnel, if you have one">
+    The checklist names the tunnel's connector servers. Run the app on all of them, and add a route for its hostname to `http://kamal-proxy:80`.
+  </Step>
+  <Step title="Merge">
+    Merge the pull request. From then on, you deploy with the app's **Deploy** button.
+  </Step>
+</Steps>
+
+## After the merge
+
+Within 30 seconds Meridian reads the new config. The app appears on the board, and **Current deploy** on its page follows the first deploy. The files are yours from then on. Edit them like any Kamal config.
+
+## If a check fails
+
+Meridian never proposes a config that would clash with another app, or that Kamal would reject.
 
 | Check | Message |
 | --- | --- |
@@ -56,23 +98,27 @@ Meridian never proposes a config that would clash with another app or that Kamal
 | Servers that can be written into a config | `Can't write these servers into a config, their hostnames aren't host names: ...`. A hostname must start with a letter or digit and hold only letters, digits, `.`, `_`, `:` and `-`, so no spaces, quotes or `<%`. |
 | The config path is one the project reads | `... isn't matched by the project's config paths (...), so Meridian would never see it. Add a path with a * to the project.` |
 | No other config at that path | `already has a config at config/deploy-shop.yml`. Any destination of an existing config counts too. |
-| No other app with that service and destination | `is already the service of shop, in config/deploy-shop.yml`. Two configs in one project with one service and destination would name the same containers. |
+| No other app with that service and destination | `is already the service of shop, in config/deploy-shop.yml`. Two such configs in one project would name the same containers. |
 | No other app on that hostname | `is already served by shop`. kamal-proxy gives a hostname to one service. Every project counts. |
 | No file in the way | `config/deploy-shop.yml already exists in acme/infra`. Meridian never replaces a file, even one it doesn't list as an app, such as a config Kamal can't parse. |
 | Kamal accepts it | `Kamal rejected the generated config: ...`. Meridian parses the result with the same Kamal version that reads your configs. |
 
-### Where the config goes
+## Where the config goes
 
-The config path comes from the project's config globs. Meridian takes the first glob with exactly one `*` (a `**/` counts as nothing) and puts the service name in place of the `*`. When the text before the `*` doesn't end in `/`, `.`, `-` or `_`, Meridian adds a `-`.
+Meridian names the file from the project's config paths, the patterns that say where its configs live. It takes the first pattern with exactly one `*` and puts the service name in place of the `*`.
 
-| Project glob | Config for `shop` |
+| Project config path | Config for `shop` |
 | --- | --- |
 | `config/deploy*.yml` (the default) | `config/deploy-shop.yml` |
 | `deploy/*.yml` | `deploy/shop.yml` |
 | `deploy/**/*.yml` | `deploy/shop.yml` |
 | `kamal/*/deploy.yml` | `kamal/shop/deploy.yml` |
 
-If no glob has a single `*`, Meridian falls back to `config/deploy*.yml`. That path must still match one of the project's globs. If it doesn't, add a glob with a `*` on the project's **Edit** page. See [Projects](/guides/projects#choose-config-paths).
+If no path fits, add one with a `*` on the project's **Edit** page. See [Projects](/guides/projects#choose-config-paths).
+
+<Accordion title="Edge cases">
+  A `**/` doesn't count as a `*`. When the text before the `*` doesn't end in `/`, `.`, `-` or `_`, Meridian adds a `-`. If no path has a single `*`, Meridian falls back to `config/deploy*.yml`. That result must still match one of the project's config paths, or the check fails.
+</Accordion>
 
 ## The files it writes
 
@@ -116,7 +162,7 @@ latest
 ```
 </CodeGroup>
 
-With a destination, the base config has no `servers` and no `proxy.host`. Those go into the destination file, and the version file carries the destination's name. For a Rails app with the destination `production`:
+With a destination, `servers` and `proxy.host` move from the base config into the destination file. The version file carries the destination's name. For a Rails app with the destination `production`:
 
 <CodeGroup>
 ```yaml config/deploy-shop.yml
@@ -164,49 +210,11 @@ latest
 ```
 </CodeGroup>
 
-The `meridian.source` label is what gives the app [previews](/guides/previews). If the project already has a [Cloudflare Tunnel](/guides/cloudflare-tunnel), the config also logs Cloudflare's visitor headers under `proxy.logging`, so the app's [Traffic](/guides/traffic) page can tell visitors apart.
-
-## The proposal
-
-Meridian opens a pull request on the infra repository, on a branch named `meridian/new-shop-<6 hex digits>`. Its title is `feat(shop): add node app`. Its body lists the config, the hosts, the URL and the first version, then a **Before merging** checklist and the Dockerfile guidance for the kind.
-
-If the project lets admins commit directly, Meridian commits the files straight to the default branch instead. See [Projects](/guides/projects#direct-commits).
-
-<Warning>
-A direct commit puts the version file on the branch at once, so CI deploys the first version straight away. Do the steps in [Before you merge](#before-you-merge) before you click **Open pull request** on such a project.
-</Warning>
-
-The proposal page says `shop is ready for review`, with **Open pull request #12**, or `shop is committed`, with **View commit**. It has three sections:
-
-- **Still to do by hand**: the same checklist as the pull request.
-- **Files**: every file Meridian wrote, in full.
-- **Dockerfile for acme/shop**: the guidance for the kind.
-
-## Before you merge
-
-Merging is the deploy. The version file lands on the branch, the workflow sees a changed `.version` file, and CI runs `kamal deploy` with the first version. Do these first. The checklist in the pull request names them with your values.
-
-<Steps>
-  <Step title="Point DNS at the servers">
-    Point the hostname at the servers, or at the tunnel or load balancer in front of them. If the servers are behind NAT, route the hostname through your tunnel to port 80 or 443 on them.
-  </Step>
-  <Step title="Add a Dockerfile and push an image">
-    Add a Dockerfile to the source repository, following the guidance below. Have its CI push `ghcr.io/acme/shop:<tag>`. The deploy workflow runs with `--skip-push` and never builds. The first version must already exist in the registry.
-  </Step>
-  <Step title="Check the secrets">
-    The infra repository needs the `KAMAL_REGISTRY_PASSWORD` secret, and `RAILS_MASTER_KEY` for a Rails app. Set them on the [Secrets](/guides/secrets) page. `.kamal/secrets` must read them, such as `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD`.
-  </Step>
-  <Step title="Serve it through the tunnel, if you have one">
-    The checklist names the tunnel's connector servers. Run the app on all of them, and add a route for its hostname to `http://kamal-proxy:80`.
-  </Step>
-  <Step title="Merge">
-    Merge the pull request. From then on, deploys go through the app's **Deploy** button.
-  </Step>
-</Steps>
+The `meridian.source` label turns on [previews](/guides/previews). If the project has a [Cloudflare Tunnel](/guides/cloudflare-tunnel), the config also logs Cloudflare's visitor headers under `proxy.logging`, for the [Traffic](/guides/traffic) page.
 
 ## Dockerfile guidance
 
-Every image must listen on the configured port and answer `GET /up` with a `200` once it is ready. Kamal boots only images labelled with their service. `kamal build` adds the label. If your CI builds the image another way, keep the `LABEL service="shop"` line.
+Every image must listen on the configured port and answer `GET /up` with a `200` once it is ready. Kamal starts only images labelled with their service. `kamal build` adds the label. If your CI builds the image another way, keep the `LABEL service="shop"` line.
 
 <Tabs>
   <Tab title="Static">
@@ -268,11 +276,7 @@ Every image must listen on the configured port and answer `GET /up` with a `200`
   </Tab>
 </Tabs>
 
-The guidance comes from `templates/dockerfiles/<kind>.md`, and the config from `templates/kamal/app.yml`. Edit them to change what every new app gets.
-
-## After the merge
-
-The next sync reads the new config. That happens on the push webhook, or within 30 seconds without one. The app appears on the board, and **Current deploy** on its page follows the first deploy. The files are yours from then on. Edit them like any Kamal config.
+To change what every new app gets, edit `templates/dockerfiles/<kind>.md` for the guidance and `templates/kamal/app.yml` for the config.
 
 ## Related
 

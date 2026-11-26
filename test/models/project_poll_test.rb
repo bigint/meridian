@@ -51,7 +51,7 @@ class ProjectPollTest < ActiveSupport::TestCase
 
   private
     def workflow_run(id:, status: "completed", conclusion: nil, head_branch: "main", updated_at: Time.current)
-      { id: id, head_sha: "c" * 40, head_branch: head_branch, event: "push", status: status, conclusion: conclusion,
+      { id: id, path: ".github/workflows/meridian-deploy.yml", head_sha: "c" * 40, head_branch: head_branch, event: "push", status: status, conclusion: conclusion,
         display_title: "deploy(web): v42", html_url: "https://github.com/example/infra/actions/runs/#{id}",
         run_started_at: 5.minutes.ago.iso8601, updated_at: updated_at.iso8601 }
     end

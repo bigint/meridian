@@ -48,7 +48,7 @@ Operator ──HTTPS──▶ Meridian (one container: Rails + Solid Queue in Pu
 - **Deploy** is a contents-API commit to the app's version file, using the file's current blob SHA. The message is `deploy(<app>): <version>`, followed by an `Meridian-Actor:` trailer.
 - **Roll back** reverts a release commit's change to the version file, with the message `rollback(<app>): <version>`.
 - **New app, preview setup and the CI workflow** arrive as pull requests. A project setting lets admins commit them directly instead.
-- **Deploy status** comes from `workflow_run` webhooks and from polling the branch's workflow runs every 30 seconds; both go through `Project#track_workflow_run`, and one repository's jobs run one at a time.
+- **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored), through `workflow_run` webhooks and polling the branch's workflow runs every 30 seconds; both go through `Project#track_workflow_run`, and one repository's jobs run one at a time.
 
 ## Domain model
 

@@ -1,10 +1,10 @@
-# CI runs on the default branch become deploys. A run arrives from a
+# Runs of the deploy workflow on the default branch become deploys. A run arrives from a
 # workflow_run webhook, from polling, or from both; handling it again changes nothing.
 module Project::WorkflowRuns
   extend ActiveSupport::Concern
 
   def track_workflow_run(run)
-    return unless run["head_branch"] == default_branch
+    return unless run["head_branch"] == default_branch && meridian_workflow?(run)
     return Preview.track(run) || Deploy.from_dispatch(self, run) if run["event"] == "workflow_dispatch"
 
     sync if last_synced_sha != run["head_sha"]
@@ -21,4 +21,11 @@ module Project::WorkflowRuns
     runs.each { track_workflow_run(it) }
     Rails.cache.write(key, runs.map { it["updated_at"].to_time }.max) if runs.any?
   end
+
+  private
+    # GitHub reports every workflow's runs. Only the deploy workflow's are
+    # deploys; a lint or test run at the same commit says nothing about one.
+    def meridian_workflow?(run)
+      File.basename(run["path"].to_s) == Project::Changes::WORKFLOW_FILE
+    end
 end

@@ -6,6 +6,7 @@
 
 - The CI workflow deploys apps with a destination: a change to `deploy/web.production.version` ran `kamal deploy -c deploy/web.production.yml` without `-d production`, which Kamal rejects. It also finds `.yaml` configs, and deploys every version file a push changed rather than only the last commit's. Press **Add CI workflow** on the project page to get the new workflow.
 - Deploys of different apps no longer cancel each other in CI. Every push run shared one concurrency group, so a third deploy made while one was running cancelled the second, waiting one. Kamal now runs one at a time per app, for pushes and redeploys alike.
+- Only the deploy workflow's runs move deploys along. A lint or test workflow running at the same commit used to overwrite a deploy's status and CI link, and could invent a deploy for an app whose config it touched.
 
 ## v0.1.0 (2026-11-26)
 

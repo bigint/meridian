@@ -27,10 +27,26 @@ class WebhooksTest < ActionDispatch::IntegrationTest
 
     perform_enqueued_jobs do
       github_webhook "workflow_run", { repository: { full_name: "example/infra" },
-        workflow_run: { id: 77, head_sha: "c" * 40, head_branch: "main", status: "queued", html_url: "https://github.com/example/infra/actions/runs/77" } }
+        workflow_run: { id: 77, path: ".github/workflows/meridian-deploy.yml", head_sha: "c" * 40, head_branch: "main", status: "queued", html_url: "https://github.com/example/infra/actions/runs/77" } }
     end
 
     deploy = Deploy.sole
     assert_equal [ "web · production", "v42", 77, "queued" ], [ deploy.app.name, deploy.version, deploy.ci_run_id, deploy.status ]
+  end
+
+  test "runs of other workflows at the same commit leave deploys alone" do
+    stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ] ] })
+    run = { id: 77, path: ".github/workflows/meridian-deploy.yml", head_sha: "c" * 40, head_branch: "main", event: "push",
+      status: "completed", conclusion: "failure", html_url: "https://github.com/example/infra/actions/runs/77" }
+
+    perform_enqueued_jobs do
+      github_webhook "workflow_run", { repository: { full_name: "example/infra" }, workflow_run: run }
+      github_webhook "workflow_run", { repository: { full_name: "example/infra" }, workflow_run: run.merge(id: 78, path: ".github/workflows/lint.yml", conclusion: "success") }
+      github_webhook "workflow_run", { repository: { full_name: "example/infra" },
+        workflow_run: run.merge(id: 79, path: ".github/workflows/lint.yml", head_sha: @project.apps.find_by!(service: "blog").latest_release.commit_sha) }
+    end
+
+    deploy = Deploy.sole
+    assert_equal [ "web · production", 77, "failure" ], [ deploy.app.name, deploy.ci_run_id, deploy.conclusion ]
   end
 end

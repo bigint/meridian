@@ -59,7 +59,7 @@
   <div class="flex flex-wrap gap-s">
     <% if current_user.can_deploy? && app.versioned? && app.latest_release %>
       <%= button_to "Redeploy", app_redeploy_path(app), class: "btn btn--small",
-            form: { data: { turbo_confirm: "Run the deploy workflow again for #{app.latest_release.version}? Use this after rotating a secret." } } %>
+            form: { data: { turbo_confirm: "Run the deploy workflow again for the version in #{app.version_file_path}? Use this after rotating a secret." } } %>
     <% end %>
     <% if current_user.can_deploy? && app.versioned? && releases.size > 1 %>
       <%= button_to "Roll back", app_rollbacks_path(app, release_id: releases.first.id), class: "btn btn--small btn--danger",

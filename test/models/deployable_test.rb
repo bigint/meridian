@@ -146,6 +146,19 @@ class DeployableTest < ActiveSupport::TestCase
     assert_requested dispatch
   end
 
+  test "a redeploy is recorded with the version it dispatched, which its run keeps" do
+    stub_request(:get, "#{GitHubHelper::API}/repos/example/infra/contents/deploy/web.production.version?ref=main")
+      .to_return_json(body: { content: Base64.encode64("v43\n"), sha: blob_sha("v43\n"), encoding: "base64" })
+    stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 204)
+
+    @app.redeploy(actor: @actor)
+    deploy = @app.current_deploy
+    assert_equal [ "redeploy", "v43", "a" * 40, @actor ], [ deploy.kind, deploy.version, deploy.commit_sha, deploy.actor ]
+
+    Deploy.from_dispatch(@project, { "id" => 60, "event" => "workflow_dispatch", "display_title" => "deploy deploy/web.yml production", "head_sha" => "a" * 40, "status" => "queued" })
+    assert_equal [ deploy, "v43", 60 ], [ @app.reload.current_deploy, deploy.reload.version, deploy.ci_run_id ], "not the v42 release Meridian last synced"
+  end
+
   test "an app without a version file has nothing to redeploy" do
     blog = @project.apps.find_by!(service: "blog")
 

@@ -13,8 +13,8 @@
       <% if app.versioned? && app.latest_release %>
         <hr>
         <div>
-          <%= button_to "Redeploy #{app.latest_release.short_version}", app_redeploy_path(app), class: "btn btn--small",
-                form: { data: { turbo_confirm: "Run the deploy workflow again for #{app.latest_release.version}? Use this after rotating a secret." } } %>
+          <%= button_to "Redeploy", app_redeploy_path(app), class: "btn btn--small",
+                form: { data: { turbo_confirm: "Run the deploy workflow again for the version in #{app.version_file_path}? Use this after rotating a secret." } } %>
         </div>
       <% end %>
     </div></div>

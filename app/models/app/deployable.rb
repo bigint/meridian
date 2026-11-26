@@ -59,13 +59,18 @@ module App::Deployable
   # after a secret was rotated. CI still runs Kamal; Meridian only asks it to.
   # The file is read now, not from the last sync, so a version that just
   # landed is never replaced by the one before it. Without a version file
-  # there is no image tag to give Kamal. Returns the version.
+  # there is no image tag to give Kamal. The deploy is recorded with that
+  # version, at the head the run starts from, so its run (see
+  # Deploy.from_dispatch) can't label it with an older one. Returns the version.
   def redeploy(actor:)
     ensure_deployable!
     version = read_version_file&.content.to_s.strip.presence
     raise ArgumentError, "#{name} has no version file yet: deploy a version first" unless version
 
+    head = project.git.head_sha
     project.git.dispatch_workflow(Project::Changes::WORKFLOW_FILE, inputs: { config: config_path, destination: destination, version: version, command: "deploy" })
+    deploy = deploys.create_or_find_by!(commit_sha: head) { it.assign_attributes(kind: "redeploy", version: version, actor: actor) }
+    deploy.update!(version: version) unless deploy.version == version
     Event.record("app.redeploy", subject: self, actor: actor, summary: "Redeployed #{name} at #{version}", version: version)
     version
   end

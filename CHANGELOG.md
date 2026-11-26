@@ -105,6 +105,7 @@
 - Retrying a failed preview removal finishes it. Polling replays the newest finished run, so the old failed remove run came back while the retry ran, marked the preview failed again, and the retry's success was then ignored, leaving the overlay in Git. A preview now ignores runs from before its latest dispatch.
 - Expiry stops asking CI to remove a preview after three failed removals, and the Previews page and activity log say it needs a hand. A removal that could never succeed, such as one whose server was gone, was dispatched again every hour for good.
 - A head whose configs hang or crash the parser is tried again: after a minute, then two, four and so on, at most hourly, until it parses or the next commit lands, with the error on the project meanwhile. It was marked synced, so a parser that had only timed out kept the head unread, with its releases and deploys, until the next commit.
+- A redeploy shows the version it ran from the moment it is asked for, and its Redeploy button and confirmation name the version file rather than the last synced release. Its deploy was labelled with the newest release Meridian had synced, so after a version had just landed it showed the one before, and never finished on servers running the new one.
 
 ### Upgrading
 

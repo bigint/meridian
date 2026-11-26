@@ -117,6 +117,24 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "5" * 40, @project.last_synced_sha
   end
 
+  test "a meridian label taken out of the config is cleared" do
+    config = <<~YAML
+      service: shop
+      image: example/shop
+      servers: [ web-9.example.com ]
+      labels: { meridian.kind: node, meridian.source: acme/shop }
+      registry: { server: ghcr.io, username: example, password: [ KAMAL_REGISTRY_PASSWORD ] }
+      builder: { arch: amd64 }
+    YAML
+    stub_github_files(@project, { "deploy/shop.yml" => config }, head: "4" * 40)
+    @project.sync
+    assert_equal [ "node", "acme/shop" ], @project.apps.sole.values_at(:kind, :source_repo)
+
+    stub_github_files(@project, { "deploy/shop.yml" => config.sub(/^labels:.*\n/, "") }, head: "3" * 40)
+    @project.sync
+    assert_equal [ "other", nil ], @project.apps.sole.values_at(:kind, :source_repo)
+  end
+
   test "parse errors carry file and line" do
     @project.sync
 

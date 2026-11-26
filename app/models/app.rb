@@ -50,8 +50,9 @@ class App < ApplicationRecord
     self.secret_names = result["secrets"]
     self.version_path = tree.key?(version_path) ? version_path : nil
     labels = result["labels"] || {}
-    self.kind = labels["meridian.kind"] if [ *KINDS, ACCESSORIES ].include?(labels["meridian.kind"])
-    self.source_repo = labels["meridian.source"].presence || source_repo
+    # Git is the record (decision 15): a label taken out of the config clears it.
+    self.kind = [ *KINDS, ACCESSORIES ].include?(labels["meridian.kind"]) ? labels["meridian.kind"] : "other"
+    self.source_repo = labels["meridian.source"].presence
 
     shas = sources.index_with { tree.fetch(it).sha }
     @releases_due = shas != source_shas || releases.none?

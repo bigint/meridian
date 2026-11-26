@@ -31,7 +31,7 @@ Per project, you can set:
 ## Conventions Meridian adds to your infra repository
 
 - **`<config>.version` / `<config>.<dest>.version`:** one line, the image tag CI deploys. Deploy and roll back change only this file.
-- **`labels: { meridian.kind: node, meridian.source: owner/repo }`:** optional labels in a config that tell Meridian the app's kind and its source repository, which previews watch.
+- **`labels: { meridian.kind: node, meridian.source: owner/repo }`:** optional labels in a config that tell Meridian the app's kind and its source repository, which previews watch. Without them an app is of kind `other` and has no previews.
 - **`<config>.pr-<n>.yml`:** a preview overlay. Meridian adds and removes these itself.
 - **`.github/workflows/meridian-deploy.yml`:** the workflow that runs Kamal.
 

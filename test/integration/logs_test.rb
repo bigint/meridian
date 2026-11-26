@@ -62,7 +62,7 @@ class LogsTest < ActionDispatch::IntegrationTest
 
     assert_select ".logs__chip", text: "web-1 · web"
     assert_select ".logs__chip", text: "web-1 · job"
-    assert_select ".logs__chip[title=?]", "web-job-production-v42 on web-1.example.com"
+    assert_select ".logs__chip[data-tooltip=?]", "web-job-production-v42 on web-1.example.com"
     assert sibling
   end
 

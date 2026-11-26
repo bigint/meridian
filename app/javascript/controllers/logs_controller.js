@@ -421,7 +421,7 @@ export default class extends Controller {
     const time = document.createElement("time")
     time.classList.add("logs__time")
     time.textContent = clock(record.key)
-    if (record.title) time.title = record.title
+    if (record.title) time.dataset.tooltip = record.title
     row.append(time)
 
     if (this.sources.size > 1) {
@@ -429,7 +429,7 @@ export default class extends Controller {
       chip.classList.add("logs__source")
       chip.dataset.tone = record.source.tone
       chip.textContent = record.source.label
-      chip.title = record.source.title
+      chip.dataset.tooltip = record.source.title
       row.append(chip)
     }
 

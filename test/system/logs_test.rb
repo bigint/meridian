@@ -24,7 +24,7 @@ class LogsTest < ApplicationSystemTestCase
 
     assert_selector ".logs__line", count: 4
     assert_equal [ "worker one", "web two", "worker three", "web four" ], messages
-    assert_selector ".logs__time[title='2026-11-26T12:00:01.5Z']"
+    assert_selector ".logs__time[data-tooltip='2026-11-26T12:00:01.5Z']"
     assert_equal [ "web-2", "web-1", "web-2", "web-1" ], all(".logs__source").map(&:text)
   end
 

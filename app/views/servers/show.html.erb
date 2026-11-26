@@ -90,7 +90,7 @@
                 </td>
                 <td class="nowrap"><%= time_ago(placement.started_at) %></td>
                 <% if current_user.can_deploy? %>
-                  <td><%= link_to icon(:logs), placement_log_path(placement), class: "btn btn--icon btn--plain btn--small", title: "Logs", aria: { label: "Logs of #{placement.name}" }, data: { turbo_prefetch: false } %></td>
+                  <td><%= link_to icon(:logs), placement_log_path(placement), class: "btn btn--icon btn--plain btn--small", aria: { label: "Logs of #{placement.name}" }, data: { turbo_prefetch: false, tooltip: "Logs" } %></td>
                 <% end %>
               </tr>
             <% end %>

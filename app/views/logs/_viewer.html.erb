@@ -24,7 +24,7 @@
   <% if sources.size > 1 %>
     <div class="logs__sources" role="group" aria-label="Containers">
       <% sources.each do |source| %>
-        <button type="button" class="logs__chip" aria-pressed="true" title="<%= source[:title] %>" data-tone="<%= source[:tone] %>" data-source-id="<%= source[:id] %>"
+        <button type="button" class="logs__chip" aria-pressed="true" data-tooltip="<%= source[:title] %>" data-tone="<%= source[:tone] %>" data-source-id="<%= source[:id] %>"
                 data-logs-target="chip" data-action="logs#toggleSource"><%= source[:label] %></button>
       <% end %>
     </div>

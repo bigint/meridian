@@ -30,4 +30,11 @@ class FrontendTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ "/events?controller=nope&host=evil.example&page=2" ], css_select(".pagination a").map { it["href"] }
   end
+
+  test "list pages take a repeated parameter as text, not an error" do
+    [ "/events?action_name[]=app", "/events?page[]=2", "/apps?q[]=web", "/servers?q[]=web" ].each do |path|
+      get path
+      assert_response :success, path
+    end
+  end
 end

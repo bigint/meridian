@@ -27,9 +27,10 @@ class Tunnel::Setup
   def boot_command = "kamal accessory boot all -c #{config_path}"
 
   # Every server that runs one of the project's apps, and the ones picked
-  # for connectors: by default the tunnel's, or every candidate.
+  # for connectors: by default the tunnel's, or every candidate. Picks come
+  # from the URL and go into a config to commit, so only host names count.
   def candidates = apps.flat_map(&:servers).uniq.sort_by(&:name)
-  def hosts = @hosts.presence || candidates.map(&:hostname)
+  def hosts = @picked ||= (@hosts.presence || candidates.map(&:hostname)).grep(Server::HOST_FORMAT)
 
   def apps = @apps ||= project.apps.deployable.includes(:servers).ordered.to_a
   def coverage = @coverage ||= Tunnel.coverage(apps, hosts, Accessory.servers_by_host(hosts))

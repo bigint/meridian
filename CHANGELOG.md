@@ -16,6 +16,7 @@
 - An accessories-only config, such as a tunnel's `deploy/edge.yml`, can no longer be deployed, rolled back or redeployed. Its page offered all three, and CI then ran `kamal deploy` on a file that says never to.
 - Webhooks find their project whatever the case of its name. A project added as `Example/Infra` ignored GitHub's `example/infra` webhooks and waited for the 30-second poll.
 - Edit connectors refuses any host that isn't plainly a host name. Hosts came from the page's URL and went into the edge config Kamal checks, so a link carrying `<%= … %>` ran Ruby on Meridian's server when an admin opened it.
+- Agents must report a plain host name, and New app refuses servers whose hostname isn't one and registries that aren't registry hosts. A hostname such as `web-9<%= … %>`, from any agent token, reached the generated config verbatim (even through a label selector the admin never saw it match), and its Ruby ran on Meridian's server while Kamal checked the config, then in CI once merged. The tunnel setup page leaves out picked hosts that aren't host names.
 
 ## v0.1.0 (2026-11-26)
 

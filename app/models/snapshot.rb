@@ -15,6 +15,8 @@ class Snapshot
   attr_reader :payload, :token
 
   validates :machine_id, :hostname, presence: true
+  # New app writes a server's hostname into a Kamal config.
+  validates :hostname, format: { with: Server::HOST_FORMAT, message: "must be a host name" }, allow_blank: true
   validate :containers_shape
 
   def initialize(payload, token:)

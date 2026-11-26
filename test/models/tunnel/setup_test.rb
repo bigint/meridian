@@ -21,6 +21,13 @@ class Tunnel::SetupTest < ActiveSupport::TestCase
     assert_equal "kamal accessory boot all -c deploy/edge.yml", setup.boot_command
   end
 
+  test "leaves out picks that aren't host names" do
+    setup = Tunnel::Setup.new(@project, hosts: [ "a.example.com", "b<%= `id` %>", "c\n  evil: 1" ])
+
+    assert_equal [ "a.example.com" ], setup.hosts
+    assert_no_match(/<%|evil/, setup.edge_config)
+  end
+
   test "says which apps the picked servers can serve" do
     both = Tunnel::Setup.new(@project, hosts: [ "a.example.com", "b.example.com" ])
     assert_equal [ @shop ], both.served.map(&:app)

@@ -94,6 +94,13 @@ class SnapshotTest < ActiveSupport::TestCase
     assert_nil agent_tokens(:fleet).reload.server
   end
 
+  test "a hostname that isn't a host name is refused, since configs are written from it" do
+    [ "web-9<%= `id` %>", "web-9\nenv: {}", "web 9" ].each do |hostname|
+      assert_not snapshot(@payload.merge("hostname" => hostname)).valid?, hostname.inspect
+    end
+    assert snapshot(@payload.merge("hostname" => "ip-10-0-0-5.ec2.internal")).valid?
+  end
+
   test "the job payload never carries env, commands or mounts" do
     @payload["containers"].first.merge!("env" => [ "SECRET=x" ], "cmd" => "bin/rails s", "mounts" => [ "/a" ])
     job = Snapshot.new(@payload, token: agent_tokens(:web_1)).to_job

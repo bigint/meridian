@@ -38,7 +38,8 @@ Through its GitHub App, Meridian can write to your infra repository and set its 
 ## Known limits
 
 - Anyone with write access to the infra repository can already deploy, with or without Meridian. Meridian adds a second way in, but no new power.
-- Snapshots are trusted as reported. A compromised server can lie about what it runs; it can't change Git.
+- Snapshots are trusted as reported. A compromised server can lie about what it runs; it can't change Git. Its hostname must be a plain host name, because New app writes it into a Kamal config, where ERB would run.
+- Everything Meridian writes into a Kamal config (hosts from a URL, form fields, agent hostnames) is checked against a strict format first. Kamal evaluates ERB whenever it reads a config, and `bin/kamal-parse` strips the environment but is not a sandbox.
 - Preview deploys run the pull request's image on a real server. Use a label selector so previews run only on servers set aside for them.
 
 Report vulnerabilities as described in [SECURITY.md](../SECURITY.md).

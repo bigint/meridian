@@ -58,6 +58,31 @@ class AppDraftTest < ActiveSupport::TestCase
     assert_includes draft.errors.full_messages, "Choose at least one server, or a label selector that matches some"
   end
 
+  test "a server whose hostname an agent made up is refused, and its ERB never runs" do
+    Dir.mktmpdir do |dir|
+      marker = File.join(dir, "ran")
+      Server.create!(name: "web-9", hostname: "web-9<%= File::write(#{marker.inspect}, 1) %>", labels: { "role" => "web" })
+
+      draft = build(server_ids: [], label_selector: "role=web")
+      assert_not draft.valid?
+      assert_match "hostnames aren't host names: web-9", draft.errors.full_messages.to_sentence
+      assert_not File.exist?(marker), "ERB in a server's hostname ran"
+    end
+  end
+
+  test "the registry must be a registry host" do
+    Dir.mktmpdir do |dir|
+      marker = File.join(dir, "ran")
+      [ "ghcr.io\n  username: other", "ghcr.io<%= File::write(#{marker.inspect}, 1) %>" ].each do |registry|
+        draft = build(registry: registry)
+        assert_not draft.valid?
+        assert draft.errors.of_kind?(:registry, :invalid)
+      end
+      assert_not File.exist?(marker)
+    end
+    assert build(registry: "registry.example.com:5000/team").valid?
+  end
+
   private
     def build(**attributes)
       AppDraft.new({ project: @project, service: "shop", source_repo: "example/shop", kind: "node", hostname: "shop.example.com", server_ids: @servers.map(&:id) }.merge(attributes))

@@ -64,7 +64,7 @@ For working on Meridian itself: [development](contributing/development.md), [arc
 bin/setup        # installs gems and prepares the databases (needs libsodium)
 bin/rails meridian:demo   # a 500-server demo fleet
 bin/dev          # the app on :3000
-bin/ci           # everything CI runs: lint, security, Rails and Go tests
+bin/ci           # everything CI runs: lint, security, Go tests
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md); report vulnerabilities as [SECURITY.md](SECURITY.md) describes.

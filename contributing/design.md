@@ -16,7 +16,7 @@ It is built the way 37signals builds Rails apps: plain CSS, ERB partials and hel
 - **State is never colour alone.** Every drift state is a symbol and a word as well as a tint (`✓ In sync`, `≠ Drifted`, `✕ Missing`, `? Stray`, `… Stale`, `– Unknown`).
 - **One primary action per view.** `.btn--primary` is indigo. Everything else is a plain, danger or quiet button.
 - **No shadows on the page.** Surfaces are separated by 1px lines and a slightly different background, never by elevation. Only what floats over the page (the account menu, search results, an open dropdown) gets one soft shadow, `--shadow-float`, so it reads as above the content.
-- **Icons are Lucide's.** `icon(:name)` inlines one from `vendor/lucide`, mapped from a meaning (`:servers`, `:sign_out`) to a Lucide name in `IconsHelper::ICONS`. Add one with `bin/icons <lucide-name>` and a line in that map. A test checks that every name has its file. The logo is Meridian's own.
+- **Icons are Lucide's.** `icon(:name)` inlines one from `vendor/lucide`, mapped from a meaning (`:servers`, `:sign_out`) to a Lucide name in `IconsHelper::ICONS`. Add one with `bin/icons <lucide-name>` and a line in that map. The logo is Meridian's own.
 - **No keyboard shortcuts for now.** Every place is one click from the sidebar, or a few letters in the search box.
 
 ## CSS
@@ -40,7 +40,7 @@ The styles live in `app/assets/stylesheets/`, served as they are by Propshaft (`
 
 Class names follow a light BEM: a block (`.sidebar`), its parts (`.sidebar__link`) and variants (`.btn--primary`). State lives in attributes the markup needs anyway: `aria-current`, `aria-selected`, `data-state`, `data-collapsed`, `[open]`. For example, `live_stats_controller.js` sets `data-state` on `.live` to `connecting`, `live` or `paused`, and `logs_controller.js` sets it on `.logs`. Modern CSS does the rest: nesting, `:has()`, `color-mix()`, logical properties. Inputs, selects and tables are styled by element, so forms need no classes.
 
-> **Warning:** Never use an inline `style` attribute. The Content Security Policy blocks it, and `test/integration/frontend_test.rb` fails if one appears on a page.
+> **Warning:** Never use an inline `style` attribute. The Content Security Policy blocks it.
 
 ## Colour and themes
 

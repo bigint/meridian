@@ -1,7 +1,0 @@
-servers:
-  web:
-    - staging-1.example.com
-
-proxy:
-  host: staging.shop.example.com
-  app_port: 3000

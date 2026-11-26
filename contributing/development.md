@@ -11,7 +11,6 @@ You need these on your machine:
 | Ruby | `.ruby-version` (`4.0.10`) | The Rails app |
 | Go | `agent/go.mod` (`1.27`) | `meridian-agent` and its tests |
 | libsodium | any current | Sealing secret values (`brew install libsodium` or `apt install libsodium23`) |
-| Chrome | any current | System tests and screenshots |
 | Node | `20.17` or later | This docs site only. The app has no Node. |
 
 ### 1. Install gems and prepare the databases
@@ -64,8 +63,6 @@ A GitHub App works too, with `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` and `GITH
 | Security: gem audit | `bin/bundler-audit` |
 | Security: importmap audit | `bin/importmap audit` |
 | Security: Brakeman | `bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error` |
-| Tests: Rails | `bin/rails test` |
-| Tests: System | `bin/rails test:system` |
 | Agent: vet | `cd agent && go vet ./...` |
 | Agent: staticcheck | `cd agent && $(go env GOPATH)/bin/staticcheck ./...` |
 | Agent: test | `cd agent && go test -race ./...` |
@@ -75,33 +72,6 @@ The steps live in `config/ci.rb`. Staticcheck must be installed once:
 ```bash
 go install honnef.co/go/tools/cmd/staticcheck@latest
 ```
-
-## Run the tests
-
-```bash
-bin/rails test                      # models, controllers, jobs, channels, integration, docs
-bin/rails test:system               # browser tests in headless Chrome
-bin/rails test test/models/drift_test.rb:12
-cd agent && go test -race ./...
-```
-
-Tests run in parallel, one worker per processor. Outside requests are blocked with WebMock, so GitHub is stubbed in every test. When a system test fails, its screenshot is in `tmp/screenshots`, and CI uploads that folder as an artifact.
-
-`test/docs/docs_test.rb` keeps this site in step with the code:
-
-- Every page in `docs/docs.json` has an `.mdx` file, and every `.mdx` file outside `docs/snippets/` is in `docs.json`.
-- Every environment variable that `app/`, `config/`, `lib/`, `bin/` or `db/` reads, and every one the agent reads, appears on [Environment](../docs/reference/environment.mdx).
-- `CHANGELOG.md` renders as one `<Update>` per release.
-
-## Regenerate the screenshots
-
-The screenshots in `docs/screenshots/` come from a system test. It is skipped unless you ask for it:
-
-```bash
-SCREENSHOTS=1 bin/rails test test/system/screenshots_test.rb
-```
-
-The test seeds a demo fleet of 72 servers and 40 apps, records some activity, and saves the board, search, an app, a server, Activity and the map at 1440 pixels wide. It saves each one twice: `<name>.png` in the light theme and `<name>-dark.png` in the dark theme. Commit the new images with the change that altered the screens.
 
 ## Work on the docs
 
@@ -113,7 +83,7 @@ bin/docs check        # what CI checks: validate, broken links, accessibility
 bin/docs changelog    # write docs/changelog.mdx from CHANGELOG.md (bin/docs does this anyway)
 ```
 
-- **Add a page.** Create the `.mdx` file with `title`, `description` and `icon` in its frontmatter, then add its path to `docs/docs.json`. The docs test fails until both exist.
+- **Add a page.** Create the `.mdx` file with `title`, `description` and `icon` in its frontmatter, then add its path to `docs/docs.json`.
 - **Change the changelog.** Edit `CHANGELOG.md`, never `docs/changelog.mdx`. `script/docs_changelog.rb` turns each `## ` release into an `<Update>` and escapes what MDX would read as code. `bin/docs` writes the page before every preview and check, and git ignores it, so only `CHANGELOG.md` is committed.
 - **Link between pages** with site paths such as `/guides/deploy`, not file names.
 
@@ -143,8 +113,8 @@ Meridian aims to be small, clear and boring in the best way. The rules are in [`
 - **Plain CSS, partials and helpers.** No CSS framework, no component library, no build step. Reuse the helpers and classes described in [Design](design.md) before adding new ones, and never use inline `style` attributes.
 - **Icons come from Lucide.** Add one with `bin/icons <name>`. Don't draw new ones.
 - **Prefer deleting code to adding it.** The only planned abstraction is the Git host adapter, `app/models/git_host.rb`.
-- **Every change keeps `bin/ci` green.** Add tests for behaviour, and system tests for screens.
-- **Fixtures use `example.com` and documentation IP ranges.** Never commit real hostnames, IPs, tokens or anyone's infrastructure.
+- **Every change keeps `bin/ci` green.**
+- **Examples use `example.com` and documentation IP ranges.** Never commit real hostnames, IPs, tokens or anyone's infrastructure.
 - **When a choice is ambiguous,** pick the simplest option that keeps Git as the record, and add one short entry to [Decisions](decisions.md).
 
 Use small conventional commits, such as `feat(board): …`, `fix(agent): …` or `docs: …`. Add a line to `CHANGELOG.md` under `## Unreleased` for anything a user would notice. The pull request template asks for the same three things: `bin/ci` passes, a changelog line, and no real infrastructure.

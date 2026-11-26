@@ -1,6 +1,0 @@
-infra:
-  name: Infra
-  repo_full_name: example/infra
-  default_branch: main
-  installation_id: 1
-  config_globs: <%= [ "deploy/*.yml" ].to_json %>

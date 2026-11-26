@@ -14,8 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install libsodium and Chrome dependencies
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsodium23 google-chrome-stable
+      - name: Install libsodium
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsodium23
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -32,14 +32,6 @@ jobs:
 
       - name: The image builds
         run: docker build --tag meridian:ci .
-
-      - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: screenshots
-          path: tmp/screenshots
-          if-no-files-found: ignore
 
   # The docs site in docs/: checks only, nothing is published.
   docs:

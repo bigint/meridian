@@ -45,8 +45,8 @@ class RollbackTest < ApplicationSystemTestCase
 
     visit root_path(app: "web")
     within("tr", text: "web · production") do
-      assert_selector ".state.in_sync", count: 3
-      assert_no_selector ".state.drifted"
+      assert_selector "[data-state=in_sync]", count: 3
+      assert_no_selector "[data-state=drifted]"
     end
   end
 

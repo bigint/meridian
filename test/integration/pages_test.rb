@@ -12,20 +12,20 @@ class PagesTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
 
-    assert_select "table.grid tbody th", text: "web · production"
-    assert_select "table.grid thead th a[title=?]", "web-1.example.com", text: "web-1"
-    assert_select "table.grid td.cell .state", count: 7
+    assert_select "[data-board-grid] tbody th", text: "web · production"
+    assert_select "[data-board-grid] thead th a[title=?]", "web-1.example.com", text: "web-1"
+    assert_select "[data-board-grid] [data-cell] [data-state]", count: 7
   end
 
   test "board filters live in the URL" do
     get root_path(app: "blog")
-    assert_select "table.grid tbody th", count: 1
-    assert_select "table.grid tbody th", text: "blog"
+    assert_select "[data-board-grid] tbody th", count: 1
+    assert_select "[data-board-grid] tbody th", text: "blog"
   end
 
   test "servers × apps toggle" do
     get root_path(view: "servers")
-    assert_select "table.grid tbody th", text: "web-1.example.com"
+    assert_select "[data-board-grid] tbody th", text: "web-1.example.com"
   end
 
   test "app, server and project pages render" do
@@ -40,6 +40,14 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "section table tbody th", text: "blog"
 
     get project_path(@project)
-    assert_select ".error-list code", text: "deploy/broken.yml:6"
+    assert_select "[data-config-errors] code", text: "deploy/broken.yml:6"
+  end
+
+  test "the CSP allows nonced scripts and styles, and nothing inline" do
+    get root_path
+    policy = response.headers["Content-Security-Policy"]
+    assert_match(/script-src 'self' 'nonce-[^']+'/, policy)
+    assert_match(/style-src 'self' 'nonce-[^']+'/, policy)
+    assert_no_match(/unsafe-inline/, policy)
   end
 end

@@ -1,23 +1,19 @@
 <% content_for :title, "#{@draft.service} proposed" %>
-<header class="page-header">
-  <h1><%= @draft.service %> is <%= @proposal.direct ? "committed" : "ready for review" %></h1>
-  <div class="actions"><%= link_to @proposal.direct ? "View commit" : "Open pull request ##{@proposal.number}", @proposal.url, class: "button primary" %></div>
-</header>
+<%= render Ui::PageHeaderComponent.new(title: "#{@draft.service} is #{@proposal.direct ? "committed" : "ready for review"}",
+      subtitle: "It appears on the board once #{@proposal.direct ? "the project syncs" : "the pull request is merged"}.") do |header| %>
+  <% header.with_actions { render Ui::ButtonComponent.new(label: @proposal.direct ? "View commit" : "Open pull request ##{@proposal.number}", href: @proposal.url, variant: :primary) } %>
+<% end %>
 
-<p>It appears on the board once <%= @proposal.direct ? "the project syncs" : "the pull request is merged" %>.</p>
-
-<div class="columns">
-  <section>
-    <h2>Still to do by hand</h2>
-    <ol><% @draft.manual_steps.each do |step| %><li><%= step %></li><% end %></ol>
-    <h2>Files</h2>
-    <% @draft.files.each do |path, content| %>
-      <h3><code><%= path %></code></h3>
-      <pre class="snippet"><code><%= content %></code></pre>
+<div class="grid gap-6 lg:grid-cols-2">
+  <div class="space-y-6">
+    <%= render Ui::SectionComponent.new(title: "Still to do by hand") do %>
+      <ol class="list-decimal space-y-1.5 pl-5 text-ink"><% @draft.manual_steps.each do |step| %><li><%= step %></li><% end %></ol>
     <% end %>
-  </section>
-  <section>
-    <h2>Dockerfile for <%= @draft.source_repo %></h2>
-    <pre class="snippet"><code><%= @draft.instructions %></code></pre>
-  </section>
+    <%= render Ui::SectionComponent.new(title: "Files") do %>
+      <% @draft.files.each do |path, content| %><%= render Ui::CodeBlockComponent.new(code: content, label: path) %><% end %>
+    <% end %>
+  </div>
+  <%= render Ui::SectionComponent.new(title: "Dockerfile for #{@draft.source_repo}") do %>
+    <%= render Ui::CodeBlockComponent.new(code: @draft.instructions, label: "Instructions") %>
+  <% end %>
 </div>

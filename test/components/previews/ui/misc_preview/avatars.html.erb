@@ -1,0 +1,6 @@
+<div class="flex items-center gap-2">
+  <%= render Ui::AvatarComponent.new(name: "Ana Lima") %>
+  <%= render Ui::AvatarComponent.new(name: "Ravi Kumar") %>
+  <%= render Ui::AvatarComponent.new(name: "sam", size: :sm) %>
+  <% %w[ missing drifted stray stale ].each do |state| %><%= render Ui::AvatarComponent.new(state: state) %><% end %>
+</div>

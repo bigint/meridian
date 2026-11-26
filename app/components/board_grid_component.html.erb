@@ -1,0 +1,40 @@
+<details open id="group-<%= @group.key %>" class="group rounded-lg border border-line">
+  <summary class="flex cursor-pointer list-none items-center gap-2 border-line bg-surface px-3 py-2 text-xs group-open:border-b [&::-webkit-details-marker]:hidden">
+    <%= helpers.icon(:chevron, class: "size-3.5 -rotate-90 text-ink-faint transition-transform group-open:rotate-0") %>
+    <span class="font-semibold text-ink"><%= title %></span>
+    <span class="text-ink-muted"><%= counts %></span>
+  </summary>
+  <div class="overflow-x-auto">
+    <table data-board-grid class="min-w-full text-sm">
+      <thead>
+        <tr>
+          <th scope="col" class="sticky left-0 z-10 bg-canvas px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-ink-muted"><%= @board.view == "apps" ? "App" : "Server" %></th>
+          <% @group.columns.each do |column| %>
+            <th scope="col" class="px-2 py-2 text-center align-bottom">
+              <%= link_to column_name(column), column, title: column.name, class: "inline-block max-w-28 truncate font-mono text-[11px] font-normal text-ink-muted hover:text-accent" %>
+            </th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @group.rows.each do |row| %>
+          <tr class="border-t border-line hover:bg-surface">
+            <th scope="row" class="sticky left-0 z-10 max-w-56 truncate bg-canvas px-3 py-2 text-left font-medium">
+              <%= link_to row.name, row, title: row.try(:hostname), class: "hover:text-accent" %>
+            </th>
+            <% @group.columns.each do |column| %>
+              <% cell = @group.cell(row, column) %>
+              <td data-cell class="min-w-24 px-2 py-1.5 text-center whitespace-nowrap">
+                <% if cell %>
+                  <%= render Ui::StateComponent.new(cell.state) %>
+                  <span class="mt-0.5 block font-mono text-[11px] text-ink-muted" title="<%= cell.roles.join(", ") %>"><%= cell.version.to_s.first(12) %></span>
+                  <% if cell.health == "unhealthy" %><%= render Ui::BadgeComponent.new("unhealthy", tone: :bad) %><% end %>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</details>

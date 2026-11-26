@@ -1,15 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// The menu: type to go anywhere; Enter opens the first match.
+// Sidebar search: results appear as you type; Enter opens the first match.
 export default class extends Controller {
   static targets = [ "input", "form" ]
-
-  toggled(event) {
-    if (event.newState !== "open") return
-    this.inputTarget.value = ""
-    this.#results.replaceChildren()
-    this.inputTarget.focus()
-  }
 
   search() {
     clearTimeout(this.timer)
@@ -20,7 +13,8 @@ export default class extends Controller {
   }
 
   key(event) {
-    if (event.key !== "Enter" || event.target !== this.inputTarget) return
+    if (event.key === "Escape") { this.inputTarget.value = ""; this.#results.replaceChildren() }
+    if (event.key !== "Enter") return
     const first = this.#results.querySelector("a")
     if (first) { event.preventDefault(); first.click() }
   }

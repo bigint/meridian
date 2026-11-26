@@ -1,0 +1,5 @@
+<%= render Ui::TableComponent.new(rows: rows, empty: "No servers yet.") do |table| %>
+  <% table.with_column("Server", header: true) { |row| row.name } %>
+  <% table.with_column("Version", mono: true) { |row| row.version || "–" } %>
+  <% table.with_column("State", align: :right) { |row| render Ui::StateComponent.new(row.state) } %>
+<% end %>

@@ -5,74 +5,62 @@
 <% group = @board.groups.first %>
 <% cells = group ? group.columns.map { group.cell(@app, it) } : [] %>
 
-<header class="page-header">
-  <h1><%= @app.name %></h1>
-  <p class="meta">
-    <%= @app.kind.capitalize %> app in <%= link_to @app.project.name, @app.project %>
-    <% if @app.hostnames.any? %> · <%= safe_join(@app.hostnames.map { link_to it, "https://#{it}" }, ", ") %><% end %>
-  </p>
-  <p><%= app_status(@app, cells) %></p>
-</header>
+<%= render Ui::PageHeaderComponent.new(title: @app.name) do |header| %>
+  <% header.with_description do %>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= render Ui::BadgeComponent.new(@app.kind) %>
+      <span>in <%= link_to @app.project.name, @app.project, class: "text-accent hover:underline" %></span>
+      <% @app.hostnames.each do |host| %><%= link_to host, "https://#{host}", class: "font-mono text-xs text-accent hover:underline" %><% end %>
+    </div>
+    <div class="mt-2"><%= render AppStatusComponent.new(app: @app, cells: cells) %></div>
+  <% end %>
+<% end %>
 
 <%= render "apps/deploys", app: @app %>
 
-<section aria-labelledby="servers-heading">
-  <h2 id="servers-heading" class="label">Servers</h2>
-  <% if cells.any? %>
-    <div class="scroll">
-      <table>
-        <thead><tr><th>Server</th><th>Roles</th><th>State</th><th>Running</th><th>Health</th></tr></thead>
-        <tbody>
-          <% cells.each do |cell| %>
-            <tr>
-              <th scope="row"><%= link_to cell.server.name, cell.server %></th>
-              <td><%= cell.roles.join(", ") %></td>
-              <td><%= drift_badge(cell.state) %></td>
-              <td><code><%= cell.versions.map { it.first(12) }.join(", ").presence || "–" %></code></td>
-              <td><%= health_text(cell.health) %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <p class="muted">Not assigned to any server.</p>
+<%= render Ui::SectionComponent.new(title: "Servers", count: cells.size) do %>
+  <%= render Ui::TableComponent.new(rows: cells, empty: "Not assigned to any server.") do |table| %>
+    <% table.with_column("Server", header: true) { |cell| link_to cell.server.name, cell.server, class: "font-mono text-xs hover:text-accent" } %>
+    <% table.with_column("Roles") { |cell| cell.roles.join(", ") } %>
+    <% table.with_column("State") { |cell| render Ui::StateComponent.new(cell.state) } %>
+    <% table.with_column("Running", mono: true) { |cell| cell.versions.map { it.first(12) }.join(", ").presence || "–" } %>
+    <% table.with_column("Health") { |cell| cell.health == "unhealthy" ? render(Ui::BadgeComponent.new("unhealthy", tone: :bad)) : cell.health } %>
   <% end %>
-</section>
+<% end %>
 
-<section aria-labelledby="releases-heading">
-  <h2 id="releases-heading" class="label">Releases</h2>
-  <p class="meta">From the Git history of <code><%= @app.release_source_path %></code>.</p>
-  <ul class="rows">
-    <% @releases.each_with_index do |release, index| %>
-      <li>
-        <%= avatar(release.author.to_s, size: "small") %>
-        <div>
-          <div class="row__title"><code><%= release.short_version %></code> <%= release.message %><%= tag.span(" newest", class: "tag") if index.zero? %></div>
-          <div class="row__sub"><%= release.author %> · <%= link_to release.short_sha, "#{@app.project.repo_url}/commit/#{release.commit_sha}" %></div>
-        </div>
-        <div class="row__side">
-          <%= time_ago(release.committed_at) %>
-          <% if index.zero? && @releases.size > 1 && current_user.can_deploy? && @app.versioned? %>
-            <%= button_to "Roll back", app_rollbacks_path(@app, release_id: release.id), class: "button danger",
-                  form: { data: { turbo_confirm: "Revert #{release.short_sha} so the version file goes back to its previous value? CI deploys the result." } } %>
+<%= render Ui::SectionComponent.new(title: "Releases", count: @releases.size) do %>
+  <p class="text-xs text-ink-muted">From the Git history of <code><%= @app.release_source_path %></code>.</p>
+  <% if @releases.any? %>
+    <%= render Ui::ListComponent.new do |list| %>
+      <% @releases.each_with_index do |release, index| %>
+        <% list.with_item do |item| %>
+          <% item.with_leading { render Ui::AvatarComponent.new(name: release.author.to_s, size: :sm) } %>
+          <% item.with_subtitle do %><%= release.author %> · <%= link_to release.short_sha, "#{@app.project.repo_url}/commit/#{release.commit_sha}", class: "font-mono hover:text-accent" %><% end %>
+          <% item.with_trailing do %>
+            <%= time_ago(release.committed_at) %>
+            <% if index.zero? && @releases.size > 1 && current_user.can_deploy? && @app.versioned? %>
+              <%= render Ui::ButtonComponent.new(label: "Roll back", href: app_rollbacks_path(@app, release_id: release.id), method: :post, variant: :danger, size: :sm,
+                    confirm: "Revert #{release.short_sha} so the version file goes back to its previous value? CI deploys the result.") %>
+            <% end %>
           <% end %>
-        </div>
-      </li>
+          <code class="font-semibold"><%= release.short_version %></code> <%= release.message %>
+          <% if index.zero? %><%= render Ui::BadgeComponent.new("newest", tone: :accent) %><% end %>
+        <% end %>
+      <% end %>
     <% end %>
-  </ul>
-  <% if @releases.none? %><p class="muted">No releases yet.</p><% end %>
-</section>
+  <% else %>
+    <%= render Ui::EmptyStateComponent.new(title: "No releases yet", icon: :activity) %>
+  <% end %>
+<% end %>
 
-<details class="disclosure">
-  <summary>Configuration</summary>
-  <dl class="facts">
-    <dt>Config</dt><dd><%= link_to @app.config_path, "#{@app.project.repo_url}/blob/#{@app.project.default_branch}/#{@app.config_path}" %> <%= tag.code(@app.destination_flag) if @app.destination_flag %></dd>
-    <dt>Image</dt><dd><code><%= @app.image %></code></dd>
-    <dt>Roles</dt><dd><%= @app.roles.map { "#{it["name"]} (#{pluralize(it["hosts"].size, "host")})" }.join(", ").presence || "–" %></dd>
-    <% if @app.accessories.any? %><dt>Accessories</dt><dd><%= @app.accessories.map { it["name"] }.join(", ") %></dd><% end %>
-    <dt>Version file</dt><dd><%= @app.version_path ? tag.code(@app.version_path) : tag.span("none yet: drift can't compare versions until one exists", class: "muted") %></dd>
-    <dt>Source</dt><dd><%= @app.source_repo.presence || tag.span("not set: add the meridian.source label to get previews", class: "muted") %></dd>
-    <dt>Secrets</dt><dd><%= @app.secret_names.join(", ").presence || "–" %></dd>
-  </dl>
-</details>
+<%= render Ui::DisclosureComponent.new(summary: "Configuration") do %>
+  <%= render Ui::DescriptionListComponent.new do |list| %>
+    <% list.with_item("Config") do %><%= link_to @app.config_path, "#{@app.project.repo_url}/blob/#{@app.project.default_branch}/#{@app.config_path}", class: "font-mono text-accent hover:underline" %> <%= tag.code(@app.destination_flag) if @app.destination_flag %><% end %>
+    <% list.with_item("Image") { tag.code(@app.image) } %>
+    <% list.with_item("Roles") { @app.roles.map { "#{it["name"]} (#{pluralize(it["hosts"].size, "host")})" }.join(", ").presence || "–" } %>
+    <% if @app.accessories.any? %><% list.with_item("Accessories") { @app.accessories.map { it["name"] }.join(", ") } %><% end %>
+    <% list.with_item("Version file") { @app.version_path ? tag.code(@app.version_path) : tag.span("none yet: drift can't compare versions until one exists", class: "text-ink-muted") } %>
+    <% list.with_item("Source") { @app.source_repo.presence || tag.span("not set: add the meridian.source label to get previews", class: "text-ink-muted") } %>
+    <% list.with_item("Secrets") { @app.secret_names.join(", ").presence || "–" } %>
+  <% end %>
+<% end %>

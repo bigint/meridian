@@ -13,7 +13,7 @@ class BoardPerformanceTest < ActionDispatch::IntegrationTest
   test "first page of a 500-server board renders under the target" do
     get root_path
     assert_response :success
-    assert_select "table.grid"
+    assert_select "[data-board-grid]"
 
     best = 3.times.map { elapsed_ms { get root_path } }.min
     assert_operator best, :<, TARGET, "Board took #{best.round} ms"

@@ -1,12 +1,14 @@
-<%= form_with model: user, url: user.persisted? ? settings_user_path(user) : settings_users_path, class: "stack" do |form| %>
+<%= form_with model: user, url: user.persisted? ? settings_user_path(user) : settings_users_path, class: "space-y-6" do |form| %>
   <%= render "shared/errors", record: user %>
-  <div class="field"><%= form.label :name %><%= form.text_field :name %></div>
-  <div class="field"><%= form.label :email_address, "Email" %><%= form.email_field :email_address, required: true %></div>
-  <div class="field">
-    <%= form.label :password %>
-    <%= form.password_field :password, required: user.new_record?, autocomplete: "new-password", minlength: 12, maxlength: 72 %>
-    <span class="hint"><%= user.persisted? ? "Leave blank to keep the current password." : "At least 12 characters. Share it with them privately." %></span>
-  </div>
-  <div class="field"><%= form.label :role %><%= form.select :role, User::ROLES.map { [ it.capitalize, it ] } %></div>
-  <div><%= form.submit class: "button primary" %> <%= link_to "Cancel", settings_users_path, class: "button" %></div>
+  <%= render Ui::CardComponent.new do %>
+    <div class="space-y-4">
+      <%= form.field :name %>
+      <%= form.field :email_address, label: "Email" do %><%= form.email_field :email_address, required: true %><% end %>
+      <%= form.field :password, hint: user.persisted? ? "Leave blank to keep the current password." : "At least 12 characters. Share it with them privately." do %>
+        <%= form.password_field :password, required: user.new_record?, autocomplete: "new-password", minlength: 12, maxlength: 72 %>
+      <% end %>
+      <%= form.field :role do %><%= form.select :role, User::ROLES.map { [ it.capitalize, it ] } %><% end %>
+    </div>
+  <% end %>
+  <div class="flex gap-2"><%= form.submit %><%= render Ui::ButtonComponent.new(label: "Cancel", href: settings_users_path, variant: :ghost) %></div>
 <% end %>

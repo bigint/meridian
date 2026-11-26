@@ -1,65 +1,81 @@
 <% content_for :title, "Board" %>
-<% content_for :sheet, "sheet--wide" %>
+<% content_for :wide, true %>
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 
-<header class="page-header">
-  <h1>Board</h1>
-  <p class="meta"><%= pluralize(@board.apps.size, "app") %> on <%= pluralize(@board.servers.size, "server") %>, compared with Git</p>
-  <div class="actions">
-    <%= link_to safe_join([ icon(:plus), "New app" ]), new_app_path, class: "button primary" if current_user.admin? %>
-  </div>
-</header>
-
-<% steps = getting_started %>
-<% unless steps.all?(&:last) %>
-  <section aria-labelledby="getting-started">
-    <h2 id="getting-started" class="label">Getting started</h2>
-    <ol class="steps">
-      <% steps.each do |title, detail, path, done| %>
-        <li class="<%= "done" if done %>">
-          <div><strong><%= done ? title : link_to(title, path) %></strong><div class="meta"><%= detail %></div></div>
-        </li>
-      <% end %>
-    </ol>
-  </section>
+<%= render Ui::PageHeaderComponent.new(title: "Board", subtitle: "#{pluralize(@board.apps.size, "app")} on #{pluralize(@board.servers.size, "server")}, compared with Git") do |header| %>
+  <% if current_user.admin? %>
+    <% header.with_actions { render Ui::ButtonComponent.new(label: "New app", href: new_app_path, variant: :primary, icon: :plus) } %>
+  <% end %>
 <% end %>
 
-<%= render "boards/attention", board: @board %>
+<% steps = getting_started %>
+<% unless steps.all? { it[:done] } %>
+  <%= render Ui::SectionComponent.new(title: "Getting started") do %>
+    <%= render Ui::StepsComponent.new(steps: steps) %>
+  <% end %>
+<% end %>
 
-<section aria-labelledby="everything" id="everything">
-  <div class="section-heading">
-    <h2 id="everything-heading" class="label">Everything</h2>
-    <nav class="segmented" aria-label="Arrange the grid">
-      <%= link_to "Apps × servers", request.query_parameters.merge(view: "apps", page: nil, anchor: "everything"), aria: { current: @board.view == "apps" } %>
-      <%= link_to "Servers × apps", request.query_parameters.merge(view: "servers", page: nil, anchor: "everything"), aria: { current: @board.view == "servers" } %>
-    </nav>
+<% items = @board.attention %>
+<%= render Ui::SectionComponent.new(title: "Needs attention", count: items.size, id: "attention") do %>
+  <% if items.empty? %>
+    <%= render Ui::EmptyStateComponent.new(title: Project.exists? ? "Everything matches Git" : "Nothing to check yet", icon: :board) do %>
+      <% unless Project.exists? %><%= link_to "Connect your infra repository", new_project_path, class: "text-accent hover:underline" %> to see your apps.<% end %>
+    <% end %>
+  <% else %>
+    <%= render Ui::ListComponent.new do %>
+      <% items.first(6).each do |item| %><%= render AttentionItemComponent.new(item: item) %><% end %>
+    <% end %>
+    <% if items.size > 6 %>
+      <%= render Ui::DisclosureComponent.new(summary: "#{pluralize(items.size - 6, "more thing")} need attention") do %>
+        <%= render Ui::ListComponent.new do %>
+          <% items.drop(6).each do |item| %><%= render AttentionItemComponent.new(item: item) %><% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<%= render Ui::SectionComponent.new(title: "Everything", id: "everything") do |section| %>
+  <% section.with_actions do %>
+    <%= render Ui::SegmentedControlComponent.new(label: "Arrange the grid", items: [
+          [ "Apps × servers", request.query_parameters.merge(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
+          [ "Servers × apps", request.query_parameters.merge(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
+  <% end %>
+
+  <div class="flex flex-wrap gap-2" data-summary aria-label="Filter by state">
+    <% Drift::STATES.each do |state| %>
+      <%= render Ui::StatComponent.new(label: Drift::LABELS[state], value: @board.summary.fetch(state, 0), state: state, current: @board.state == state,
+            href: request.query_parameters.merge(state: (@board.state == state ? nil : state), page: nil, anchor: "everything")) %>
+    <% end %>
   </div>
 
-  <%= render "boards/summary", board: @board %>
-  <%= render "boards/filters", board: @board, projects: @projects %>
+  <div class="flex flex-wrap gap-x-6 gap-y-3">
+    <%= render "boards/filters", board: @board, projects: @projects %>
+    <%= render Ui::DisclosureComponent.new(summary: "What do these mean?") do %>
+      <%= render Ui::DescriptionListComponent.new do |list| %>
+        <% Drift::STATES.each do |state| %>
+          <% list.with_item(render(Ui::StateComponent.new(state))) { Drift::MEANINGS[state] } %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
 
   <% if @board.groups.empty? %>
-    <div class="empty">
+    <%= render Ui::EmptyStateComponent.new(title: Project.none? ? "Nothing to show yet" : "Nothing matches these filters", icon: :board) do |empty| %>
       <% if Project.none? %>
-        <p>Nothing to show yet.</p>
-        <p><%= link_to "Connect your infra repository", new_project_path %> to see your apps.</p>
+        <% empty.with_action { render Ui::ButtonComponent.new(label: "Connect your infra repository", href: new_project_path, variant: :primary) } %>
       <% else %>
-        <p>Nothing matches these filters.</p>
-        <p><%= link_to "Clear filters", board_path(view: @board.view) %></p>
+        <% empty.with_action { render Ui::ButtonComponent.new(label: "Clear filters", href: board_path(view: @board.view)) } %>
       <% end %>
-    </div>
+    <% end %>
   <% end %>
 
   <% @board.groups.each do |group| %>
-    <%= render "boards/group", board: @board, group: group %>
+    <%= render BoardGridComponent.new(board: @board, group: group) %>
   <% end %>
 
-  <% if @board.pages > 1 %>
-    <nav class="pagination" aria-label="Pages">
-      <%= link_to "← Previous", request.query_parameters.merge(page: @board.page - 1, anchor: "everything"), class: "button" if @board.page > 1 %>
-      <span class="meta">Page <%= @board.page %> of <%= @board.pages %></span>
-      <%= link_to "Next →", request.query_parameters.merge(page: @board.page + 1, anchor: "everything"), class: "button" if @board.page < @board.pages %>
-    </nav>
-  <% end %>
-</section>
+  <%= render Ui::PaginationComponent.new(label: "Page #{@board.page} of #{@board.pages}",
+        previous_url: (request.query_parameters.merge(page: @board.page - 1, anchor: "everything") if @board.page > 1),
+        next_url: (request.query_parameters.merge(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages)) %>
+<% end %>

@@ -1,21 +1,15 @@
 <% content_for :title, "People" %>
-<header class="page-header">
-  <h1>People</h1>
-  <%= render "settings/nav" %>
-  <div class="actions"><%= link_to "Add person", new_settings_user_path, class: "button primary" %></div>
-</header>
-<p class="meta">Viewers read everything. Deployers can also deploy and roll back. Admins do everything else.</p>
-<table>
-  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Sign-in</th><th></th></tr></thead>
-  <tbody>
-    <% @users.each do |user| %>
-      <tr>
-        <th scope="row"><%= user.display_name %></th>
-        <td><%= user.email_address %></td>
-        <td><span class="tag"><%= user.role %></span></td>
-        <td><%= user.identities.any? ? "Password, OIDC" : "Password" %></td>
-        <td class="right"><%= link_to "Edit", edit_settings_user_path(user) %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
+<%= render Ui::PageHeaderComponent.new(title: "Settings") do |header| %>
+  <% header.with_actions { render Ui::ButtonComponent.new(label: "Add person", href: new_settings_user_path, variant: :primary, icon: :plus) } %>
+  <% header.with_tabs { render "settings/nav" } %>
+<% end %>
+
+<p class="text-ink-muted">Viewers read everything. Deployers can also deploy and roll back. Admins do everything else.</p>
+
+<%= render Ui::TableComponent.new(rows: @users) do |table| %>
+  <% table.with_column("Name", header: true) { |user| safe_join([ render(Ui::AvatarComponent.new(name: user.display_name, size: :sm)), user.display_name ], " ") } %>
+  <% table.with_column("Email") { |user| user.email_address } %>
+  <% table.with_column("Role") { |user| render Ui::BadgeComponent.new(user.role, tone: user.admin? ? :accent : :neutral) } %>
+  <% table.with_column("Sign-in") { |user| user.identities.any? ? "Password, OIDC" : "Password" } %>
+  <% table.with_column("", align: :right) { |user| render Ui::ButtonComponent.new(label: "Edit", href: edit_settings_user_path(user), variant: :ghost, size: :sm) } %>
+<% end %>

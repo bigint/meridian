@@ -22,10 +22,13 @@ class JumpTest < ActionDispatch::IntegrationTest
     assert_select "#jump_results", text: /Nothing called “zzz”/
   end
 
-  test "every page carries the menu with the main places as tiles" do
+  test "every page carries the sidebar with search and the main places" do
     get root_path
-    assert_select "#jump[popover] .jump__tiles a", 6
-    assert_select "#jump .jump__tiles a", text: /Map/
+    assert_select "#sidebar form[action=?] input[type=search][name=q]", jump_path
+    assert_select "#sidebar nav[aria-label=Main] a", 6
+    assert_select "#sidebar nav[aria-label=Main] a[aria-current=page]", text: /Board/
+    assert_select "#sidebar nav a", text: /Map/
+    assert_select "#sidebar nav a", text: /Settings/, count: 0, message: "viewers don't see admin places"
     assert_select "[data-controller~=shortcuts]", 0
   end
 end

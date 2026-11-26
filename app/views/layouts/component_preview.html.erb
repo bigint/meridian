@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Meridian components</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <%= csrf_meta_tags %>
+    <%= stylesheet_link_tag "tailwind" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body class="p-6">
+    <div class="max-w-4xl space-y-4"><%= yield %></div>
+  </body>
+</html>

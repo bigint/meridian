@@ -1,6 +1,8 @@
 <% content_for :title, "Edit #{@project.name}" %>
-<header class="page-header">
-  <h1>Edit <%= @project.name %></h1>
-  <div class="actions"><%= button_to "Remove project", @project, method: :delete, class: "button danger", form: { data: { turbo_confirm: "Remove this project from Meridian? Nothing in Git changes." } } %></div>
-</header>
+<%= render Ui::PageHeaderComponent.new(title: "Edit #{@project.name}") do |header| %>
+  <% header.with_actions do %>
+    <%= render Ui::ButtonComponent.new(label: "Remove project", href: project_path(@project), method: :delete, variant: :danger,
+          confirm: "Remove this project from Meridian? Nothing in Git changes.") %>
+  <% end %>
+<% end %>
 <%= render "form", project: @project %>

@@ -1,12 +1,15 @@
 <% content_for :title, "Welcome" %>
-<%= icon :logo, class: "auth__logo" %>
-<h1>Welcome to Meridian</h1>
-<p class="meta">Create the first admin. You can add more people, or sign in with OpenID Connect, later.</p>
+<div>
+  <h1 class="text-lg font-semibold">Welcome to Meridian</h1>
+  <p class="mt-1 text-ink-muted">Create the first admin. You can add more people, or sign in with OpenID Connect, later.</p>
+</div>
 
-<%= form_with model: @user, url: first_run_path, class: "stack" do |form| %>
+<%= form_with model: @user, url: first_run_path, class: "space-y-4" do |form| %>
   <%= render "shared/errors", record: @user %>
-  <div class="field"><%= form.label :name %><%= form.text_field :name, autofocus: true %></div>
-  <div class="field"><%= form.label :email_address, "Email" %><%= form.email_field :email_address, required: true, autocomplete: "username" %></div>
-  <div class="field"><%= form.label :password %><%= form.password_field :password, required: true, autocomplete: "new-password", minlength: 12, maxlength: 72 %><span class="hint">At least 12 characters.</span></div>
-  <div><%= form.submit "Create admin", class: "button primary" %></div>
+  <%= form.field :name, autofocus: true, class: "!max-w-none" %>
+  <%= form.field :email_address, label: "Email" do %><%= form.email_field :email_address, required: true, autocomplete: "username", class: "!max-w-none" %><% end %>
+  <%= form.field :password, hint: "At least 12 characters." do %>
+    <%= form.password_field :password, required: true, autocomplete: "new-password", minlength: 12, maxlength: 72, class: "!max-w-none" %>
+  <% end %>
+  <%= form.submit "Create admin", class: "w-full justify-center" %>
 <% end %>

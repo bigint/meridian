@@ -1,0 +1,4 @@
+<div class="flex flex-wrap gap-2">
+  <% Ui::BadgeComponent::TONES.each_key do |tone| %><%= render Ui::BadgeComponent.new(tone.to_s, tone: tone) %><% end %>
+  <%= render Ui::BadgeComponent.new("region=ap-south-1", mono: true) %>
+</div>

@@ -1,50 +1,45 @@
 <% content_for :title, "Settings" %>
-<header class="page-header"><h1>Settings</h1><%= render "settings/nav" %></header>
+<%= render Ui::PageHeaderComponent.new(title: "Settings") do |header| %>
+  <% header.with_tabs { render "settings/nav" } %>
+<% end %>
 
-<div class="columns">
-  <section>
-    <h2>General</h2>
-    <%= form_with model: @account, url: settings_account_path, method: :patch, class: "stack" do |form| %>
-      <%= render "shared/errors", record: @account %>
-      <div class="field"><%= form.label :name %><%= form.text_field :name, required: true %></div>
-      <div class="field">
-        <%= form.label :preview_domain %>
-        <%= form.text_field :preview_domain, placeholder: "preview.example.com" %>
-        <span class="hint">Previews get <code>pr-&lt;n&gt;.&lt;app&gt;.&lt;this domain&gt;</code>. Needs a wildcard DNS record.</span>
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+  <%= form_with model: @account, url: settings_account_path, method: :patch, class: "space-y-6" do |form| %>
+    <%= render "shared/errors", record: @account %>
+    <%= render Ui::CardComponent.new(title: "General") do %>
+      <div class="space-y-4">
+        <%= form.field :name, required: true %>
+        <%= form.field :preview_domain, placeholder: "preview.example.com",
+              hint: safe_join([ "Previews get ", tag.code("pr-<n>.<app>.<this domain>"), ". Needs a wildcard DNS record." ]) %>
+        <%= form.field :preview_selector, label: "Preview servers", placeholder: "role=preview",
+              hint: "Labels a server needs to host previews. The least busy match is used. Blank: the app's own servers." %>
+        <%= form.field :preview_ttl_days, label: "Previews expire after (days)" do %><%= form.number_field :preview_ttl_days, min: 1 %><% end %>
       </div>
-      <div class="field">
-        <%= form.label :preview_selector, "Preview servers" %>
-        <%= form.text_field :preview_selector, placeholder: "role=preview" %>
-        <span class="hint">Labels a server needs to host previews. The least busy match is used. Blank: the app's own servers.</span>
-      </div>
-      <div class="field"><%= form.label :preview_ttl_days, "Previews expire after (days)" %><%= form.number_field :preview_ttl_days, min: 1 %></div>
-      <fieldset class="stack">
-        <legend><strong>Where Meridian runs</strong> <span class="meta">— the centre of the map's flows</span></legend>
-        <div class="field"><%= form.label :location_name, "Place" %><%= form.text_field :location_name, placeholder: "Singapore" %></div>
-        <div class="filters">
-          <div><%= form.label :latitude %><%= form.number_field :latitude, step: "any", min: -90, max: 90, placeholder: "1.35" %></div>
-          <div><%= form.label :longitude %><%= form.number_field :longitude, step: "any", min: -180, max: 180, placeholder: "103.82" %></div>
-        </div>
-      </fieldset>
-      <div><%= form.submit "Save", class: "button primary" %></div>
     <% end %>
-  </section>
+    <%= render Ui::CardComponent.new(title: "Where Meridian runs") do %>
+      <p class="mb-4 text-xs text-ink-muted">The centre of the map's flows: agent reports arrive here, deploys go out from here.</p>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <%= form.field :location_name, label: "Place", placeholder: "Singapore" %>
+        <%= form.field :latitude do %><%= form.number_field :latitude, step: "any", min: -90, max: 90, placeholder: "1.35" %><% end %>
+        <%= form.field :longitude do %><%= form.number_field :longitude, step: "any", min: -180, max: 180, placeholder: "103.82" %><% end %>
+      </div>
+    <% end %>
+    <%= form.submit "Save" %>
+  <% end %>
 
-  <section>
-    <h2>Connections</h2>
-    <dl class="facts">
-      <dt>GitHub App</dt>
-      <dd>
-        <% if GitHost::GitHub.token_mode? %>Token (GITHUB_TOKEN). Fine for a homelab; a GitHub App limits access more tightly.
-        <% elsif GitHost::GitHub.configured? %>App <%= GitHost::GitHub.app_id %>
-        <% else %>Not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN.<% end %>
-      </dd>
-      <dt>Webhooks</dt>
-      <dd><%= GitHost::GitHub.webhook_secret.present? ? "Secret set" : "Set GITHUB_APP_WEBHOOK_SECRET" %></dd>
-      <dt>OpenID Connect</dt>
-      <dd><%= Meridian.oidc? ? "#{Meridian.oidc_name} (#{ENV["OIDC_ISSUER"]})" : "Off. Set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET." %></dd>
-      <dt>Kamal</dt><dd><%= KamalConfig::KAMAL_VERSION %></dd>
-    </dl>
-    <p class="meta">These come from the environment, so they stay out of the database. See <code>docs/configuration.md</code>.</p>
-  </section>
+  <%= render Ui::SectionComponent.new(title: "Connections") do %>
+    <%= render Ui::CardComponent.new do %>
+      <%= render Ui::DescriptionListComponent.new do |list| %>
+        <% list.with_item("GitHub") do %>
+          <% if GitHost::GitHub.token_mode? %>Token (GITHUB_TOKEN). Fine for a homelab; a GitHub App limits access more tightly.
+          <% elsif GitHost::GitHub.configured? %>App <%= GitHost::GitHub.app_id %>
+          <% else %>Not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or GITHUB_TOKEN.<% end %>
+        <% end %>
+        <% list.with_item("Webhooks") { GitHost::GitHub.webhook_secret.present? ? "Secret set" : "Set GITHUB_APP_WEBHOOK_SECRET" } %>
+        <% list.with_item("OpenID Connect") { Meridian.oidc? ? "#{Meridian.oidc_name} (#{ENV["OIDC_ISSUER"]})" : "Off. Set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET." } %>
+        <% list.with_item("Kamal") { tag.code(KamalConfig::KAMAL_VERSION) } %>
+      <% end %>
+      <p class="mt-4 text-xs text-ink-muted">These come from the environment, so they stay out of the database. See <code>docs/configuration.md</code>.</p>
+    <% end %>
+  <% end %>
 </div>

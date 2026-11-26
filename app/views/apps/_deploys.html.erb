@@ -1,54 +1,33 @@
-<div class="columns">
-  <section aria-labelledby="ship-heading">
-    <h2 id="ship-heading" class="label">Ship a version</h2>
+<div class="grid gap-4 lg:grid-cols-2">
+  <%= render Ui::SectionComponent.new(title: "Ship a version", id: "ship-heading") do %>
     <% if current_user.can_deploy? %>
-      <%= form_with url: app_deploys_path(app), scope: :deploy, class: "panel" do |form| %>
-        <div class="field">
-          <%= form.label :version, "Version" %>
-          <%= form.text_field :version, list: "versions-#{app.id}", required: true, pattern: "[\\w.+:@\\-]{1,128}", autocomplete: "off", placeholder: app.latest_release&.version %>
-          <datalist id="versions-<%= app.id %>"><% app.releases.limit(20).map(&:version).uniq.each do |version| %><option value="<%= version %>"><% end %></datalist>
-          <span class="hint">A past release or a new image tag. Meridian commits it to <code><%= app.version_file_path %></code>, and CI runs <code>kamal deploy</code>.</span>
-        </div>
-        <div>
-          <%= form.submit "Deploy", class: "button primary", data: { turbo_confirm: "Commit this version to #{app.version_file_path}?" } %>
-        </div>
-      <% end %>
-      <% if app.latest_release %>
-        <%= button_to "Redeploy #{app.latest_release.short_version}", app_redeploy_path(app), class: "button",
-              form: { class: "center", data: { turbo_confirm: "Run the deploy workflow again for #{app.latest_release.version}? Use this after rotating a secret." } } %>
-      <% end %>
-    <% else %>
-      <p class="muted">Deployers and admins can deploy and roll back.</p>
-    <% end %>
-  </section>
-
-  <section aria-labelledby="deploy-heading">
-    <h2 id="deploy-heading" class="label">Current deploy</h2>
-    <% if (deploy = app.current_deploy) %>
-      <ul class="rows">
-        <li>
-          <%= avatar(deploy.actor&.display_name || "Git", size: "small") %>
-          <div>
-            <div class="row__title"><%= deploy.rollback? ? "Rollback to" : "Deploy of" %> <code><%= deploy.version %></code> · <%= deploy.state_label %></div>
-            <div class="row__sub"><%= deploy.actor&.display_name || "Git" %> · <%= link_to deploy.commit_sha.first(7), app.project.git.commit_url(deploy.commit_sha) %><% if deploy.ci_url %> · <%= link_to "CI run", deploy.ci_url %><% end %></div>
-          </div>
-          <div class="row__side"><%= time_ago(deploy.created_at) %></div>
-        </li>
-      </ul>
-      <table>
-        <thead><tr><th>Server</th><th>Running</th><th>Done</th></tr></thead>
-        <tbody>
-          <% deploy.progress.each do |server, versions, done| %>
-            <tr>
-              <th scope="row"><%= link_to server.short_name, server, title: server.name %></th>
-              <td><code><%= versions.join(", ").presence || "–" %></code></td>
-              <td><%= done ? tag.span("✓ Running #{deploy.version}", class: "state in_sync") : tag.span("… Waiting", class: "state") %></td>
-            </tr>
+      <%= render Ui::CardComponent.new do %>
+        <%= form_with url: app_deploys_path(app), scope: :deploy, class: "space-y-3" do |form| %>
+          <%= form.field :version, hint: safe_join([ "A past release or a new image tag. Meridian commits it to ", tag.code(app.version_file_path), ", and CI runs ", tag.code("kamal deploy"), "." ]) do %>
+            <%= form.text_field :version, list: "versions-#{app.id}", required: true, pattern: "[\\w.+:@\\-]{1,128}", autocomplete: "off", placeholder: app.latest_release&.version %>
+            <datalist id="versions-<%= app.id %>"><% app.releases.limit(20).map(&:version).uniq.each do |version| %><option value="<%= version %>"><% end %></datalist>
           <% end %>
-        </tbody>
-      </table>
+          <div class="flex flex-wrap items-center gap-2">
+            <%= form.submit "Deploy", data: { turbo_confirm: "Commit this version to #{app.version_file_path}?" } %>
+          </div>
+        <% end %>
+        <% if app.latest_release %>
+          <div class="mt-3 border-t border-line pt-3">
+            <%= render Ui::ButtonComponent.new(label: "Redeploy #{app.latest_release.short_version}", href: app_redeploy_path(app), method: :post, size: :sm,
+                  confirm: "Run the deploy workflow again for #{app.latest_release.version}? Use this after rotating a secret.") %>
+          </div>
+        <% end %>
+      <% end %>
     <% else %>
-      <div class="empty"><p>No deploys through Meridian yet.</p></div>
+      <p class="text-ink-muted">Deployers and admins can deploy and roll back.</p>
     <% end %>
-  </section>
+  <% end %>
+
+  <%= render Ui::SectionComponent.new(title: "Current deploy", id: "deploy-heading") do %>
+    <% if (deploy = app.current_deploy) %>
+      <%= render DeployProgressComponent.new(deploy: deploy, app: app) %>
+    <% else %>
+      <%= render Ui::EmptyStateComponent.new(title: "No deploys through Meridian yet", icon: :apps) %>
+    <% end %>
+  <% end %>
 </div>

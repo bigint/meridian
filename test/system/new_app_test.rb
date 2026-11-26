@@ -46,7 +46,7 @@ class NewAppTest < ApplicationSystemTestCase
     Snapshot.new(payload, token: agent_tokens(:web_1)).ingest
 
     visit root_path(app: "shop")
-    within("tr", text: "shop") { assert_selector ".state.in_sync", count: 1 }
+    within("tr", text: "shop") { assert_selector "[data-state=in_sync]", count: 1 }
   end
 
   private

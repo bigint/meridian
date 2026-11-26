@@ -1,11 +1,17 @@
-<turbo-frame id="jump_results" class="jump__results" target="_top">
+<turbo-frame id="jump_results" target="_top">
   <% if @results.any? %>
-    <ul class="jump__list">
+    <ul class="overflow-hidden rounded-md border border-line bg-canvas py-1">
       <% @results.each do |name, record, icon_name, kind| %>
-        <li><%= link_to record do %><%= icon icon_name %><%= name %><span class="kind"><%= kind %></span><% end %></li>
+        <li>
+          <%= link_to record, class: "flex items-center gap-2 px-2.5 py-1.5 text-sm text-ink hover:bg-raised focus:bg-raised focus:outline-none" do %>
+            <%= icon icon_name, class: "size-4 shrink-0 text-ink-faint" %>
+            <span class="flex-1 truncate"><%= name %></span>
+            <span class="kind text-[11px] text-ink-faint"><%= kind %></span>
+          <% end %>
+        </li>
       <% end %>
     </ul>
   <% elsif @query.present? %>
-    <p class="meta center">Nothing called “<%= @query %>”.</p>
+    <p class="rounded-md border border-line bg-canvas px-2.5 py-2 text-xs text-ink-muted">Nothing called “<%= @query %>”.</p>
   <% end %>
 </turbo-frame>

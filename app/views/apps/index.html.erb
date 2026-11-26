@@ -1,26 +1,20 @@
 <% content_for :title, "Apps" %>
-<header class="page-header">
-  <h1>Apps</h1>
-  <%= form_with url: apps_path, method: :get, class: "filters" do |form| %>
-    <%= form.label :q, "Search", class: "visually-hidden" %>
-    <%= form.search_field :q, value: params[:q], placeholder: "Search apps" %>
-  <% end %>
-  <div class="actions"><%= link_to "New app", new_app_path, class: "button primary" if current_user.admin? %></div>
-</header>
-
-<table>
-  <thead><tr><th>App</th><th>Project</th><th>Kind</th><th>Hostnames</th><th>Config</th><th>Latest release</th></tr></thead>
-  <tbody>
-    <% @apps.each do |app| %>
-      <tr>
-        <th scope="row"><%= link_to app.name, app %></th>
-        <td><%= link_to app.project.name, app.project %></td>
-        <td><span class="tag"><%= app.kind %></span></td>
-        <td><%= app.hostnames.join(", ") %></td>
-        <td><code><%= app.config_path %></code> <%= tag.code(app.destination_flag) if app.destination_flag %></td>
-        <td><% if (release = app.latest_release) %><code><%= release.short_version %></code> <span class="meta"><%= time_ago(release.committed_at) %></span><% end %></td>
-      </tr>
+<%= render Ui::PageHeaderComponent.new(title: "Apps", subtitle: "Every Kamal config in your infra repositories, one row per destination.") do |header| %>
+  <% header.with_actions do %>
+    <%= form_with url: apps_path, method: :get do |form| %>
+      <%= form.label :q, "Search apps", class: "sr-only" %><%= form.search_field :q, value: params[:q], placeholder: "Search apps", compact: true %>
     <% end %>
-  </tbody>
-</table>
-<% if @apps.empty? %><p class="muted">No apps yet. They appear when a project syncs.</p><% end %>
+    <% if current_user.admin? %><%= render Ui::ButtonComponent.new(label: "New app", href: new_app_path, variant: :primary, icon: :plus) %><% end %>
+  <% end %>
+<% end %>
+
+<%= render Ui::TableComponent.new(rows: @apps, empty: "No apps yet. They appear when a project syncs.") do |table| %>
+  <% table.with_column("App", header: true) { |app| link_to app.name, app, class: "hover:text-accent" } %>
+  <% table.with_column("Project") { |app| link_to app.project.name, app.project, class: "hover:text-accent" } %>
+  <% table.with_column("Kind") { |app| render Ui::BadgeComponent.new(app.kind) } %>
+  <% table.with_column("Hostnames") { |app| app.hostnames.join(", ") } %>
+  <% table.with_column("Config", mono: true) { |app| safe_join([ app.config_path, (" #{app.destination_flag}" if app.destination_flag) ].compact) } %>
+  <% table.with_column("Latest release", nowrap: true) do |app| %>
+    <% if (release = app.latest_release) %><code class="text-ink"><%= release.short_version %></code> <span class="text-xs"><%= time_ago(release.committed_at) %></span><% end %>
+  <% end %>
+<% end %>

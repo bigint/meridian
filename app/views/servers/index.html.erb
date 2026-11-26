@@ -1,25 +1,17 @@
 <% content_for :title, "Servers" %>
-<header class="page-header">
-  <h1>Servers</h1>
-  <%= form_with url: servers_path, method: :get, class: "filters", data: { controller: "autosubmit" } do |form| %>
-    <%= form.label :q, "Search", class: "visually-hidden" %>
-    <%= form.search_field :q, value: params[:q], placeholder: "Search servers" %>
-    <label><%= form.check_box :silent, { checked: @silent, data: { action: "autosubmit#submit" } }, "1", nil %> Only silent agents</label>
-  <% end %>
-</header>
-
-<table>
-  <thead><tr><th>Server</th><th>Hostname</th><th>Labels</th><th>Agent</th><th>Last seen</th></tr></thead>
-  <tbody>
-    <% @servers.each do |server| %>
-      <tr>
-        <th scope="row"><%= link_to server.name, server %></th>
-        <td><%= tag.code(server.hostname) unless server.hostname == server.name %></td>
-        <td><%= labels_list(server.labels) %></td>
-        <td><%= server.agent_version || tag.span("no agent", class: "muted") %></td>
-        <td><%= time_ago(server.last_seen_at) %><%= tag.span(" · silent", class: "state stale") if server.stale? %></td>
-      </tr>
+<%= render Ui::PageHeaderComponent.new(title: "Servers", subtitle: "Every machine Git names or an agent reports from.") do |header| %>
+  <% header.with_actions do %>
+    <%= form_with url: servers_path, method: :get, class: "flex items-center gap-3", data: { controller: "autosubmit" } do |form| %>
+      <%= form.label :q, "Search servers", class: "sr-only" %><%= form.search_field :q, value: params[:q], placeholder: "Search servers", compact: true %>
+      <label class="flex items-center gap-1.5 text-xs text-ink-muted"><%= form.check_box :silent, { checked: @silent, data: { action: "autosubmit#submit" } }, "1", nil %> Only silent agents</label>
     <% end %>
-  </tbody>
-</table>
-<% if @servers.none? %><p class="muted">No servers.</p><% end %>
+  <% end %>
+<% end %>
+
+<%= render Ui::TableComponent.new(rows: @servers, empty: "No servers.") do |table| %>
+  <% table.with_column("Server", header: true) { |server| link_to server.name, server, class: "font-mono text-xs hover:text-accent" } %>
+  <% table.with_column("Hostname", mono: true) { |server| server.hostname unless server.hostname == server.name } %>
+  <% table.with_column("Labels") { |server| labels_list(server.labels) } %>
+  <% table.with_column("Agent", mono: true) { |server| server.agent_version || tag.span("no agent", class: "text-ink-faint") } %>
+  <% table.with_column("Last seen", nowrap: true) { |server| safe_join([ time_ago(server.last_seen_at), (render(Ui::BadgeComponent.new("silent")) if server.stale?) ].compact, " ") } %>
+<% end %>

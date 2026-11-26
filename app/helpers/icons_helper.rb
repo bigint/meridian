@@ -24,13 +24,4 @@ module IconsHelper
     tag.svg(ICONS.fetch(name).html_safe, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 1.75,
       "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true, **options)
   end
-
-  # Initials on a soft colour that stays the same for the same name. The eight
-  # colours are classes (avatar--0 … avatar--7), so the CSP needs no inline styles.
-
-  def avatar(name, size: nil, state: nil)
-    words = name.to_s.scan(/[[:alnum:]]+/)
-    initials = (words.size > 1 ? words.first(2).map { it[0] } : [ words.first.to_s[0, 2] ]).join.upcase
-    tag.span(initials.presence || "?", class: [ "avatar", size, state || "avatar--#{Zlib.crc32(name.to_s) % 8}" ], aria: { hidden: true })
-  end
 end

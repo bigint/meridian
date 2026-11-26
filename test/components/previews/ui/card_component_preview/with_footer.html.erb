@@ -1,0 +1,4 @@
+<%= render Ui::CardComponent.new(title: "Ship a version") do |card| %>
+  <p>Commits the new image tag to <code>config/deploy.yml</code>; CI deploys it.</p>
+  <% card.with_footer { render Ui::ButtonComponent.new(label: "Deploy", variant: :primary) } %>
+<% end %>

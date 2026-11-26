@@ -1,0 +1,5 @@
+<%= render Ui::DescriptionListComponent.new do |list| %>
+  <% list.with_item("Host") { tag.code("10.0.4.12") } %>
+  <% list.with_item("Agent") { tag.code("0.4.1") } %>
+  <% list.with_item("Labels") { render Ui::BadgeComponent.new("region=ap-south-1", mono: true) } %>
+<% end %>

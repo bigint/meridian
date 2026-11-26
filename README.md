@@ -63,7 +63,7 @@ Operator ──▶ Meridian ──commits, PRs──▶ GitHub ──Actions─�
 ```bash
 bin/setup        # installs gems and prepares the databases (needs libsodium)
 bin/rails meridian:demo   # a 500-server demo fleet
-bin/dev
+bin/dev          # the app on :3000; components at /lookbook
 bin/ci           # everything CI runs: lint, security, Rails and Go tests
 ```
 

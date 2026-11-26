@@ -1,0 +1,57 @@
+<figure class="world space-y-3">
+  <div class="rounded-lg border border-line bg-surface p-2 sm:p-4">
+    <svg viewBox="0 0 <%= WorldMap::WIDTH.to_i %> <%= WorldMap::HEIGHT %>" role="img" aria-labelledby="world-title world-desc">
+      <title id="world-title">Servers on a world map</title>
+      <desc id="world-desc"><%= helpers.pluralize(@sites.size, "place") %>, <%= helpers.pluralize(@links.size, "shared-app link") %>. The table below lists every place.</desc>
+
+      <use href="<%= helpers.image_path("world.svg") %>#land" class="world__land"/>
+
+      <g class="world__links">
+        <% @links.each do |link| %>
+          <path d="<%= WorldMap.arc([ link.from.x, link.from.y ], [ link.to.x, link.to.y ]) %>" stroke-width="<%= (1.4 + [ link.weight, 8 ].min * 0.6).round(2) %>">
+            <title><%= link.from.name %> ↔ <%= link.to.name %>: <%= link.apps.map(&:name).to_sentence %></title>
+          </path>
+        <% end %>
+      </g>
+
+      <% if @hub %>
+        <g class="world__flows">
+          <% @flows.each do |flow| %>
+            <path d="<%= WorldMap.arc(flow.from ? [ flow.from.x, flow.from.y ] : @hub, flow.to ? [ flow.to.x, flow.to.y ] : @hub, bend: -0.12) %>" class="flow <%= flow.kind %> <%= "live" if flow.live %>">
+              <title><%= flow_title(flow) %></title>
+            </path>
+          <% end %>
+        </g>
+        <g class="world__hub" transform="translate(<%= @hub.join(" ") %>)"><rect x="-5" y="-5" width="10" height="10" rx="2"/></g>
+      <% end %>
+
+      <g class="world__sites">
+        <% @sites.each do |site| %>
+          <%= link_to site_href(site), class: "site #{site.state}" do %>
+            <g transform="translate(<%= site.x %> <%= site.y %>)">
+              <circle r="<%= @map.radius(site) %>"/>
+              <text class="symbol" dy="0.35em"><%= Drift::SYMBOLS[site.state] %></text>
+            </g>
+            <title><%= site.name %>: <%= helpers.pluralize(site.servers.size, "server") %>, <%= Drift::LABELS[site.state].downcase %></title>
+          <% end %>
+        <% end %>
+      </g>
+
+      <g class="world__labels" aria-hidden="true">
+        <% labels.each do |label, site| %>
+          <% if label.leader %><line x1="<%= label.leader[0] %>" y1="<%= label.leader[1] %>" x2="<%= label.x %>" y2="<%= label.y %>"/><% end %>
+          <text x="<%= label.x %>" y="<%= label.y %>" dy="0.35em" text-anchor="<%= label.anchor %>" class="<%= site ? "place" : "hub" %>"><%= label.text %></text>
+        <% end %>
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-ink-muted">
+    <span class="inline-flex items-center gap-2"><svg viewBox="0 0 24 8" class="h-2 w-6 overflow-visible" aria-hidden="true"><path d="M1 4 H23" class="legend-link"/></svg>Runs the same app (thicker: more apps)</span>
+    <% if @hub %>
+      <span class="inline-flex items-center gap-2"><svg viewBox="0 0 24 8" class="h-2 w-6 overflow-visible" aria-hidden="true"><path d="M1 4 H23" class="flow report live"/></svg>Agent reports, flowing in</span>
+      <span class="inline-flex items-center gap-2"><svg viewBox="0 0 24 8" class="h-2 w-6 overflow-visible" aria-hidden="true"><path d="M1 4 H23" class="flow deploy live"/></svg>Deploy in progress, flowing out</span>
+    <% end %>
+    <span class="inline-flex items-center gap-1.5">Worst state per place: <% LEGEND_STATES.each do |state| %><%= render Ui::StateComponent.new(state) %><% end %></span>
+  </figcaption>
+</figure>

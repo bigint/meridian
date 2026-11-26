@@ -12,7 +12,7 @@ class ScreenshotsTest < ApplicationSystemTestCase
     record_some_activity
   end
 
-  test "board, menu, app, server and activity in light and dark" do
+  test "board, search, app, server and activity in light and dark" do
     sign_in users(:admin)
 
     %w[ light dark ].each do |scheme|
@@ -22,10 +22,9 @@ class ScreenshotsTest < ApplicationSystemTestCase
       visit root_path
       save "board#{suffix}"
 
-      click_on "Open the Meridian menu"
-      fill_in "Go to an app, server or project", with: "cedar"
+      fill_in "Search apps, servers and projects", with: "cedar"
       within("#jump_results") { assert_link "cedar-0" }
-      save "menu#{suffix}"
+      save "search#{suffix}"
       send_keys :escape
 
       visit app_path(@project.apps.order(:id).second)

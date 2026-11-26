@@ -2,15 +2,16 @@
 
 ## Unreleased
 
-### Calmer, simpler interface
+### Instrument interface
 
-- A new look in the spirit of HEY: one quiet bar, content on a centred sheet with a big title, pill buttons, and light and dark palettes built from RGB tokens. Meridian draws its own icons. See `docs/design.md`.
-- One menu in the middle of the top bar: type to jump to any app, server or project, or pick one of the main places.
-- The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should", with silent agents summarised in one line. The grid follows under **Everything**, with filters folded away and a "What do these mean?" note.
-- A getting-started checklist on new installs, a one-line status on each app ("✓ Running v42 everywhere"), and Activity laid out day by day like a calendar.
+- A new look of Meridian's own: zinc neutrals, one teal accent, monospace for versions and hosts, compact tables, 6px corners, and light and dark themes. Still no shadows. See `docs/design.md`.
+- A left sidebar with the main places always in view and a search box that finds any app, server or project as you type. On phones it is a drawer behind a Menu button.
+- Built with Tailwind 4 (standalone binary, still no Node) and a ViewComponent library, `app/components/ui/`, browsable at `/lookbook` in development.
+- Install snippets and one-time tokens have a copy button.
+- The board opens on **Needs attention**: plain sentences such as "web isn't running on web-2, but Git says it should", with silent agents summarised in one line. The grid follows, with filters folded away.
+- A getting-started checklist on new installs, a one-line status on each app ("✓ Running v42 everywhere"), and Activity laid out day by day.
 - `bin/rails meridian:demo` can be run again over an existing demo fleet.
-- No shadows anywhere, and section labels carry a thin rule to the edge, as in HEY.
-- Keyboard shortcuts are gone for now; everything is one click from the menu.
+- Keyboard shortcuts are gone for now; everything is one click from the sidebar.
 
 ### World map
 

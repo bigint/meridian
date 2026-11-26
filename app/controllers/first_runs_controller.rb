@@ -1,5 +1,6 @@
 # Creates the first admin. Only reachable while there are no users.
 class FirstRunsController < ApplicationController
+  layout "auth"
   allow_unauthenticated_access
   before_action { redirect_to root_path if User.exists? }
 

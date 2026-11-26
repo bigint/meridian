@@ -1,5 +1,6 @@
 # Strict CSP: everything from this origin, inline scripts only with a nonce
-# (the importmap tags get one automatically).
+# (the importmap tags get one automatically). Turbo's progress bar <style> uses
+# the same nonce, so style-src accepts it too; style attributes stay blocked.
 Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src :self
@@ -15,6 +16,6 @@ Rails.application.configure do
   end
 
   config.content_security_policy_nonce_generator = ->(request) { SecureRandom.base64(16) }
-  config.content_security_policy_nonce_directives = %w[ script-src ]
+  config.content_security_policy_nonce_directives = %w[ script-src style-src ]
   config.content_security_policy_nonce_auto = true
 end

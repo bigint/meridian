@@ -1,50 +1,43 @@
 <% content_for :title, "Activity" %>
-<header class="page-header">
-  <h1>Activity</h1>
-  <p class="meta">Everything Meridian did, and who asked for it.</p>
-</header>
+<%= render Ui::PageHeaderComponent.new(title: "Activity", subtitle: "Everything Meridian did, and who asked for it.") %>
 
-<details class="disclosure" <%= "open" if params[:action_name].present? || params[:actor].present? %>>
-  <summary>Filters</summary>
-  <%= form_with url: events_path, method: :get, class: "filters" do |form| %>
-    <div><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy" %></div>
-    <div><%= form.label :actor, "Who" %><%= form.select :actor, @actors.map { [ it.display_name, it.id ] }, { include_blank: "Anyone", selected: params[:actor] } %></div>
-    <%= form.submit "Apply", class: "button", name: nil %>
+<%= render Ui::DisclosureComponent.new(summary: "Filters", open: params[:action_name].present? || params[:actor].present?) do %>
+  <%= form_with url: events_path, method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
+    <div><%= form.label :action_name, "Action starts with" %><%= form.search_field :action_name, value: params[:action_name], placeholder: "app.deploy", compact: true %></div>
+    <div><%= form.label :actor, "Who" %><%= form.select :actor, @actors.map { [ it.display_name, it.id ] }, { include_blank: "Anyone", selected: params[:actor] }, compact: true %></div>
+    <%= form.submit "Apply", name: nil, variant: :secondary %>
   <% end %>
-</details>
+<% end %>
 
-<div class="days">
+<% if @events.empty? %>
+  <%= render Ui::EmptyStateComponent.new(title: "Nothing has happened yet", icon: :activity) %>
+<% end %>
+
+<div class="space-y-6">
   <% @events.group_by { it.created_at.to_date }.each do |date, events| %>
-    <section class="day" aria-label="<%= date.to_fs(:long) %>">
-      <header>
-        <h2><%= date == Date.current ? "Today" : date == Date.yesterday ? "Yesterday" : date.strftime("%A, %B %-d") %></h2>
-        <% if date == Date.current %><span class="pill-today"><%= date.strftime("%a %-d") %></span><% else %><span class="meta"><%= date.strftime("%Y") unless date.year == Date.current.year %></span><% end %>
-      </header>
-      <ul class="rows">
+    <section aria-label="<%= date.to_fs(:long) %>" class="space-y-2">
+      <h2 class="flex items-center gap-2 text-sm font-semibold text-ink">
+        <%= date == Date.current ? "Today" : date == Date.yesterday ? "Yesterday" : date.strftime("%A, %B %-d") %>
+        <span class="font-mono text-xs font-normal text-ink-faint"><%= date.iso8601 %></span>
+      </h2>
+      <%= render Ui::ListComponent.new do |list| %>
         <% events.each do |event| %>
-          <li>
-            <span class="time"><%= event.created_at.strftime("%-l:%M%P") %></span>
-            <%= avatar(event.actor_name, size: "small") %>
-            <div>
-              <div class="row__title"><%= event.summary %></div>
-              <div class="row__sub">
-                <%= event.actor_name %> · <code><%= event.action %></code>
-                <% if event.details["commit"] %> · <%= short_sha(event.details["commit"]) %><% end %>
-                <% if event.details["pull_request"] %> · <%= link_to "pull request", event.details["pull_request"] %><% end %>
-              </div>
-            </div>
-          </li>
+          <% list.with_item do |item| %>
+            <% item.with_leading { render Ui::AvatarComponent.new(name: event.actor_name, size: :sm) } %>
+            <% item.with_subtitle do %>
+              <%= event.actor_name %> · <code><%= event.action %></code>
+              <% if event.details["commit"] %> · <%= short_sha(event.details["commit"]) %><% end %>
+              <% if event.details["pull_request"] %> · <%= link_to "pull request", event.details["pull_request"], class: "text-accent hover:underline" %><% end %>
+            <% end %>
+            <% item.with_trailing { tag.time(event.created_at.strftime("%H:%M"), datetime: event.created_at.iso8601, class: "font-mono") } %>
+            <%= event.summary %>
+          <% end %>
         <% end %>
-      </ul>
+      <% end %>
     </section>
   <% end %>
 </div>
 
-<% if @events.empty? %>
-  <div class="empty"><span class="sparkle" aria-hidden="true">✨</span><p>Nothing has happened yet.</p></div>
-<% end %>
-
-<nav class="pagination" aria-label="Pages">
-  <%= link_to "← Newer", request.query_parameters.merge(page: @page - 1), class: "button" if @page > 1 %>
-  <%= link_to "Older →", request.query_parameters.merge(page: @page + 1), class: "button" if @more %>
-</nav>
+<%= render Ui::PaginationComponent.new(label: "Page #{@page}", previous_label: "Newer", next_label: "Older",
+      previous_url: (request.query_parameters.merge(page: @page - 1) if @page > 1),
+      next_url: (request.query_parameters.merge(page: @page + 1) if @more)) %>

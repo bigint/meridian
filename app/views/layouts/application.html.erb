@@ -8,38 +8,30 @@
     <%= csp_meta_tag %>
     <%= yield :head %>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <% if authenticated? %>
-      <header class="navbar">
-        <button type="button" class="navbar__search" popovertarget="jump">
-          <%= icon :search %> Search
-        </button>
+  <body class="min-h-svh">
+    <div class="lg:grid lg:min-h-svh lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <%# One sidebar: a popover drawer on phones, always shown from lg up. %>
+      <aside id="sidebar" popover aria-label="Navigation"
+        class="fixed inset-y-0 left-0 z-40 h-svh w-72 max-w-[85vw] overflow-y-auto border-r border-line bg-surface backdrop:bg-black/40
+               lg:sticky lg:top-0 lg:z-auto lg:block lg:w-auto lg:max-w-none">
+        <%= render SidebarComponent.new(user: current_user, attention_count: attention_count) %>
+      </aside>
 
-        <button type="button" class="navbar__menu" popovertarget="jump" aria-label="Open the Meridian menu">
-          <%= icon :logo, class: "logo" %> Meridian <%= icon :chevron, class: "chevron" %>
-        </button>
-
-        <button type="button" class="avatar navbar__me" popovertarget="me" aria-label="Your account">
-          <%= current_user.display_name.scan(/[[:alnum:]]+/).first(2).map(&:first).join.upcase %>
-        </button>
+      <header class="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-canvas px-4 py-2 lg:hidden">
+        <%= link_to root_path, class: "flex items-center gap-2 font-semibold" do %><%= icon :logo, class: "size-5 text-accent" %> Meridian<% end %>
+        <button type="button" popovertarget="sidebar" class="rounded-md border border-line px-2.5 py-1 text-sm cursor-pointer">Menu</button>
       </header>
 
-      <%= render "shared/jump_menu" %>
-      <%= render "shared/me_menu" %>
-
-      <main id="main" class="sheet <%= yield :sheet %>">
-        <%= render "shared/flash" %>
-        <%= yield %>
+      <main id="main" class="<%= content_for?(:wide) ? "min-w-0 px-4 py-6 lg:px-8" : "mx-auto w-full min-w-0 max-w-6xl px-4 py-6 lg:px-8" %>">
+        <div class="space-y-6">
+          <%= render "shared/flash" %>
+          <%= yield %>
+        </div>
       </main>
-    <% else %>
-      <main class="auth">
-        <%= render "shared/flash" %>
-        <%= yield %>
-      </main>
-    <% end %>
+    </div>
   </body>
 </html>

@@ -15,13 +15,12 @@ class BoardSyncTest < ApplicationSystemTestCase
     assert_text "deploy/broken.yml:6"
     assert_text "servers/web/hosts: should be an array"
 
-    click_on "Open the Meridian menu"
-    within("#jump") { click_on "Board" }
-    within "table.grid" do
+    within("nav[aria-label=Main]") { click_on "Board" }
+    within "[data-board-grid]" do
       assert_text "web · production"
       assert_text "blog"
       assert_selector "a[title='api-1.example.com']", text: "api-1"
     end
-    assert_selector ".summary", text: "Unknown"
+    assert_selector "[data-summary]", text: "Unknown"
   end
 end

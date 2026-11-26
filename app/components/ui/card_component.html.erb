@@ -1,0 +1,7 @@
+<%= tag.div class: classes("rounded-lg border border-line bg-canvas", @html.delete(:class)), **@html do %>
+  <% if header? || @title %>
+    <div class="flex items-center justify-between gap-2 border-b border-line px-4 py-2.5 font-medium"><%= header? ? header : @title %></div>
+  <% end %>
+  <div class="<%= "p-4" if @padded %>"><%= content %></div>
+  <% if footer? %><div class="border-t border-line px-4 py-2.5"><%= footer %></div><% end %>
+<% end %>

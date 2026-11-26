@@ -1,21 +1,12 @@
 <% content_for :title, "Projects" %>
-<header class="page-header">
-  <h1>Projects</h1>
-  <div class="actions"><%= link_to "Add project", new_project_path, class: "button primary" if current_user.admin? %></div>
-</header>
+<%= render Ui::PageHeaderComponent.new(title: "Projects", subtitle: "A project is one Git repository that holds Kamal configs.") do |header| %>
+  <% if current_user.admin? %><% header.with_actions { render Ui::ButtonComponent.new(label: "Add project", href: new_project_path, variant: :primary, icon: :plus) } %><% end %>
+<% end %>
 
-<table>
-  <thead><tr><th>Project</th><th>Repository</th><th>Apps</th><th>Synced</th><th>Problems</th></tr></thead>
-  <tbody>
-    <% @projects.each do |project| %>
-      <tr>
-        <th scope="row"><%= link_to project.name, project %></th>
-        <td><%= link_to project.repo_full_name, project.repo_url %></td>
-        <td><%= project.apps.size %></td>
-        <td><%= short_sha(project.last_synced_sha) if project.last_synced_sha %> <span class="meta"><%= time_ago(project.synced_at) %></span></td>
-        <td><%= project.config_errors? ? tag.span("✕ #{pluralize(project.config_errors.size, "parse error")}", class: "state missing") : "–" %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-<% if @projects.none? %><p class="muted">No projects yet. A project is one Git repository that holds Kamal configs.</p><% end %>
+<%= render Ui::TableComponent.new(rows: @projects, empty: "No projects yet.") do |table| %>
+  <% table.with_column("Project", header: true) { |project| link_to project.name, project, class: "hover:text-accent" } %>
+  <% table.with_column("Repository", mono: true) { |project| link_to project.repo_full_name, project.repo_url, class: "hover:text-accent" } %>
+  <% table.with_column("Apps", align: :right) { |project| project.apps.size } %>
+  <% table.with_column("Synced", nowrap: true) { |project| safe_join([ (short_sha(project.last_synced_sha) if project.last_synced_sha), time_ago(project.synced_at) ].compact, " ") } %>
+  <% table.with_column("Problems") { |project| project.config_errors? ? render(Ui::BadgeComponent.new("✕ #{pluralize(project.config_errors.size, "parse error")}", tone: :bad)) : "–" } %>
+<% end %>

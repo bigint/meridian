@@ -31,6 +31,7 @@
               <dt>Hostname</dt><dd><%= @setup.hostname ? copyable(@setup.hostname) : tag.span("one the app's proxy answers to", class: "txt-faint") %></dd>
               <dt>Service URL</dt><dd><%= copyable "http://kamal-proxy:80" %></dd>
             </dl>
+            <p class="walk__note">Check the record under the domain's <strong>DNS → Records</strong>: Cloudflare sometimes skips it. If it's missing, add a proxied <strong>CNAME</strong> from the hostname to <code>&lt;tunnel ID&gt;.cfargotunnel.com</code>. The tunnel ID is on its Overview.</p>
             <% if @setup.hostname %>
               <p class="walk__note">Serving a different hostname? Also set <strong>HTTP Host Header</strong> to <code><%= @setup.hostname %></code> under <strong>Additional application settings → HTTP</strong>, or kamal-proxy and the app answer 404. Keep it one level below the domain: Cloudflare's free certificate covers <code>app.example.com</code>, not <code>app.team.example.com</code>.</p>
             <% end %>

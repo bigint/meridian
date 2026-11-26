@@ -74,8 +74,8 @@ Every other route is a page for people. A request without a session is sent to `
 | `/secrets` | Secret names per project | Viewer |
 | `POST /secrets`, `PATCH /secrets/:id` | Add a name, set a value. 20 a minute. | Admin |
 | `/previews` | Previews | Viewer |
-| `DELETE /previews/:id` | Destroy a preview | Deployer |
-| `/tunnels`, `/tunnels/new` | Tunnels and tunnel setup | Viewer |
+| `POST /previews/:id/closure` | Destroy a preview: CI removes it, then Meridian drops its overlay | Deployer |
+| `/tunnels`, `/tunnels/setup` | Tunnels and tunnel setup | Viewer |
 | `/tunnels/connectors/edit` | Edit connectors | Admin |
 | `/agents` | Agent tokens and silent servers | Viewer |
 | `POST /agents`, `DELETE /agents/:id` | Create and revoke tokens | Admin |

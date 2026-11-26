@@ -5,7 +5,7 @@
              else "#{pluralize(@tunnels.size, "Cloudflare Tunnel")}. #{problems} #{problems == 1 ? "needs" : "need"} attention."
              end %>
 <%= page_header "Tunnels", meta: summary do %>
-  <%= link_to new_tunnel_path, class: "btn btn--primary" do %><%= icon :plus %> Set up a tunnel<% end %>
+  <%= link_to tunnels_setup_path, class: "btn btn--primary" do %><%= icon :plus %> Set up a tunnel<% end %>
 <% end %>
 
 <% if @tunnels.none? %>
@@ -22,7 +22,7 @@
         <span class="txt-small txt-muted"><%= tunnel.project.repo_full_name %> · <%= safe_join(tunnel.configs.map { tag.code(it.config_path) }, ", ") %></span>
       </h2>
       <div class="flex items-center gap-s">
-        <%= link_to "Steps", new_tunnel_path(project: tunnel.project.id), class: "btn btn--plain" %>
+        <%= link_to "Steps", tunnels_setup_path(project: tunnel.project.id), class: "btn btn--plain" %>
         <% if current_user.admin? && tunnel.configs.one? %>
           <%= link_to "Edit connectors", edit_tunnels_connectors_path(project: tunnel.project.id, secret: tunnel.secret_name), class: "btn" %>
         <% end %>

@@ -30,7 +30,7 @@
           <% if current_user.can_deploy? %>
             <td class="table__end">
               <% unless preview.removing? %>
-                <%= button_to "Destroy", preview_path(preview), method: :delete, class: "btn btn--danger btn--small",
+                <%= button_to "Destroy", preview_closure_path(preview), class: "btn btn--danger btn--small",
                       form: { data: { turbo_confirm: "Remove pr-#{preview.pr_number} from its server now?" } } %>
               <% end %>
             </td>

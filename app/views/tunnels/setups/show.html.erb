@@ -87,7 +87,7 @@
     </div>
 
     <aside class="split__aside">
-      <%= form_with url: new_tunnel_path, method: :get, class: "panel", data: { controller: "autosubmit" } do |form| %>
+      <%= form_with url: tunnels_setup_path, method: :get, class: "panel", data: { controller: "autosubmit" } do |form| %>
         <% if @projects.many? %>
           <div class="field">
             <%= form.label :project, "Project" %>

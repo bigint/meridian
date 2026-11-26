@@ -16,4 +16,5 @@
 .DS_Store
 /.claude
 /lab/.secrets
+/docs/changelog.mdx
 

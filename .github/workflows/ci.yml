@@ -40,3 +40,16 @@ jobs:
           name: screenshots
           path: tmp/screenshots
           if-no-files-found: ignore
+
+  # The docs site in docs/: checks only, nothing is published.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: bin/docs check
+        run: bin/docs check

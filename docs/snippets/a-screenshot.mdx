@@ -1,0 +1,6 @@
+export const Screenshot = ({ name, alt, caption }) => (
+  <Frame caption={caption}>
+    <img className="block dark:hidden" src={`/screenshots/${name}.png`} alt={alt} />
+    <img className="hidden dark:block" src={`/screenshots/${name}-dark.png`} alt={alt} />
+  </Frame>
+);

@@ -6,7 +6,7 @@
   "colors": {
     "primary": "#4338ca",
     "light": "#818cf8",
-    "dark": "#3730a3"
+    "dark": "#6366f1"
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -14,6 +14,9 @@
     "href": "/"
   },
   "favicon": "/favicon.svg",
+  "icons": {
+    "library": "lucide"
+  },
   "appearance": {
     "default": "system"
   },
@@ -35,7 +38,12 @@
     }
   },
   "contextual": {
-    "options": ["copy", "view", "claude", "chatgpt"]
+    "options": [
+      "copy",
+      "view",
+      "claude",
+      "chatgpt"
+    ]
   },
   "seo": {
     "metatags": {
@@ -50,7 +58,12 @@
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "quickstart", "install", "tour"]
+            "pages": [
+              "index",
+              "quickstart",
+              "install",
+              "tour"
+            ]
           },
           {
             "group": "Concepts",
@@ -113,11 +126,17 @@
         "groups": [
           {
             "group": "Configuration",
-            "pages": ["reference/environment", "reference/github-app"]
+            "pages": [
+              "reference/environment",
+              "reference/github-app"
+            ]
           },
           {
             "group": "Git and CI",
-            "pages": ["reference/infra-repository", "reference/ci-workflow"]
+            "pages": [
+              "reference/infra-repository",
+              "reference/ci-workflow"
+            ]
           },
           {
             "group": "Agent and server",
@@ -130,7 +149,9 @@
           },
           {
             "group": "Words",
-            "pages": ["reference/glossary"]
+            "pages": [
+              "reference/glossary"
+            ]
           }
         ]
       },
@@ -147,13 +168,18 @@
           },
           {
             "group": "Working on Meridian",
-            "pages": ["internals/development", "internals/lab"]
+            "pages": [
+              "internals/development",
+              "internals/lab"
+            ]
           }
         ]
       },
       {
         "tab": "Changelog",
-        "pages": ["changelog"]
+        "pages": [
+          "changelog"
+        ]
       }
     ]
   }

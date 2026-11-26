@@ -282,10 +282,14 @@ func (f *follower) pump(body io.Reader, since time.Time) {
 	ticker := time.NewTicker(max(f.t.batchEvery/5, time.Millisecond))
 	defer ticker.Stop()
 	for {
+		in := lines
+		if b.held() { // the batch is full and the last went out under batchEvery ago: Docker waits
+			in = nil
+		}
 		select {
 		case <-f.ctx.Done():
 			return
-		case l, ok := <-lines:
+		case l, ok := <-in:
 			if !ok { // Docker closed the stream
 				if f.ctx.Err() == nil {
 					if readErr != nil {
@@ -324,6 +328,13 @@ func (f *follower) fetchBacklog(n int) {
 	defer body.Close()
 	b := f.t.newBatcher(f.id)
 	readLogs(body, f.tty, func(l logLine) bool {
+		for b.held() {
+			select {
+			case <-ctx.Done():
+				return false
+			case <-time.After(b.wait()):
+			}
+		}
 		b.add(l, true)
 		return ctx.Err() == nil
 	})

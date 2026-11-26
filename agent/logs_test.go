@@ -352,6 +352,56 @@ func TestBatcherDropsAndCountsLinesBeyondHalfAMiBPerSecond(t *testing.T) {
 	}
 }
 
+// The budget charges each line its JSON overhead, so a container printing
+// blank lines (m is "" once the timestamp is off) is bounded too.
+func TestBatcherChargesEveryLineAnOverhead(t *testing.T) {
+	r := newBatchRig()
+	for range 100_000 { // one second of blank lines
+		r.add(false, "")
+	}
+	r.b.flush(false)
+	kept, dropped := 0, 0
+	for _, b := range r.batches {
+		kept += len(b.Lines)
+		dropped += b.Dropped
+	}
+	if want := budgetBytes / lineOverhead; kept != want || dropped != 100_000-want {
+		t.Fatalf("kept %d blank lines and dropped %d, want %d kept", kept, dropped, want)
+	}
+}
+
+// A caller that waits while the batch is held sends at most one batch per
+// batchEvery, however fast lines come: AgentChannel drops an agent's frames
+// past 100 a second, and an agent tails up to 20 containers.
+func TestBatcherFullBatchesWaitTheirTurn(t *testing.T) {
+	r := newBatchRig()
+	var sentAt []time.Time
+	r.b.emit = func(b logBatch) { r.batches = append(r.batches, b); sentAt = append(sentAt, r.clock.Now()) }
+	for added := 0; added < 5000; {
+		if r.b.held() {
+			r.clock.Advance(time.Millisecond)
+			r.b.flushDue()
+			continue
+		}
+		r.add(false, "x")
+		added++
+	}
+	r.clock.Advance(batchEvery)
+	r.b.flushDue()
+	lines := 0
+	for _, b := range r.batches {
+		lines += len(b.Lines)
+	}
+	if lines != 5000 {
+		t.Fatalf("%d of 5000 lines went out", lines)
+	}
+	for i := 1; i < len(sentAt); i++ {
+		if gap := sentAt[i].Sub(sentAt[i-1]); gap < batchEvery {
+			t.Fatalf("batch %d went out %v after the one before, want at least %v", i, gap, batchEvery)
+		}
+	}
+}
+
 func TestBatcherReportsDropsEvenWithoutLines(t *testing.T) {
 	r := newBatchRig()
 	chunk := strings.Repeat("m", 8000)

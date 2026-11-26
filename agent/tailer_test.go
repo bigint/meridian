@@ -767,6 +767,34 @@ func TestEndedIsSentOnceWhenDockerClosesTheStream(t *testing.T) {
 	}
 }
 
+// A burst of short lines is not sent as fast as it is read: full batches
+// wait their turn, and the reader holds Docker's stream meanwhile, so no line
+// is lost and none of them jumps the queue.
+func TestTailSpacesFullBatchesInsteadOfBurstingThem(t *testing.T) {
+	fd := newLogDocker(t)
+	id := containerID(0xa7)
+	fd.add(id, kamalApp())
+	rig := startLogRig(t, fd, true)
+	rig.tail(id, 30, 0)
+	waitFor(t, "the follow", func() bool { return fd.activeFor(id) == 1 })
+
+	burst := make([]logEntry, 0, 5000)
+	for i := range 5000 {
+		burst = append(burst, fresh(1, 1, fmt.Sprint(i)))
+	}
+	start := time.Now()
+	fd.push(id, burst...)
+	got := rig.lines(t, 5000)
+	elapsed := time.Since(start)
+	if n := len(allMessages(got)); n != 5000 {
+		t.Fatalf("%d lines arrived, want 5000", n)
+	}
+	// Ten full batches, each at least batchEvery (20ms here) after the last.
+	if min := 9 * rig.tl.batchEvery; elapsed < min {
+		t.Fatalf("%d batches in %v, want them spread over at least %v", len(got), elapsed, min)
+	}
+}
+
 func TestTailOfAStoppedContainerSendsItsHistoryAndEnded(t *testing.T) {
 	fd := newLogDocker(t)
 	id := containerID(0xb2)

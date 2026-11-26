@@ -25,7 +25,7 @@ It works like live stats. Opening the logs sends the agent a 30-second lease for
 
 - **Off by default.** Logs can contain secrets, so the agent tails nothing unless `MERIDIAN_LOGS=1`. The accessory template turns it on; remove the line to keep logs on the server.
 - **Kamal containers only.** The agent checks every container it is asked for against Kamal's labels itself, so even a compromised Meridian can't read the logs of anything else on the host.
-- **Bounded.** At most 20 containers at once, 8 KB per line, and 512 KB per second per container. Lines beyond that are dropped and counted.
+- **Bounded.** At most 20 containers at once, 8 KB per line, one batch per 250 ms, and 512 KB per second per container, counting 64 bytes a line on top of its text so even blank lines are bounded. Lines beyond that are dropped and counted.
 - **Not stored.** Lines are relayed to the open page. They pass through the cable database, which keeps messages for a minute. Each time someone opens logs, it's recorded in Activity.
 
 ## Traffic

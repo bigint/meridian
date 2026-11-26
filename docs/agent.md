@@ -5,8 +5,8 @@
 - reads Docker **read-only**: `GET /containers/json`, `GET /containers/{id}/json` and, only while someone is looking, `GET /containers/{id}/stats` and (if you turn logs on) `GET /containers/{id}/logs`, nothing else;
 - recognises Kamal containers by the labels Kamal sets (`service`, `role`, `destination`) and takes the version from the container name, exactly as Kamal does;
 - sends container name, image, labels, state, health and start time, and **never** environment variables, commands or mounts, which can contain secrets;
-- POSTs a snapshot every 15 seconds (±20% jitter), outbound only, so it works behind NAT and firewalls;
-- backs off exponentially when Meridian is down, caps its payload at 1 MiB, and never takes the host down with it;
+- POSTs a snapshot every 15 seconds (±20% jitter), outbound only, so it works behind NAT and firewalls, and says in each one how often it reports (`interval_seconds`), so Meridian knows when a server has gone quiet;
+- backs off exponentially when Meridian is down, waits as long as a `429`'s `Retry-After` asks, caps its payload at 1 MiB, and never takes the host down with it;
 - keeps one outbound WebSocket open to Meridian's `/cable` for live stats (below).
 
 ## Live stats

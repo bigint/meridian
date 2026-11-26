@@ -20,12 +20,15 @@ const (
 
 // Snapshot is the JSON document POSTed to Meridian.
 type Snapshot struct {
-	AgentVersion string            `json:"agent_version"`
-	MachineID    string            `json:"machine_id"`
-	Hostname     string            `json:"hostname"`
-	Labels       map[string]string `json:"labels"`
-	Containers   []Container       `json:"containers"`
-	Truncated    bool              `json:"truncated,omitempty"`
+	AgentVersion string `json:"agent_version"`
+	MachineID    string `json:"machine_id"`
+	Hostname     string `json:"hostname"`
+	// The configured snapshot interval in whole seconds, before jitter, so
+	// Meridian knows how long a silence means the agent is gone.
+	IntervalSeconds int               `json:"interval_seconds"`
+	Labels          map[string]string `json:"labels"`
+	Containers      []Container       `json:"containers"`
+	Truncated       bool              `json:"truncated,omitempty"`
 }
 
 type Container struct {

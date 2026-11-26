@@ -222,6 +222,7 @@ func TestSnapshotShapeAndNoSecrets(t *testing.T) {
 		machineID: "0123456789abcdef0123456789abcdef",
 		hostname:  "app-1.example.com",
 		labels:    map[string]string{"region": "sgp", "provider": "ovh"},
+		interval:  defaultInterval,
 	})
 	body, err := a.snapshotBody(context.Background())
 	if err != nil {
@@ -238,7 +239,10 @@ func TestSnapshotShapeAndNoSecrets(t *testing.T) {
 	if err := json.Unmarshal(body, &doc); err != nil {
 		t.Fatal(err)
 	}
-	assertKeys(t, "snapshot", doc, "agent_version", "machine_id", "hostname", "labels", "containers")
+	assertKeys(t, "snapshot", doc, "agent_version", "machine_id", "hostname", "interval_seconds", "labels", "containers")
+	if got := string(doc["interval_seconds"]); got != "15" {
+		t.Errorf("interval_seconds = %s, want 15, the default interval before jitter", got)
+	}
 
 	var containers []map[string]json.RawMessage
 	json.Unmarshal(doc["containers"], &containers)
@@ -354,6 +358,53 @@ func TestPostSnapshotRejectsNon2xx(t *testing.T) {
 	defer srv.Close()
 	if err := postSnapshot(context.Background(), srv.Client(), srv.URL, "bad", []byte(`{}`)); err == nil {
 		t.Fatal("want error on 401")
+	}
+}
+
+func TestIntervalSecondsIsWholeAndAtLeastOne(t *testing.T) {
+	for d, want := range map[time.Duration]int{15 * time.Second: 15, time.Minute: 60, 1500 * time.Millisecond: 2, time.Second: 1, 1100 * time.Millisecond: 1} {
+		if got := intervalSeconds(d); got != want {
+			t.Errorf("intervalSeconds(%v) = %d, want %d", d, got, want)
+		}
+	}
+}
+
+// A 429 says when to come back: the agent waits at least that long, even
+// when its own backoff would retry sooner.
+func TestPostSnapshotHonoursRetryAfterOn429(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "120")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+	err := postSnapshot(context.Background(), srv.Client(), srv.URL, "t", []byte(`{}`))
+	if err == nil {
+		t.Fatal("want an error on 429")
+	}
+	a := &agent{cfg: config{interval: defaultInterval}, rand: func() float64 { return 0 }}
+	if got := a.delayAfter(err, 1); got < 2*time.Minute {
+		t.Fatalf("after a 429 with Retry-After: 120 the agent retries in %v", got)
+	}
+	if got := a.delayAfter(errors.New("boom"), 1); got != 24*time.Second {
+		t.Fatalf("an ordinary failure waits %v, want the doubled, jittered interval (24s)", got)
+	}
+}
+
+func TestParseRetryAfter(t *testing.T) {
+	now := time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC)
+	for v, want := range map[string]time.Duration{
+		"30":                            30 * time.Second,
+		"0":                             0,
+		"-5":                            0,
+		"86400":                         maxBackoff,
+		"Thu, 26 Nov 2026 12:01:00 GMT": time.Minute,
+		"Thu, 26 Nov 2026 11:00:00 GMT": 0,
+		"soon":                          0,
+		"":                              0,
+	} {
+		if got := parseRetryAfter(v, now); got != want {
+			t.Errorf("parseRetryAfter(%q) = %v, want %v", v, got, want)
+		}
 	}
 }
 

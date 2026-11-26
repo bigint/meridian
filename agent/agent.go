@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -23,7 +25,8 @@ type agent struct {
 func (a *agent) run(ctx context.Context) {
 	failures := 0
 	for {
-		if err := a.tick(ctx); err != nil {
+		err := a.tick(ctx)
+		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
@@ -36,7 +39,7 @@ func (a *agent) run(ctx context.Context) {
 			failures = 0
 		}
 
-		timer := time.NewTimer(nextDelay(a.cfg.interval, failures, a.rand()))
+		timer := time.NewTimer(a.delayAfter(err, failures))
 		select {
 		case <-ctx.Done():
 			timer.Stop()
@@ -44,6 +47,19 @@ func (a *agent) run(ctx context.Context) {
 		case <-timer.C:
 		}
 	}
+}
+
+// delayAfter is how long to wait before the next snapshot: the jittered
+// interval, doubled per failure, and after a 429 never sooner than Meridian's
+// Retry-After (jittered up to 20% later, so a fleet told the same wait does
+// not come back at once).
+func (a *agent) delayAfter(err error, failures int) time.Duration {
+	delay := nextDelay(a.cfg.interval, failures, a.rand())
+	var busy *retryAfterError
+	if errors.As(err, &busy) {
+		delay = max(delay, min(time.Duration(float64(busy.after)*(1+0.2*a.rand())), maxBackoff))
+	}
+	return delay
 }
 
 func (a *agent) tick(parent context.Context) (err error) {
@@ -68,11 +84,12 @@ func (a *agent) snapshotBody(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("docker: %w", err)
 	}
 	snap := Snapshot{
-		AgentVersion: version,
-		MachineID:    a.cfg.machineID,
-		Hostname:     a.cfg.hostname,
-		Labels:       a.cfg.labels,
-		Containers:   containers,
+		AgentVersion:    version,
+		MachineID:       a.cfg.machineID,
+		Hostname:        a.cfg.hostname,
+		IntervalSeconds: intervalSeconds(a.cfg.interval),
+		Labels:          a.cfg.labels,
+		Containers:      containers,
 	}
 	body, truncated, err := encodeCapped(snap, maxPayload)
 	if err != nil {
@@ -98,10 +115,42 @@ func postSnapshot(ctx context.Context, client *http.Client, endpoint, token stri
 	}
 	defer resp.Body.Close()
 	io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return &retryAfterError{status: resp.Status, after: parseRetryAfter(resp.Header.Get("Retry-After"), time.Now())}
+	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("post snapshot: unexpected status %s", resp.Status)
 	}
 	return nil
+}
+
+// retryAfterError is a 429, with how long Meridian asked the agent to wait
+// (0 when it did not say).
+type retryAfterError struct {
+	status string
+	after  time.Duration
+}
+
+func (e *retryAfterError) Error() string {
+	return fmt.Sprintf("post snapshot: unexpected status %s (retry after %s)", e.status, e.after)
+}
+
+// parseRetryAfter reads a Retry-After header: delay-seconds or an HTTP date.
+// Anything else, or a time already past, is 0.
+func parseRetryAfter(v string, now time.Time) time.Duration {
+	if secs, err := strconv.Atoi(v); err == nil {
+		return time.Duration(min(max(secs, 0), int(maxBackoff/time.Second))) * time.Second
+	}
+	if at, err := http.ParseTime(v); err == nil && at.After(now) {
+		return min(at.Sub(now), maxBackoff)
+	}
+	return 0
+}
+
+// intervalSeconds is the snapshot interval as Meridian is told it: whole
+// seconds, at least 1.
+func intervalSeconds(d time.Duration) int {
+	return max(int(d.Round(time.Second)/time.Second), 1)
 }
 
 // nextDelay is interval doubled per consecutive failure (capped at

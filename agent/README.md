@@ -46,6 +46,7 @@ and `Content-Type: application/json`:
   "agent_version": "1.0.0",
   "machine_id": "0123456789abcdef0123456789abcdef",
   "hostname": "app-1",
+  "interval_seconds": 15,
   "labels": { "region": "sgp", "provider": "ovh" },
   "containers": [
     {
@@ -73,7 +74,12 @@ and `Content-Type: application/json`:
   keeps old versions around.
 - `truncated` appears only when the snapshot went over 1 MiB and containers
   were dropped from the end to fit.
-- Any 2xx response counts as delivered.
+- `interval_seconds` is `MERIDIAN_INTERVAL` in whole seconds (at least 1),
+  before jitter, so Meridian can tell a quiet agent from a slow one.
+- Any 2xx response counts as delivered. After a 429 the agent waits at least
+  the response's `Retry-After` (seconds or an HTTP date, capped at 5 minutes,
+  plus up to 20% jitter) before the next try, even when its backoff is
+  shorter.
 
 ## Live stats
 

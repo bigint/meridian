@@ -7,6 +7,7 @@
 - The New app form can put an app behind a Cloudflare Tunnel. It adds a `cloudflared` accessory to the config and swaps the DNS steps for the tunnel's. Meridian never calls Cloudflare's API. See [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) and decision 33.
 - A Tunnels page lists the apps behind a tunnel and whether each server's connector runs, read from Git and the agents. It shows the boot command for a connector that was never started, the setup steps and the preview hostname format.
 - Settings → General can name previews `pr-<n>-<app>.<domain>`. One wildcard record covers every app, and it works with Cloudflare's free certificate. Existing previews keep their hostname.
+- Each tunnelled app reads its token from its own secret, `<SERVICE>_TUNNEL_TOKEN`, so apps on different servers never share a tunnel. The Tunnels page shows whether each token is set, and step-by-step setup for any app with its own names filled in, matching Cloudflare's current dashboard.
 
 ### Live logs
 

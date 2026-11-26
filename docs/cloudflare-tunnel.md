@@ -4,15 +4,18 @@ A tunnel is one way to reach your servers, not something Meridian assumes. Merid
 
 ## Apps behind a tunnel
 
-Tick **Behind a Cloudflare Tunnel** on the New app form. The generated base config ends with a `cloudflared` accessory (`templates/kamal/cloudflared.yml`). It connects out to Cloudflare, so the servers need no open ports. It goes in the base file because Kamal resolves accessories with `roles:` after it merges the destination file.
+Give each app its own tunnel and its own token. Cloudflare spreads a tunnel's requests over all its connectors, so a tunnel shared by apps on different servers sends some requests to servers that don't run the app. The token lives in a repository secret named after the service, `<SERVICE>_TUNNEL_TOKEN` (`saleor-api` becomes `SALEOR_API_TUNNEL_TOKEN`). The accessory reads it with Kamal's secret alias, `TUNNEL_TOKEN:<SERVICE>_TUNNEL_TOKEN`, because cloudflared expects `TUNNEL_TOKEN`.
 
-The pull request lists the manual steps.
+For a new app, tick **Behind a Cloudflare Tunnel** on the New app form. The generated base config ends with the `cloudflared` accessory (`templates/kamal/cloudflared.yml`), and the pull request lists the steps. For an existing app, the **Tunnels** page shows the same steps with that app's names filled in. These match the Cloudflare dashboard as of November 2026.
 
-1. Create a tunnel in Cloudflare with a public hostname `<hostname>` that points at `http://kamal-proxy:80`. Accessories share Kamal's `kamal` Docker network, where the proxy container is `kamal-proxy`.
-2. Add the tunnel's token as the `TUNNEL_TOKEN` secret. Meridian's Secrets page picks the name up from the config.
-3. After the first deploy, run `kamal accessory boot cloudflared -c <config>` (plus `-d <destination>`). `kamal deploy` doesn't boot accessories.
+1. **Create the tunnel.** Open **Networking → Tunnels**, click **Create Tunnel**, name it after the app and click **Create Tunnel**.
+2. **Copy its token.** On the tunnel's **Overview**, under **Install cloudflared connector**, choose **Docker** and copy the command. Keep only the value after `--token`. Don't run the command; Kamal runs the connector.
+3. **Save the token.** On Meridian's Secrets page, set `<SERVICE>_TUNNEL_TOKEN` to it. Add `<SERVICE>_TUNNEL_TOKEN=$<SERVICE>_TUNNEL_TOKEN` to `.kamal/secrets`, so Kamal can read it.
+4. **Route the hostname.** On the tunnel's **Routes** tab, click **Add route → Published application**. Enter a hostname the app's proxy answers to, and `http://kamal-proxy:80` as the **Service URL**. Cloudflare creates the DNS record. Accessories share Kamal's `kamal` Docker network, where the proxy container is `kamal-proxy`.
+5. **Add the connector** to the app's config and commit it. It goes in the base file because Kamal resolves accessories with `roles:` after it merges the destination file.
+6. **Start it once** with `kamal accessory boot cloudflared -c <config>` (plus `-d <destination>`), with the token secret in the environment. `kamal deploy` doesn't start accessories.
 
-Every server that runs the connector with the same token is a replica of one tunnel. Cloudflare serves HTTPS, so the app needs no certificate of its own.
+Every server that runs the connector is a replica of the app's tunnel. Cloudflare serves HTTPS, so the app needs no certificate of its own. Keep hostnames one level below the domain: Cloudflare's free certificate covers `app.example.com`, not `app.team.example.com`.
 
 ## The Tunnels page
 
@@ -23,7 +26,7 @@ Every server that runs the connector with the same token is a replica of one tun
 - **not booted** means the server's agent is reporting and has no such container, so the connector was never booted or was removed. The page shows the `kamal accessory boot` command.
 - **unknown** means Meridian can't tell. The server isn't known, has no agent, or hasn't reported lately.
 
-The page also shows the setup steps, the snippet and the current preview hostname format.
+Each row also names the app's token secret and whether Meridian has set it. Below the table, pick any app to see the setup steps with its names, config path, servers and boot command filled in.
 
 ## Previews behind a tunnel
 
@@ -33,7 +36,7 @@ Previews are named `pr-<n>.<app>.<preview domain>` by default. That is two level
 2. Give the preview servers' tunnel a wildcard public hostname `*.<preview domain>` that points at `http://kamal-proxy:80`.
 3. Add a proxied wildcard DNS record, a CNAME from `*.<preview domain>` to `<tunnel id>.cfargotunnel.com`. One record covers every app.
 
-The preview servers need the `cloudflared` accessory with that tunnel's token, as above.
+The preview servers need a `cloudflared` connector for that tunnel, booted the same way.
 
 ## Meridian behind a tunnel
 

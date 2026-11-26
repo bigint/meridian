@@ -55,9 +55,8 @@ class Tunnel::ConnectorChange
       #{removed.map { "- Removes the connector on `#{it}`" }.join("\n")}
 
       ### By hand
-      #{remove_commands.any? ? "\nBefore merging, stop the dropped connectors (once merged, Kamal no longer knows them):\n\n```\n#{remove_commands.join("\n")}\n```\n" : ""}
-      #{boot_commands.any? ? "\nAfter merging, start the new ones, with `#{tunnel.secret_name}` in the environment:\n\n```\n#{boot_commands.join("\n")}\n```\n" : ""}
-      #{gaps.any? ? "\nCloudflare can send any routed hostname to any connector. Not on every connector's server yet: #{gaps.map { "#{it.app.name} (missing on #{it.missing.join(", ")})" }.join("; ")}.\n" : ""}
+
+      #{by_hand.join("\n\n")}
     MARKDOWN
   end
 
@@ -68,6 +67,21 @@ class Tunnel::ConnectorChange
   end
 
   private
+    # What a person has to run or check around the merge, if anything.
+    def by_hand
+      steps = []
+      if remove_commands.any?
+        steps << "Before merging, stop the dropped connectors (once merged, Kamal no longer knows them):\n\n```\n#{remove_commands.join("\n")}\n```"
+      end
+      if boot_commands.any?
+        steps << "After merging, start the new ones, with `#{tunnel.secret_name}` in the environment:\n\n```\n#{boot_commands.join("\n")}\n```"
+      end
+      if gaps.any?
+        steps << "Cloudflare can send any routed hostname to any connector. Not on every connector's server yet: #{gaps.map { "#{it.app.name} (missing on #{it.missing.join(", ")})" }.join("; ")}."
+      end
+      steps
+    end
+
     def removed_connectors = tunnel.connectors.select { removed.include?(it.host) }
     def template = tunnel.connectors.find { hosts.include?(it.host) } || tunnel.connectors.first
 

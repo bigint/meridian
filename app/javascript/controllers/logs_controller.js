@@ -151,6 +151,17 @@ function requestSegments(object, targets) {
   return segments
 }
 
+// Errors and 5xx statuses read as bad, 4xx as a warning.
+function valueTone(key, value) {
+  if (key === "error" || key === "err") return "json-value--bad"
+  if (key !== "status") return null
+
+  const status = Number(asText(value))
+  if (status >= 500) return "json-value--bad"
+  if (status >= 400) return "json-value--warn"
+  return null
+}
+
 // [{ text, classes }] runs for a JSON line, or null when it isn't one.
 // targets names the containers kamal-proxy sends requests to.
 function parseStructured(message, targets) {
@@ -178,9 +189,10 @@ function parseStructured(message, targets) {
   if (said) segments.push({ text: (segments.length ? " " : "") + String(said[1]), classes: [ "json-message" ] })
 
   const keys = Object.keys(object).filter(key => !skip.has(key) && object[key] !== "" && object[key] !== null)
-  keys.sort((a, b) => (FIRST_KEYS.includes(a) ? FIRST_KEYS.indexOf(a) : FIRST_KEYS.length) - (FIRST_KEYS.includes(b) ? FIRST_KEYS.indexOf(b) : FIRST_KEYS.length))
+  const rank = key => FIRST_KEYS.includes(key) ? FIRST_KEYS.indexOf(key) : FIRST_KEYS.length
+  keys.sort((a, b) => rank(a) - rank(b))
   for (const key of keys.slice(0, INLINE_FIELDS)) {
-    const tone = (key === "error" || key === "err") ? "json-value--bad" : key === "status" && Number(asText(object[key])) >= 500 ? "json-value--bad" : key === "status" && Number(asText(object[key])) >= 400 ? "json-value--warn" : null
+    const tone = valueTone(key, object[key])
     segments.push({ text: (segments.length ? "  " : "") + key, classes: [ "json-key" ] })
     segments.push({ text: "=", classes: [ "json-key" ] })
     segments.push({ text: shown(object[key]).replace(CONTROLS, ""), classes: tone ? [ "json-value", tone ] : [ "json-value" ] })

@@ -20,10 +20,7 @@ function formatBytes(bytes) {
 function formatRate(bytes) {
   if (bytes === 0) return "0 B/s"
   if (bytes < 1024) return `${bytes.toFixed(1)} B/s`
-  const units = [ "KB/s", "MB/s", "GB/s" ]
-  let value = bytes / 1024, unit = 0
-  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++ }
-  return `${value.toFixed(1)} ${units[unit]}`
+  return `${formatBytes(bytes)}/s`
 }
 
 const percent = value => `${value.toFixed(1)}%`

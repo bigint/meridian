@@ -85,7 +85,7 @@
               <%= avatar release.author.to_s, small: true %>
               <div class="row__body">
                 <div class="row__title"><code class="txt-strong"><%= release.short_version %></code> <%= release.message %> <% if index.zero? %><%= badge "newest", tone: :accent %><% end %></div>
-                <div class="row__meta"><%= release.author %> · <%= link_to release.short_sha, "#{@app.project.repo_url}/commit/#{release.commit_sha}", class: "mono" %></div>
+                <div class="row__meta"><%= release.author %> · <%= link_to release.short_sha, @app.project.git.commit_url(release.commit_sha), class: "mono" %></div>
               </div>
               <div class="row__trail">
                 <%= time_ago(release.committed_at) %>

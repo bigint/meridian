@@ -5,8 +5,7 @@ module ApplicationHelper
   # The theme this browser asked for: "light", "dark", or nil for the system's.
   def theme = cookies[:theme].presence_in(%w[ light dark ])
 
-  # How many things need attention, for the sidebar. Cached briefly: it is
-  # shown on every page and the board refreshes itself anyway.
+  # A sidebar link, with the number of things needing attention beside it.
   def sidebar_link(name, path, icon_name, count = nil)
     current = path == root_path ? request.path.in?([ root_path, board_path ]) : request.path.start_with?(path)
     link_to path, class: "sidebar__link", data: { tooltip: name }, aria: { current: (current ? "page" : nil) } do

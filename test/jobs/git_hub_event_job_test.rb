@@ -44,6 +44,22 @@ class GitHubEventJobTest < ActiveJob::TestCase
     assert_equal "deploy", @dispatches.sole.dig("inputs", "command")
   end
 
+  test "the destinations of one config share one preview" do
+    staging, production = @project.apps.where(service: "web").order(:destination).reverse
+    [ staging, production ].each { it.update!(source_repo: "example/api-src") }
+    @app.update!(source_repo: nil)
+
+    GitHubEventJob.perform_now("pull_request", pull_request("opened"))
+    assert_equal [ "deploy/web.pr-7.yml" ], @writes.map { it["path"] }
+    assert_equal [ production ], Preview.all.map(&:app)
+
+    production.previews.sole.update!(state: "removed")
+    staging.previews.create!(pr_number: 7, destination: "pr-7", hostname: "pr-7.web.preview.example.com", overlay_path: "deploy/web.pr-7.yml", state: "active", expires_at: 1.day.from_now)
+    GitHubEventJob.perform_now("pull_request", pull_request("synchronize"))
+    assert_equal 2, @dispatches.size
+    assert_equal "deploying", staging.previews.sole.state
+  end
+
   private
     def pull_request(action, number: 7, state: "open", head_repo: "example/api-src")
       { "action" => action, "number" => number, "repository" => { "full_name" => "example/api-src" },

@@ -35,9 +35,20 @@ class GitHubEventJob < ApplicationJob
         # A late delivery for a pull request that has closed since.
         return if apps.empty? || pull["state"] == "closed" || from_fork?(repo, pull, payload)
 
-        apps.each { |app| previewing(app, payload) { Preview.deploy(app, number: payload["number"], head_sha: pull.dig("head", "sha"), url: pull["html_url"]) } }
+        one_per_config(apps, payload["number"]).each do |app|
+          previewing(app, payload) { Preview.deploy(app, number: payload["number"], head_sha: pull.dig("head", "sha"), url: pull["html_url"]) }
+        end
       when "closed"
         apps.each { |app| previewing(app, payload) { app.previews.find_by(pr_number: payload["number"])&.close(reason: pull["merged"] ? "merged" : "closed") } }
+      end
+    end
+
+    # The apps of one config (its staging and production destinations) would
+    # all write <config>.pr-<n>.yml, so a config gets one preview: the one it
+    # already runs, or else its first app's, by destination.
+    def one_per_config(apps, number)
+      apps.sort_by { [ it.destination, it.id ] }.group_by { [ it.project_id, it.config_path ] }.values.map do |siblings|
+        siblings.find { it.previews.current.exists?(pr_number: number) } || siblings.first
       end
     end
 

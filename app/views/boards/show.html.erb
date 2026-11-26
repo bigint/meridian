@@ -3,7 +3,9 @@
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @board.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 
-<%= page_header "Board", meta: "#{pluralize(@board.apps.size, "app")} on #{pluralize(@board.servers.size, "server")}, compared with Git" do %>
+<% items = @board.attention %>
+<% verdict = items.none? && Project.exists? ? "all matching Git" : "compared with Git" %>
+<%= page_header "Board", meta: "#{pluralize(@board.apps.size, "app")} on #{pluralize(@board.servers.size, "server")}, #{verdict}" do %>
   <% if current_user.admin? %><%= link_to new_app_path, class: "btn btn--primary" do %><%= icon :plus %> New app<% end %><% end %>
 <% end %>
 
@@ -26,17 +28,8 @@
 
 <div class="split">
   <div class="split__main">
-    <% items = @board.attention %>
-    <%= titled_section "Needs attention", count: items.size, id: "attention" do %>
-      <% if items.empty? %>
-        <p class="card card__body">
-          <% if Project.exists? %>
-            <span><span class="txt-ok txt-strong" aria-hidden="true">✓</span> Everything matches Git.</span>
-          <% else %>
-            <span>Nothing to check yet. <%= link_to "Connect your infra repository", new_project_path %> to see your apps.</span>
-          <% end %>
-        </p>
-      <% else %>
+    <% if items.any? %>
+      <%= titled_section "Needs attention", count: items.size, id: "attention" do %>
         <ul class="rows"><%= render partial: "boards/attention_item", collection: items.first(4), as: :item %></ul>
         <% if items.size > 4 %>
           <%= disclosure "#{pluralize(items.size - 4, "more thing")} need attention" do %>

@@ -4,7 +4,9 @@
 # a first snapshot is not found here, and the subscription is rejected.
 class AgentChannel < ApplicationCable::Channel
   MIN_FRAME_GAP = 0.5
-  MAX_LOG_FRAMES_PER_SECOND = 20
+  # An agent sends a batch per container at most every 250 ms and tails at
+  # most 20 containers: 80 a second at full tilt. Past this, it is misbehaving.
+  MAX_LOG_FRAMES_PER_SECOND = 100
   RECHECK_TOKEN_EVERY = 60.seconds
 
   def subscribed

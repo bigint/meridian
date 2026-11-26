@@ -8,7 +8,7 @@ development:
     database:
       writing: cable
   polling_interval: 0.1.seconds
-  message_retention: 5.minutes
+  message_retention: 1.minute
 
 test:
   adapter: test
@@ -19,6 +19,6 @@ production:
     database:
       writing: cable
   polling_interval: 0.1.seconds
-  message_retention: 5.minutes
+  message_retention: 1.minute
   writer_batch_size: 4
   writer_batch_delay: 0.001.seconds

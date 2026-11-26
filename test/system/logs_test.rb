@@ -88,15 +88,13 @@ class LogsTest < ApplicationSystemTestCase
     assert_selector ".logs__line:not([hidden])", count: 2
   end
 
-  test "a backlog fills an empty source but is ignored once it has live lines" do
+  test "history that arrives after live lines slots in by time, without repeating what is held" do
     open_app_logs
-    send_lines @web, line("12:00:01", "history one"), line("12:00:02", "history two"), backlog: true
-    assert_selector ".logs__line", count: 2
-
     send_lines @web, line("12:00:05", "live one")
-    assert_selector ".logs__line", count: 3
+    assert_selector ".logs__line", count: 1
 
-    send_lines @web, line("12:00:01", "history one"), line("12:00:02", "history two"), line("12:00:03", "history three"), backlog: true
+    # The container was already being followed: its history comes second.
+    send_lines @web, line("12:00:01", "history one"), line("12:00:02", "history two"), line("12:00:05", "live one"), backlog: true
     send_lines @worker, line("12:00:04", "other source")
     assert_selector ".logs__line", count: 4
 

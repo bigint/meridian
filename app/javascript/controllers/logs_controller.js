@@ -155,7 +155,7 @@ export default class extends Controller {
     this.follow = true
     this.lastActivityAt = performance.now()
     this.sources = new Map(this.sourcesValue.map(source => [ source.id, {
-      ...source, enabled: true, live: false, backlogKey: -Infinity, off: false, refused: false, ended: false
+      ...source, enabled: true, held: new Set(), off: false, refused: false, ended: false
     } ]))
 
     const longest = Math.max(...this.sourcesValue.map(source => source.label.length))
@@ -299,21 +299,28 @@ export default class extends Controller {
     return shown
   }
 
-  // The batch's lines as records. A backlog is the history before the live
-  // lines, so it is ignored once the source has any live ones, and a second
-  // reader's copy of it is told apart by being no newer than what we hold.
+  // The batch's lines as records. A backlog is history: it can arrive after
+  // live lines (the container was already being followed) or twice (another
+  // reader asked for it too), so its lines go in by timestamp and any line
+  // already held, same time, stream and text, is skipped.
   #accept(source, batch) {
     const records = []
     for (const raw of batch.lines ?? []) {
-      const key = parseTime(raw.t) ?? this.#now()
-      if (batch.backlog && (source.live || key <= source.backlogKey)) continue
-      if (batch.backlog) source.backlogKey = key
+      const identity = `${raw.t}\n${raw.s}\n${raw.m}`
+      if (batch.backlog && source.held.has(identity)) continue
+      this.#hold(source, identity)
 
+      const key = parseTime(raw.t) ?? this.#now()
       const segments = parseAnsi(raw.m)
       records.push(this.#record({ kind: "line", source, key, stream: raw.s, title: raw.t, segments }))
     }
-    if (records.length && !batch.backlog) source.live = true
     return records
+  }
+
+  // Remembers a line for the backlog check, forgetting the oldest past what the page can hold.
+  #hold(source, identity) {
+    source.held.add(identity)
+    if (source.held.size > MAX_LINES) source.held.delete(source.held.values().next().value)
   }
 
   #notice(source, notice, text, key = this.#now()) {

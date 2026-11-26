@@ -144,14 +144,15 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     assert_broadcast_on(stream, { "container" => WEB, "ended" => true, "source" => placement.id }) { perform :logs, { "action" => "logs", "container" => WEB, "ended" => true, "lines" => [] } }
   end
 
-  test "frames past twenty a second are dropped, and the budget comes back" do
+  test "frames past the per-second budget are dropped, and the budget comes back" do
     placement = place(@server, WEB)
     subscribe machine_id: "m-web-1"
+    budget = AgentChannel::MAX_LOG_FRAMES_PER_SECOND
 
     start = Time.current
     travel_to start, with_usec: true
-    assert_broadcasts LogsChannel.broadcasting_for(placement), 20 do
-      25.times { perform :logs, batch(WEB) }
+    assert_broadcasts LogsChannel.broadcasting_for(placement), budget do
+      (budget + 5).times { perform :logs, batch(WEB) }
     end
 
     travel_to start + 1.1, with_usec: true

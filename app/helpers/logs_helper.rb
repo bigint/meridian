@@ -13,4 +13,17 @@ module LogsHelper
       { id: placement.id, label: label, server: placement.server.name, title: "#{placement.name} on #{placement.server.name}", tone: tones[placement.id] }
     end
   end
+
+  # For kamal-proxy's request lines: the containers it can send a request to,
+  # by the short id Kamal deploys them with (kamal v2.12.0,
+  # Kamal::Cli::App::Boot#start_new_version), named with a short version.
+  def log_targets(placements)
+    servers = placements.select { it.kind == "proxy" }.map(&:server_id)
+    return {} if servers.empty?
+
+    Placement.where(server_id: servers, kind: "app").to_h do |placement|
+      name = placement.version.present? ? placement.name.delete_suffix(placement.version) + placement.short_version : placement.name
+      [ placement.container_id.first(12), name ]
+    end
+  end
 end

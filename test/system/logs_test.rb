@@ -155,13 +155,13 @@ class LogsTest < ApplicationSystemTestCase
 
   test "a JSON line reads as level, message and its useful fields, and opens to the whole object" do
     open_app_logs
-    entry = { time: "2026-11-26T12:00:01Z", level: "INFO", msg: "Request", host: "yoginth.com", path: "/missing", status: 404,
+    entry = { time: "2026-11-26T12:00:01Z", level: "INFO", msg: "request handled", host: "yoginth.com", path: "/missing", status: 404,
               method: "GET", duration: 917417, service: "web", request_id: "a57ad1a8-e4e9", client_addr: "172.18.0.1", query: "" }
     send_lines @web, line("12:00:01", entry.to_json), line("12:00:02", "plain text stays as it is")
 
     within ".logs__line--json" do
       assert_selector ".json-level--info", text: "INFO"
-      assert_selector ".json-message", text: "Request"
+      assert_selector ".json-message", text: "request handled"
       assert_selector ".json-value--warn", text: "404"
       assert_text "method=GET"
       assert_text "+2 more" # request_id and client_addr; the empty query is left out
@@ -172,6 +172,28 @@ class LogsTest < ApplicationSystemTestCase
     assert_selector ".logs__line:not([hidden])", count: 1
     find(".logs__line--json .json-message").click
     assert_selector ".logs__json", text: %("request_id": "a57ad1a8-e4e9")
+  end
+
+  test "a kamal-proxy request reads as status, request, time taken, the container that answered and who asked" do
+    proxy = place(@web.server, "f" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+    @web.update!(name: "web-web-production-1a2b3c4d5e6f7a8b9c0d", version: "1a2b3c4d5e6f7a8b9c0d")
+    sign_in users(:deployer)
+    visit placement_log_path(proxy)
+    assert_selector ".logs[data-state=live]"
+
+    request = { time: "2026-11-26T12:00:01Z", level: "INFO", msg: "Request", host: "shop.example.com", port: 80, path: "/cart", query: "page=2",
+                request_id: "a57ad1a8", status: 503, service: "web-web-production", target: "#{WEB.first(12)}:3000", duration: 23_456_789,
+                method: "POST", remote_addr: "172.18.0.9", req_cf_connecting_ip: "203.0.113.7", req_cf_ipcountry: "SG", req_cf_ray: "8f1c2d3e4f5a6b7c-SIN" }
+    send_lines proxy, line("12:00:01", request.to_json)
+
+    within ".logs__line--json" do
+      assert_selector ".json-level--bad", text: "503"
+      assert_selector ".logs__text", text: %r{\A503\s+POST\s+shop\.example\.com/cart\?page=2\s+23 ms\s+→\s+web-web-production-1a2b3c4d5e6f\s+from\s+203\.0\.113\.7 SG via SIN\z}
+      assert_no_text "a57ad1a8"
+    end
+
+    fill_in "Filter lines", with: "a57ad1a8"
+    assert_selector ".logs__line:not([hidden])", count: 1
   end
 
   test "ANSI colours become styles, other escapes are cut and markup is only text" do

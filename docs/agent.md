@@ -28,6 +28,14 @@ It works like live stats. Opening the logs sends the agent a 30-second lease for
 - **Bounded.** At most 20 containers at once, 8 KB per line, and 512 KB per second per container. Lines beyond that are dropped and counted.
 - **Not stored.** Lines are relayed to the open page. They pass through the cable database, which keeps messages for a minute. Each time someone opens logs, it's recorded in Activity.
 
+## Traffic
+
+An app's **Traffic** page shows its requests as they happen, from kamal-proxy on every server the app runs on. Each request reads as its status, method, host and path, how long it took, the container that answered (by name and short version), and who asked. The server it came through is the chip at the start of the line.
+
+It is live logs again, aimed at the `kamal-proxy` container: the same `MERIDIAN_LOGS=1`, lease, limits and Activity record. kamal-proxy logs every app's requests in one stream, so Meridian keeps only the lines whose `service` is one of the app's (`<service>-<role>`, plus each preview's destination) before relaying them. The page starts from kamal-proxy's last 1,000 lines, so a quiet app may show few at first.
+
+Behind a [Cloudflare Tunnel](cloudflare-tunnel.md#traffic-behind-a-tunnel), kamal-proxy sees `cloudflared`, not the visitor, unless the app's Kamal config logs Cloudflare's headers.
+
 `MERIDIAN_LIVE=0` turns live stats and logs off; the agent then only posts snapshots. Your proxy must pass WebSockets through to Meridian; kamal-proxy and Thruster both do.
 
 The full reference (every environment variable and the payload format) is in [`agent/README.md`](../agent/README.md).

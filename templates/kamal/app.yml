@@ -12,7 +12,7 @@ labels:
 %{proxy_host}  app_port: %{app_port}
   healthcheck:
     path: /up
-%{env}
+%{proxy_logging}%{env}
 registry:
   server: %{registry}
   username: %{registry_username}

@@ -120,6 +120,20 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     end
   end
 
+  test "a kamal-proxy batch also reaches the readers of each app's traffic, only that app's requests" do
+    app = App.create!(project: projects(:infra), service: "web", destination: "production", config_path: "deploy/web.yml", kind: "rails")
+    place(@server, WEB, app: app)
+    proxy = place(@server, "f" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+    LiveTraffic.watch(app, [ proxy ])
+    mine = { "t" => "2026-11-26T12:00:01.000Z", "s" => "out", "m" => { msg: "Request", status: 200, path: "/", service: "web-web-production" }.to_json }
+    theirs = { "t" => "2026-11-26T12:00:02.000Z", "s" => "out", "m" => { msg: "Request", status: 200, path: "/", service: "blog-web" }.to_json }
+    subscribe machine_id: "m-web-1"
+
+    assert_broadcast_on TrafficChannel.broadcasting_for(app), { "container" => "f" * 64, "source" => proxy.id, "lines" => [ mine ] } do
+      perform :logs, batch("f" * 64, lines: [ mine, theirs ])
+    end
+  end
+
   test "a batch for a container that is not on this server is ignored" do
     other = server_named("web-2.example.com")
     elsewhere = place(other, WEB)

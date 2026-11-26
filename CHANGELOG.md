@@ -10,6 +10,12 @@
 - A config labelled `meridian.kind: accessories` runs no app, so the board leaves it out.
 - Settings → General can name previews `pr-<n>-<app>.<domain>`. One wildcard record covers every app, and it works with Cloudflare's free certificate. Existing previews keep their hostname.
 
+### Traffic
+
+- An app's **Traffic** page shows its requests live from kamal-proxy on every server it runs on: status, method, host and path, time taken, the container that answered, and who asked, with the server on each line. Only the app's own requests (previews included) reach the page. See [docs/agent.md](docs/agent.md#traffic) and decision 34.
+- kamal-proxy's request lines read the same way in any container's logs.
+- New apps in a project with a Cloudflare Tunnel log `Cf-Connecting-Ip`, `Cf-Ipcountry` and `Cf-Ray`, so traffic shows the visitor, their country and the Cloudflare location. See [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md#traffic-behind-a-tunnel).
+
 ### Live logs
 
 - Open a container's logs, or an app's logs merged across every server it runs on, and read the last 200 lines and then new ones as they're written. Filter, show only stderr, follow or pause, and toggle each server on and off. ANSI colours render.

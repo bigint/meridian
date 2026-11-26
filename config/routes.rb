@@ -10,6 +10,7 @@ Rails.application.routes.draw do
       resources :rollbacks, only: :create
       resource :redeploy, only: :create
       resource :log, only: :show
+      resource :traffic, only: :show
     end
   end
   resources :placements, only: [] do

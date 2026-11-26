@@ -1,0 +1,15 @@
+<% content_for :title, "Traffic · #{@app.name}" %>
+<% content_for :wide, true %>
+<% meta = capture do %>
+  <%= link_to @app.name, @app, class: "link" %> through kamal-proxy on <%= pluralize(@proxies.size, "server") %>
+<% end %>
+<%= page_header "Traffic", meta: meta do %>
+  <%= link_to app_log_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>Logs<% end %>
+<% end %>
+
+<% if @proxies.any? %>
+  <%= render "logs/viewer", placements: @proxies, channel: { channel: "TrafficChannel", app_id: @app.id }, streams: false,
+        empty: "No requests yet. Each one #{@app.name} serves shows up here, with the server and container that answered." %>
+<% else %>
+  <%= empty_state "No kamal-proxy reported for #{@app.name}", icon_name: :traffic do %>Traffic appears here once an agent reports kamal-proxy on a server this app runs on.<% end %>
+<% end %>

@@ -41,6 +41,21 @@ Previews are named `pr-<n>.<app>.<preview domain>` by default, two levels below 
 2. Give the tunnel a wildcard route `*.<preview domain>` to `http://kamal-proxy:80`, and a proxied wildcard CNAME `*.<preview domain>` to `<tunnel ID>.cfargotunnel.com`.
 3. Use the connector servers as the preview servers (the preview selector), so every preview runs where the tunnel can reach it.
 
+## Traffic behind a tunnel
+
+Every request reaches kamal-proxy from `cloudflared`, so an app's [Traffic](agent.md#traffic) page can't tell visitors apart unless kamal-proxy logs Cloudflare's headers. Apps created in a project with a tunnel get this in their Kamal config. Add it to older ones and deploy:
+
+```yaml
+proxy:
+  logging:
+    request_headers:
+      - Cf-Connecting-Ip
+      - Cf-Ipcountry
+      - Cf-Ray
+```
+
+Each request then shows the visitor's address and country, and the Cloudflare location it came through (the last part of `Cf-Ray`, such as `SIN`).
+
 ## Meridian behind a tunnel
 
 GitHub webhooks and agents must reach Meridian. Run Meridian on a connector server, add a route for its hostname, and set `proxy.ssl: false`, because Cloudflare terminates TLS. `MERIDIAN_URL` stays the public `https://` URL. Agents connect out over HTTPS and keep one WebSocket to `/cable`; both work through a tunnel.

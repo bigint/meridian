@@ -71,6 +71,7 @@
   .json-level--bad { background: var(--color-bad-soft); color: var(--color-bad); }
   .json-level--warn { background: var(--color-warn-soft); color: var(--color-warn); }
   .json-level--info { background: var(--color-info-soft); color: var(--color-info); }
+  .json-level--ok { background: var(--color-ok-soft); color: var(--color-ok); }
   .json-level--quiet { background: var(--color-raised); color: var(--color-ink-muted); }
   .json-message { font-weight: 500; color: var(--color-ink); }
   .json-key { color: var(--color-ink-faint); }

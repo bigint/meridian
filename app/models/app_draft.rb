@@ -6,6 +6,16 @@ class AppDraft
 
   PORTS = { "static" => 80, "node" => 3000, "rails" => 80, "other" => 3000 }.freeze
   DESCRIPTIONS = { "static" => "a static site served by nginx", "node" => "a Next.js app (standalone output)", "rails" => "a Rails app", "other" => "a container" }.freeze
+  # Behind a Cloudflare Tunnel, kamal-proxy sees cloudflared, not the
+  # visitor. These headers put the visitor, their country and the Cloudflare
+  # location on each request line, which the app's Traffic page shows.
+  PROXY_LOGGING = <<~YAML.indent(2)
+    logging:
+      request_headers:
+        - Cf-Connecting-Ip
+        - Cf-Ipcountry
+        - Cf-Ray
+  YAML
 
   attribute :project_id, :integer
   attribute :service, :string
@@ -105,15 +115,20 @@ class AppDraft
     # The project's shared tunnel can serve the app only from servers that
     # run a connector, and only if the app runs on all of them.
     def tunnel_steps
-      tunnel = Tunnel.all.find { it.project == project } or return []
+      return [] unless tunnel
       [ "To serve it through Cloudflare Tunnel #{tunnel.name}, run it on #{tunnel.connector_hosts.to_sentence} and add a route for #{hostname} to http://kamal-proxy:80 on the tunnel." ]
+    end
+
+    def tunnel
+      return @tunnel if defined?(@tunnel)
+      @tunnel = Tunnel.all.find { it.project == project }
     end
 
     def config(with_servers:)
       Templates.render("kamal/app.yml",
         service: service, description: DESCRIPTIONS.fetch(kind), image: image, kind: kind, source_repo: source_repo,
         servers: with_servers ? servers_yaml + "\n" : "", proxy_host: with_servers ? "  host: #{hostname}\n" : "", app_port: port,
-        env: kind == "rails" ? "\nenv:\n  secret:\n    - RAILS_MASTER_KEY\n" : "", registry: registry, registry_username: registry_username)
+        proxy_logging: tunnel ? PROXY_LOGGING : "", env: kind == "rails" ? "\nenv:\n  secret:\n    - RAILS_MASTER_KEY\n" : "", registry: registry, registry_username: registry_username)
     end
 
     def servers_yaml

@@ -1,19 +1,26 @@
 <%# The last 200 lines of each container and the new ones as they come, drawn by logs_controller.js from what
-    LogsChannel relays. Nothing is stored: leave the page and the lines are gone. Local: placements. %>
+    the channel relays. Nothing is stored: leave the page and the lines are gone. Locals: placements, and
+    optionally channel (the subscription; LogsChannel for these placements by default), empty, and streams
+    (false hides the stdout/stderr switch). %>
 <% sources = log_sources(placements) %>
+<% channel = local_assigns.fetch(:channel) { { channel: "LogsChannel", placement_ids: placements.map(&:id) } } %>
+<% empty = local_assigns.fetch(:empty, "No lines yet. Whatever the container writes shows up here.") %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 
 <div class="logs" data-controller="logs" data-state="connecting" <%= tag.attributes(data: { multi: (sources.size > 1 || nil), wrap: true,
-      logs_placement_ids_value: placements.map(&:id).to_json, logs_sources_value: sources.to_json }) %>>
+      logs_channel_value: channel.to_json, logs_sources_value: sources.to_json, logs_targets_value: log_targets(placements).to_json,
+      logs_empty_value: empty }) %>>
   <div class="logs__bar">
     <div class="logs__tools">
       <%= search_field_tag :log_filter, nil, placeholder: "Filter lines", autocomplete: "off", class: "logs__filter", aria: { label: "Filter lines" },
             data: { logs_target: "filter", action: "input->logs#filter" } %>
-      <div class="segmented" role="group" aria-label="Streams">
-        <% [ [ "Both", "both" ], [ "stdout", "out" ], [ "stderr", "err" ] ].each do |label, stream| %>
-          <button type="button" aria-pressed="<%= stream == "both" %>" data-stream="<%= stream %>" data-logs-target="stream" data-action="logs#pick"><%= label %></button>
-        <% end %>
-      </div>
+      <% if local_assigns.fetch(:streams, true) %>
+        <div class="segmented" role="group" aria-label="Streams">
+          <% [ [ "Both", "both" ], [ "stdout", "out" ], [ "stderr", "err" ] ].each do |label, stream| %>
+            <button type="button" aria-pressed="<%= stream == "both" %>" data-stream="<%= stream %>" data-logs-target="stream" data-action="logs#pick"><%= label %></button>
+          <% end %>
+        </div>
+      <% end %>
       <button type="button" class="btn btn--small" aria-pressed="true" data-logs-target="wrap" data-action="logs#toggleWrap">Wrap</button>
       <button type="button" class="btn btn--small" aria-pressed="true" data-logs-target="follow" data-action="logs#toggleFollow">Follow</button>
       <button type="button" class="btn btn--small" data-action="logs#clear">Clear</button>
@@ -32,7 +39,7 @@
 
   <div class="logs__scroller" role="log" aria-label="Container logs" aria-live="off" tabindex="0" data-logs-target="scroller" data-action="scroll->logs#scrolled">
     <div class="logs__lines" data-logs-target="lines" data-action="click->logs#expand"></div>
-    <p class="logs__empty" data-logs-target="empty">No lines yet. Whatever the container writes shows up here.</p>
+    <p class="logs__empty" data-logs-target="empty"><%= empty %></p>
   </div>
 
   <button type="button" class="btn btn--small logs__jump" hidden data-logs-target="jump" data-action="logs#jump"></button>

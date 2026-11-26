@@ -18,7 +18,7 @@ class LogsTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select ".logs[data-logs-placement-ids-value=?]", [ @web.id ].to_json
+    assert_select ".logs[data-logs-channel-value=?]", { channel: "LogsChannel", placement_ids: [ @web.id ] }.to_json
     assert_select ".logs__chip", count: 0
     event = Event.find_by!(action: "logs.viewed")
     assert_equal users(:deployer), event.actor
@@ -34,7 +34,7 @@ class LogsTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select ".logs[data-logs-placement-ids-value=?]", [ @web.id, @worker.id ].to_json
+    assert_select ".logs[data-logs-channel-value=?]", { channel: "LogsChannel", placement_ids: [ @web.id, @worker.id ] }.to_json
     assert_select ".logs__chip", count: 2
     assert_select ".logs__chip", text: "web-1"
     assert_select ".logs__chip", text: "web-2"
@@ -49,7 +49,7 @@ class LogsTest < ActionDispatch::IntegrationTest
 
     get app_log_path(@app)
 
-    ids = JSON.parse(css_select(".logs").first["data-logs-placement-ids-value"])
+    ids = JSON.parse(css_select(".logs").first["data-logs-channel-value"])["placement_ids"]
     assert_equal 20, ids.size
     assert_equal @web.id, ids.first
   end

@@ -20,6 +20,17 @@ class AppDraftTest < ActiveSupport::TestCase
     assert_match "output: \"standalone\"", draft.instructions
   end
 
+  test "behind the project's tunnel, kamal-proxy logs who asked and through which Cloudflare location" do
+    assert_nil YAML.safe_load(build.files["deploy/shop.yml"]).dig("proxy", "logging")
+
+    @project.apps.create!(service: "edge", kind: App::ACCESSORIES, config_path: "deploy/edge.yml",
+      accessories: [ { "name" => "cloudflared", "service" => "edge-cloudflared", "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ "web-1.example.com" ], "secrets" => [ "CLOUDFLARE_TUNNEL_TOKEN" ] } ])
+
+    config = YAML.safe_load(build.files["deploy/shop.yml"])
+    assert_equal %w[ Cf-Connecting-Ip Cf-Ipcountry Cf-Ray ], config.dig("proxy", "logging", "request_headers")
+    assert_equal "/up", config.dig("proxy", "healthcheck", "path")
+  end
+
   test "a destination splits base and destination files" do
     draft = build(kind: "static", destination: "production")
     assert draft.valid?, draft.errors.full_messages.to_sentence

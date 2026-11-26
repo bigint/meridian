@@ -36,6 +36,7 @@ class AgentChannel < ApplicationCable::Channel
     batch = LiveLogs.parse(data) or return
     placement = @server.placements.find_by(container_id: batch["container"]) or return
     LogsChannel.broadcast_to(placement, batch.merge("source" => placement.id))
+    LiveTraffic.relay(@server, placement, batch) if placement.kind == "proxy"
   end
 
   periodically every: RECHECK_TOKEN_EVERY do

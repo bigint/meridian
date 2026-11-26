@@ -93,13 +93,71 @@ function shown(value) {
   return JSON.stringify(value)
 }
 
+// kamal-proxy's request lines (kamal-proxy v0.10.3, internal/server/
+// logging_middleware.go) read as what happened: the status, the request, how
+// long it took, the container that answered and who asked. Behind Cloudflare,
+// "who" is the visitor, their country and the Cloudflare location, when the
+// app's Kamal config logs those headers. The rest stays searchable.
+const REQUEST_DRAWN = [ "time", "level", "msg", "status", "method", "host", "path", "query", "duration",
+  "remote_addr", "req_cf_connecting_ip", "req_cf_ipcountry", "req_cf_ray" ]
+
+const isRequest = object => object.msg === "Request" && typeof object.status === "number" && typeof object.method === "string" && typeof object.path === "string"
+
+function statusTone(status) {
+  if (status >= 500) return "bad"
+  if (status >= 400) return "warn"
+  if (status >= 300) return "quiet"
+  return "ok"
+}
+
+// kamal-proxy logs nanoseconds.
+function took(nanoseconds) {
+  const milliseconds = nanoseconds / 1e6
+  if (milliseconds < 10) return `${milliseconds.toFixed(1)} ms`
+  if (milliseconds < 1000) return `${Math.round(milliseconds)} ms`
+  return `${(milliseconds / 1000).toFixed(milliseconds < 10_000 ? 2 : 1)} s`
+}
+
+// The container's name for a target, "<short id>:<port>", when Meridian knows it.
+function answeredBy(object, targets) {
+  const target = typeof object.target === "string" ? object.target : ""
+  return targets[target.split(":")[0]] ?? (target || object.service || "")
+}
+
+function requestSegments(object, targets) {
+  const segments = []
+  const add = (text, ...classes) => { if (text) segments.push({ text: String(text).replace(CONTROLS, ""), classes }) }
+  const query = object.query ? `?${object.query}` : ""
+
+  add(String(object.status), "json-level", `json-level--${statusTone(object.status)}`)
+  add(` ${object.method} `, "json-message")
+  add(`${object.host ?? ""}${object.path}${query}`, "json-message")
+  if (typeof object.duration === "number") add(`  ${took(object.duration)}`, "json-value")
+  const container = answeredBy(object, targets)
+  if (container) { add("  → ", "json-key"); add(container, "json-value") }
+
+  const visitor = object.req_cf_connecting_ip || object.remote_addr
+  const edge = typeof object.req_cf_ray === "string" ? object.req_cf_ray.split("-")[1] : null
+  const where = [ object.req_cf_ipcountry, edge && `via ${edge}` ].filter(Boolean).join(" ")
+  if (visitor || where) add("  from ", "json-key")
+  add([ visitor, where ].filter(Boolean).join(" "), "json-value")
+  return segments
+}
+
 // [{ text, classes }] runs for a JSON line, or null when it isn't one.
-function parseStructured(message) {
+// targets names the containers kamal-proxy sends requests to.
+function parseStructured(message, targets) {
   const text = message.trim()
   if (!text.startsWith("{") || !text.endsWith("}")) return null
   let object
   try { object = JSON.parse(text) } catch { return null }
   if (!object || typeof object !== "object" || Array.isArray(object)) return null
+
+  if (isRequest(object)) {
+    const hidden = Object.keys(object).filter(key => !REQUEST_DRAWN.includes(key) && object[key] !== "" && object[key] !== null)
+      .map(key => `${key}=${shown(object[key])}`).join(" ")
+    return { segments: requestSegments(object, targets), hidden, pretty: JSON.stringify(object, null, 2) }
+  }
 
   const pick = keys => { const key = keys.find(key => typeof object[key] === "string" || typeof object[key] === "number"); return key && [ key, object[key] ] }
   const level = pick(LEVEL_KEYS), said = pick(MESSAGE_KEYS)
@@ -194,14 +252,15 @@ function drawText(container, segments, ranges) {
 
 const plural = (count, word) => `${count.toLocaleString("en-US")} ${word}${count === 1 ? "" : "s"}`
 
-// One or several containers' logs. Subscribes to LogsChannel through Turbo's
-// own cable consumer, which asks each container's agent for its last 200 lines
+// One or several containers' logs, or an app's traffic. Subscribes to the
+// channel it is given (LogsChannel or TrafficChannel) through Turbo's own
+// cable consumer, which asks each container's agent for its last lines
 // and then new ones. Lines from every source are kept in timestamp order (a
 // new one almost always lands at the end), at most MAX_LINES of them, and
 // the page is only touched once per animation frame.
 export default class extends Controller {
   static targets = [ "filter", "stream", "wrap", "follow", "status", "scroller", "lines", "empty", "jump", "chip" ]
-  static values = { placementIds: Array, sources: Array }
+  static values = { channel: Object, sources: Array, targets: Object, empty: String }
 
   connect() {
     this.closed = false
@@ -288,7 +347,7 @@ export default class extends Controller {
 
   async #subscribe() {
     const subscription = await cable.subscribeTo(
-      { channel: "LogsChannel", placement_ids: this.placementIdsValue },
+      this.channelValue,
       {
         received: batch => this.#receive(batch),
         connected: () => { this.connected = true; this.lastActivityAt = performance.now(); this.#drawStatus() },
@@ -372,7 +431,7 @@ export default class extends Controller {
       this.#hold(source, identity)
 
       const key = parseTime(raw.t) ?? this.#now()
-      const structured = parseStructured(raw.m)
+      const structured = parseStructured(raw.m, this.targetsValue)
       const segments = structured?.segments ?? parseAnsi(raw.m)
       records.push(this.#record({ kind: "line", source, key, stream: raw.s, title: raw.t, segments, pretty: structured?.pretty, hidden: structured?.hidden }))
     }
@@ -515,7 +574,7 @@ export default class extends Controller {
   #drawEmpty() {
     const anyShown = this.linesTarget.querySelector(".logs__line:not([hidden])")
     this.emptyTarget.hidden = !!anyShown
-    this.emptyTarget.textContent = this.lines.length ? "No lines match." : "No lines yet. Whatever the container writes shows up here."
+    this.emptyTarget.textContent = this.lines.length ? "No lines match." : this.emptyValue
   }
 
   #drawStatus() {

@@ -41,10 +41,12 @@ class TunnelTest < ActiveSupport::TestCase
     make_app("edge", accessories: %w[ a b c d e ].map { connector("cloudflared-#{it}", "#{it}.example.com") })
     place(running, "edge-cloudflared-a", "running")
     place(stopped, "edge-cloudflared-b", "exited")
+    place(quiet, "edge-cloudflared-d", "running")
 
     states = Tunnel.all.sole.connectors.to_h { [ it.host, it.state ] }
 
-    assert_equal({ "a.example.com" => :running, "b.example.com" => :stopped, "c.example.com" => :missing, "d.example.com" => :unknown, "e.example.com" => :unknown }, states)
+    assert_equal({ "a.example.com" => :running, "b.example.com" => :stopped, "c.example.com" => :missing, "d.example.com" => :unknown, "e.example.com" => :unknown }, states,
+      "a quiet agent's last report says nothing about now")
   end
 
   test "a missing connector has the command that starts it" do

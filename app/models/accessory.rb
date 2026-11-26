@@ -7,12 +7,13 @@ class Accessory
   STATES = %i[ running unknown stopped missing ].freeze
 
   # Running, stopped, missing (the server reports, without it) or unknown (no
-  # report to go by). Needs server and placement.
+  # recent report to go by: a silent agent's last placements may be long
+  # gone). Needs server and placement.
   module State
     def state
-      if placement then placement.running? ? :running : :stopped
-      elsif server&.reporting? && !server.stale? then :missing
-      else :unknown
+      if !server&.reporting? || server.stale? then :unknown
+      elsif placement then placement.running? ? :running : :stopped
+      else :missing
       end
     end
   end

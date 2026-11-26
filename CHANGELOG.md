@@ -20,6 +20,7 @@
 - New app never overwrites a file. Making `shop` with a destination when `deploy/shop.yml` already existed without one (or the other way round) passed the check, which only compared the same destination, and rewrote the existing app's config without its servers. Any of the new files already in Git, such as a config Kamal can't parse, is now refused too.
 - Every connector in a tunnel's edge config gets its own name. The setup page named each after its host's first DNS label, so servers known by IP (`10.0.0.1`, `10.0.0.2`) or sharing one (`web.sgp…`, `web.fra…`) got the same key, and YAML kept only the last: one connector instead of several. Edit connectors names IP connectors after the whole address too, and finds a free `-2`, `-3` suffix instead of reusing one an earlier change took.
 - The tunnel setup page asks for a server when none is picked, instead of showing an edge config with no hosts that Kamal rejects.
+- A connector or accessory on a server whose agent has gone quiet shows as unknown, as the docs say. It kept the agent's last report, so a dead server's connector showed running and the Tunnels page said every connector was running.
 
 ## v0.1.0 (2026-11-26)
 

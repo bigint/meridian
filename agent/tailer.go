@@ -304,8 +304,10 @@ func (f *follower) admit() (inspectedContainer, string) {
 // pump reads the stream in one goroutine and batches it in this one, so a
 // slow write to Meridian never stops the batch timer. The channel between
 // them is small: when it is full the reader waits, and Docker's side of the
-// stream waits with it. It returns when ctx ends or Docker closes the stream,
-// with the latest stamp it read; what is left in b is the caller's.
+// stream waits with it. Live lines beyond one full batch per batchEvery are
+// dropped and counted, never waited for, so the reader keeps up with Docker.
+// It returns when ctx ends or Docker closes the stream, with the latest stamp
+// it read; what is left in b is the caller's.
 func (f *follower) pump(body io.Reader, since time.Time, b *batcher) (last time.Time) {
 	lines := make(chan logLine, linesAhead)
 	var readErr error
@@ -325,14 +327,10 @@ func (f *follower) pump(body io.Reader, since time.Time, b *batcher) (last time.
 	ticker := time.NewTicker(max(f.t.batchEvery/5, time.Millisecond))
 	defer ticker.Stop()
 	for {
-		in := lines
-		if b.held() { // the batch is full and the last went out under batchEvery ago: Docker waits
-			in = nil
-		}
 		select {
 		case <-f.ctx.Done():
 			return last
-		case l, ok := <-in:
+		case l, ok := <-lines:
 			if !ok { // Docker closed the stream
 				if f.ctx.Err() == nil && readErr != nil {
 					f.t.log.Warn("container logs: the stream broke", "container", short(f.id), "error", readErr)
@@ -342,11 +340,40 @@ func (f *follower) pump(body io.Reader, since time.Time, b *batcher) (last time.
 			if l.at.After(last) {
 				last = l.at
 			}
-			b.add(l, f.backlog > 0 && !l.at.IsZero() && !l.at.After(since))
+			history := f.backlog > 0 && !l.at.IsZero() && !l.at.After(since)
+			if b.held() {
+				// The batch is full and the last went out under batchEvery
+				// ago. A live line is dropped and counted: waiting for it
+				// would leave the reader further behind Docker every second
+				// the container logs this fast. The backlog is bounded, so
+				// it waits its turn instead.
+				if !history {
+					b.skip()
+					continue
+				}
+				if !f.waitTurn(b) {
+					return last
+				}
+			}
+			b.add(l, history)
 		case <-ticker.C:
 			b.flushDue()
 		}
 	}
+}
+
+// waitTurn waits until the held batch b may go out, then sends it. It
+// returns false if ctx ended first.
+func (f *follower) waitTurn(b *batcher) bool {
+	for b.held() {
+		select {
+		case <-f.ctx.Done():
+			return false
+		case <-time.After(b.wait()):
+		}
+	}
+	b.flushDue()
+	return true
 }
 
 // fetchBacklog sends the last n lines of an already followed container as

@@ -261,13 +261,15 @@ and only while the line is subscribed. They are never queued.
   untouched. A line without a timestamp keeps all of itself in `m` with an
   empty `t`.
 - At most one batch per container every 250 ms, with at most 500 lines and
-  256 KiB of `m`. A full batch waits for its turn too, and Docker's stream
-  waits with it, so a burst of lines is spread out rather than sent at once.
+  256 KiB of `m`, so at most 2000 lines a second. A full batch waits for its
+  turn too. Live lines that arrive while it waits are dropped and counted in
+  the next batch's `dropped`, so the agent never falls behind Docker. History
+  is bounded, so its lines wait their turn and none is dropped for the pace.
   History lines and live lines never share a batch. Empty batches are not sent
   unless they carry `dropped` or `ended`.
-- A container may send 512 KiB a second, counting each line's `m` plus 64
-  bytes for the rest of it, so even empty lines are bounded (8192 a second).
-  Lines beyond that are dropped and counted in the next batch's `dropped`.
+- A container may also send at most 512 KiB a second, counting each line's
+  `m` plus 64 bytes for the rest of it. Lines beyond that are dropped and
+  counted in `dropped` too.
 - `ended: true` comes once, when Docker closes the follow stream and an
   inspect then shows the container is no longer running (in the last batch,
   with any lines still waiting). The agent stops following. The next tail

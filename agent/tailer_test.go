@@ -787,31 +787,64 @@ func TestEndedIsSentOnceWhenDockerClosesTheStream(t *testing.T) {
 	}
 }
 
-// A burst of short lines is not sent as fast as it is read: full batches
-// wait their turn, and the reader holds Docker's stream meanwhile, so no line
-// is lost and none of them jumps the queue.
-func TestTailSpacesFullBatchesInsteadOfBurstingThem(t *testing.T) {
+// A burst of live lines faster than one full batch per batchEvery is not
+// waited for: the reader would fall further behind Docker every second the
+// container kept it up, and nothing would say so. Each line either arrives
+// or is counted in dropped, and no batch goes over maxBatchLines.
+func TestTailDropsAndCountsLiveLinesPastTheBatchPaceInsteadOfFallingBehind(t *testing.T) {
 	fd := newLogDocker(t)
 	id := containerID(0xa7)
 	fd.add(id, kamalApp())
-	rig := startLogRig(t, fd, true)
+	// A slow pace, so the burst is read far faster than batches may go.
+	rig := startLogRig(t, fd, true, func(tl *tailer) { tl.batchEvery = 200 * time.Millisecond })
 	rig.tail(id, 30, 0)
 	waitFor(t, "the follow", func() bool { return fd.activeFor(id) == 1 })
 
-	burst := make([]logEntry, 0, 5000)
-	for i := range 5000 {
+	const n = 5000
+	burst := make([]logEntry, 0, n)
+	for i := range n {
 		burst = append(burst, fresh(1, 1, fmt.Sprint(i)))
 	}
-	start := time.Now()
 	fd.push(id, burst...)
-	got := rig.lines(t, 5000)
-	elapsed := time.Since(start)
-	if n := len(allMessages(got)); n != 5000 {
-		t.Fatalf("%d lines arrived, want 5000", n)
+	sent, dropped := 0, 0
+	rig.until(t, "every line sent or counted", func(o logsOut) bool {
+		if len(o.Lines) > maxBatchLines {
+			t.Fatalf("a batch of %d lines, want at most %d", len(o.Lines), maxBatchLines)
+		}
+		sent, dropped = sent+len(o.Lines), dropped+o.Dropped
+		return sent+dropped >= n
+	})
+	if sent+dropped != n || dropped == 0 {
+		t.Fatalf("sent %d and dropped %d of %d, want some dropped and every line accounted for", sent, dropped, n)
 	}
-	// Ten full batches, each at least batchEvery (20ms here) after the last.
-	if min := 9 * rig.tl.batchEvery; elapsed < min {
-		t.Fatalf("%d batches in %v, want them spread over at least %v", len(got), elapsed, min)
+}
+
+// The backlog is bounded, so it is never dropped for the pace: a history
+// longer than one batch waits its turn and arrives whole.
+func TestTailSendsABacklogLongerThanOneBatchWhole(t *testing.T) {
+	fd := newLogDocker(t)
+	id := containerID(0xa9)
+	history := make([]logEntry, 0, maxBacklog)
+	for i := range maxBacklog {
+		history = append(history, old(1, 60, fmt.Sprint(i)))
+	}
+	fd.add(id, kamalApp(history...))
+	rig := startLogRig(t, fd, true)
+	start := time.Now()
+	rig.tail(id, 30, maxBacklog)
+	got := rig.lines(t, maxBacklog)
+	elapsed := time.Since(start)
+	for _, b := range got {
+		if !b.Backlog || b.Dropped != 0 {
+			t.Fatalf("batch = %s, want backlog with nothing dropped", b.raw)
+		}
+	}
+	if n := len(allMessages(got)); n != maxBacklog {
+		t.Fatalf("%d backlog lines, want %d", n, maxBacklog)
+	}
+	// Two full batches, the second at least batchEvery after the first.
+	if elapsed < rig.tl.batchEvery {
+		t.Fatalf("%d batches in %v, want them at least %v apart", len(got), elapsed, rig.tl.batchEvery)
 	}
 }
 

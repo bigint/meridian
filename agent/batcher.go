@@ -18,9 +18,10 @@ const (
 // the first line, and no more than budgetBytes of message (plus lineOverhead a
 // line) per second. What the budget refuses is counted and reported in the
 // next batch's dropped. Lines from history (the backlog) and live lines never
-// share a batch. Batches go out at most once per every: a caller that finds
-// the batch held waits before adding more, so a full batch never jumps the
-// queue and Meridian's per-agent frame cap holds.
+// share a batch. Batches go out at most once per every, so Meridian's
+// per-agent frame cap holds: a caller that finds the batch held either waits
+// before adding more (history, which is bounded) or drops the line with skip,
+// which counts it like the budget's drops (live lines, which are not).
 //
 // A batcher belongs to one goroutine; it never blocks and never queues beyond
 // the one batch it is building. emit decides what happens to a finished batch.
@@ -98,6 +99,13 @@ func (b *batcher) full() bool {
 func (b *batcher) held() bool { return b.full() && b.now().Sub(b.sent) < b.every }
 
 func (b *batcher) wait() time.Duration { return max(b.every-b.now().Sub(b.sent), 0) }
+
+// skip counts a line the caller dropped because the batch was held. It is
+// reported in the next batch's dropped, as the budget's drops are.
+func (b *batcher) skip() {
+	b.dropped++
+	b.touch(b.now())
+}
 
 // finish sends what is left with ended set: Docker closed the stream.
 func (b *batcher) finish() { b.flush(true) }

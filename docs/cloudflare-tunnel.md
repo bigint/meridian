@@ -14,6 +14,17 @@ The pull request lists the manual steps.
 
 Every server that runs the connector with the same token is a replica of one tunnel. Cloudflare serves HTTPS, so the app needs no certificate of its own.
 
+## The Tunnels page
+
+**Tunnels** under Manage lists every app with a `cloudflared` accessory, problems first. Meridian finds them in Git (an accessory whose image starts with `cloudflare/cloudflared`) and reads each connector's container from the agents. It never asks Cloudflare, so it can't tell whether the tunnel itself is healthy. Each server that should run the connector shows one state.
+
+- **running** means the agent reports the container and it is running.
+- **A Docker state** such as `exited` or `restarting` means the container exists but isn't running.
+- **not booted** means the server's agent is reporting and has no such container, so the connector was never booted or was removed. The page shows the `kamal accessory boot` command.
+- **unknown** means Meridian can't tell. The server isn't known, has no agent, or hasn't reported lately.
+
+The page also shows the setup steps, the snippet and the current preview hostname format.
+
 ## Previews behind a tunnel
 
 Previews are named `pr-<n>.<app>.<preview domain>` by default. That is two levels below the domain. Cloudflare's Universal SSL wildcard covers one level, so behind Cloudflare's proxy or a tunnel those names fail HTTPS unless you pay for Advanced Certificate Manager.

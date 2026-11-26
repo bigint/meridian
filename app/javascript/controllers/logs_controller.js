@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { cable } from "@hotwired/turbo-rails"
 
 const MAX_LINES = 5_000        // rows kept in the page; the oldest go first
+const BACKLOG = 200            // lines of history a new reader asks each container for (LiveLogs::BACKLOG)
 const WAITING_AFTER = 10_000   // ms without anything from the agents
 const RENEW_EVERY = 10_000     // ms between telling the channel this page is still open
 const NEAR_BOTTOM = 4          // px from the end that still counts as the end
@@ -284,6 +285,8 @@ export default class extends Controller {
       ...source, enabled: true, held: new Set(), off: false, refused: false, ended: false
     } ]))
 
+    this.heldPerSource = Math.max(BACKLOG, Math.ceil(MAX_LINES / this.sources.size))
+
     const longest = Math.max(...this.sourcesValue.map(source => source.label.length))
     this.element.style.setProperty("--source-width", `calc(${longest}ch + 1.25rem)`)
 
@@ -446,10 +449,12 @@ export default class extends Controller {
     return records
   }
 
-  // Remembers a line for the backlog check, forgetting the oldest past what the page can hold.
+  // Remembers a line for the backlog check, forgetting the oldest. A backlog
+  // is a container's last BACKLOG lines, so each source keeps at least that
+  // many, and all of them together about what the page holds, not that many each.
   #hold(source, identity) {
     source.held.add(identity)
-    if (source.held.size > MAX_LINES) source.held.delete(source.held.values().next().value)
+    if (source.held.size > this.heldPerSource) source.held.delete(source.held.values().next().value)
   }
 
   #notice(source, notice, text, key = this.#now()) {

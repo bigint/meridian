@@ -35,13 +35,14 @@ class Preview < ApplicationRecord
       preview
     end
 
-    # Matches a workflow run to a preview by its run name: "<command> <config> pr-<n>".
-    def track(run)
+    # Matches a workflow run to a preview by its run name: "<command> <config> pr-<n>",
+    # within the run's own repository: many repositories have a config/deploy.yml.
+    def track(run, project = Project.for_repo(run.dig("repository", "full_name")))
       command, config, destination = run["display_title"].to_s.split(" ", 3)
       return unless destination.to_s.match?(Project::Syncable::PREVIEW_DESTINATION)
-      return true unless run["status"] == "completed"
+      return true unless run["status"] == "completed" && project
 
-      preview = Preview.joins(:app).find_by(apps: { config_path: config }, destination: destination) or return true
+      preview = Preview.joins(:app).find_by(apps: { project_id: project.id, config_path: config }, destination: destination) or return true
       success = run["conclusion"] == "success"
       # Only a preview still waiting on its removal is finished by one: a
       # remove run replayed by polling, or one that ends after the pull

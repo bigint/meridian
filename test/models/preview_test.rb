@@ -57,7 +57,7 @@ class PreviewTest < ActiveSupport::TestCase
   test "CI runs move previews along, and removal drops the overlay" do
     preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
 
-    Preview.track("display_title" => "deploy deploy/api.yml pr-7", "status" => "completed", "conclusion" => "success")
+    track("deploy deploy/api.yml pr-7")
     assert preview.reload.active?
 
     preview.close
@@ -65,7 +65,7 @@ class PreviewTest < ActiveSupport::TestCase
     assert_equal "remove", @dispatches.last.dig("inputs", "command")
 
     stub_github_files(@project, { "deploy/api.yml" => file_fixture("infra/deploy/api.yml").read, "deploy/api.pr-7.yml" => @writes.sole["content"] }, head: "z" * 40)
-    Preview.track("display_title" => "remove deploy/api.yml pr-7", "status" => "completed", "conclusion" => "success")
+    track("remove deploy/api.yml pr-7")
     assert preview.reload.removed?
     assert_requested @deletes
   end
@@ -76,9 +76,20 @@ class PreviewTest < ActiveSupport::TestCase
     Preview.deploy(@app, number: 7, head_sha: "i" * 40, url: nil)
 
     stub_overlay
-    Preview.track("display_title" => "remove deploy/api.yml pr-7", "status" => "completed", "conclusion" => "success")
+    track("remove deploy/api.yml pr-7")
     assert preview.reload.deploying?
     assert_not_requested @deletes
+  end
+
+  test "a run is matched to a preview in its own repository only" do
+    other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
+    theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")
+      .previews.create!(pr_number: 7, destination: "pr-7", hostname: "pr-7.api.example.org", overlay_path: "deploy/api.pr-7.yml", state: "removing", expires_at: 1.day.from_now)
+    mine = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    mine.close
+
+    track("remove deploy/api.yml pr-7")
+    assert_equal [ "removed", "removing" ], [ mine.reload.state, theirs.reload.state ]
   end
 
   test "expired previews are closed by the hourly job" do
@@ -107,6 +118,10 @@ class PreviewTest < ActiveSupport::TestCase
   end
 
   private
+    def track(title, conclusion: "success", repository: "example/infra")
+      Preview.track("display_title" => title, "status" => "completed", "conclusion" => conclusion, "repository" => { "full_name" => repository })
+    end
+
     def stub_overlay
       stub_github_files(@project, { "deploy/api.yml" => file_fixture("infra/deploy/api.yml").read, "deploy/api.pr-7.yml" => @writes.last["content"] }, head: "z" * 40)
     end

@@ -19,6 +19,15 @@ class GitHubEventJobTest < ActiveJob::TestCase
     assert_empty Preview.all
   end
 
+  test "a preview's workflow run is matched in the repository that sent it" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "e" * 40, url: nil)
+    run = { "event" => "workflow_dispatch", "path" => ".github/workflows/meridian-deploy.yml", "head_branch" => "main",
+            "display_title" => "deploy deploy/api.yml pr-7", "status" => "completed", "conclusion" => "success" }
+
+    GitHubEventJob.perform_now("workflow_run", { "repository" => { "full_name" => "example/infra" }, "workflow_run" => run })
+    assert preview.reload.active?
+  end
+
   private
     def pull_request(action, number: 7, state: "open", head_repo: "example/api-src")
       { "action" => action, "number" => number, "repository" => { "full_name" => "example/api-src" },

@@ -52,6 +52,7 @@ Operator ──▶ Meridian ──commits, PRs──▶ GitHub ──Actions─�
 - [Configuration](docs/configuration.md)
 - [The agent](docs/agent.md)
 - [Previews](docs/previews.md)
+- [Cloudflare Tunnel](docs/cloudflare-tunnel.md)
 - [Security](docs/security.md)
 - [Architecture and Kamal research](docs/architecture.md)
 - [Decisions](docs/decisions.md)

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Cloudflare Tunnel
+
+- The New app form can put an app behind a Cloudflare Tunnel. It adds a `cloudflared` accessory to the config and swaps the DNS steps for the tunnel's. Meridian never calls Cloudflare's API. See [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) and decision 33.
+- Settings → General can name previews `pr-<n>-<app>.<domain>`. One wildcard record covers every app, and it works with Cloudflare's free certificate. Existing previews keep their hostname.
+
 ### Live logs
 
 - Open a container's logs, or an app's logs merged across every server it runs on, and read the last 200 lines and then new ones as they're written. Filter, show only stderr, follow or pause, and toggle each server on and off. ANSI colours render.

@@ -18,7 +18,7 @@ A pull request in an app's **source** repository can run as a Kamal destination,
 
 - **The App is installed on the source repository,** and the app's config names it: `labels: { meridian.source: owner/repo }`. New apps created in Meridian get this label automatically.
 - **A preview domain** is set under **Settings → General**.
-- **Wildcard DNS.** For each app with previews, create `*.<app>.<preview domain>` pointing at your preview servers, or at the tunnel or load balancer in front of them, e.g. `*.shop.preview.example.com`. Meridian doesn't manage DNS. If you use `ssl: true`, kamal-proxy issues a certificate per host through Let's Encrypt, so the names must resolve publicly.
+- **Wildcard DNS.** For each app with previews, create `*.<app>.<preview domain>` pointing at your preview servers, or at the tunnel or load balancer in front of them, e.g. `*.shop.preview.example.com`. Meridian doesn't manage DNS. In **Settings → General** you can choose flat hostnames, `pr-<n>-<app>.<preview domain>`, so one wildcard record `*.<preview domain>` covers every app and works with Cloudflare's free certificate; see [Cloudflare Tunnel](cloudflare-tunnel.md). If you use `ssl: true`, kamal-proxy issues a certificate per host through Let's Encrypt, so the names must resolve publicly.
 - **Preview servers.** Set the selector, e.g. `role=preview`. The least busy matching server is used. If the selector is blank, the app's own first server is used.
 - **The CI workflow** must be Meridian's (or keep its `run-name`), because Meridian matches preview runs by name.
 

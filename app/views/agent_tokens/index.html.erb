@@ -21,6 +21,7 @@
         <ol class="list-numbered txt-muted">
           <li>Create a token<%= " (an admin can)" unless current_user.admin? %>.</li>
           <li>Put it in <code>.kamal/secrets</code> as <code>MERIDIAN_TOKEN</code>.</li>
+          <li>Once per host, create the <code>meridian</code> network the two share: <code>kamal server exec "docker network inspect meridian &gt;/dev/null 2&gt;&amp;1 || docker network create meridian"</code>.</li>
           <li>Run <code>kamal accessory boot meridian_docker</code>, then <code>meridian_agent</code>.</li>
         </ol>
         <% if current_user.admin? %>

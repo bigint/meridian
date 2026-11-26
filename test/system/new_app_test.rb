@@ -18,14 +18,14 @@ class NewAppTest < ApplicationSystemTestCase
     fill_in "Name", with: "shop"
     fill_in "Source repository", with: "example/shop"
     choose "Node"
-    fill_in "Hostname", with: "shop.example.com"
+    fill_in "Hostname", with: "shop.example.org"
     select "web-1.example.com", from: "Servers"
     fill_in "First version", with: "v1"
     click_on "Open pull request"
 
     assert_text "shop is ready for review"
     assert_link "Open pull request #12", href: "https://github.com/example/infra/pull/12"
-    assert_text "Point DNS for shop.example.com"
+    assert_text "Point DNS for shop.example.org"
     assert_equal %w[ deploy/shop.yml deploy/shop.version ], writes.map { it["path"] }
 
     # The pull request is merged: main now holds the generated files.
@@ -33,7 +33,7 @@ class NewAppTest < ApplicationSystemTestCase
     stub_github_repo(@project, head: "m" * 40, files: merged, history: { "deploy/shop.version" => [ [ "m" * 40, "v1\n" ] ] })
     perform_enqueued_jobs do
       deliver "push", ref: "refs/heads/main"
-      deliver "workflow_run", workflow_run: { id: 8, head_sha: "m" * 40, head_branch: "main", status: "completed", conclusion: "success", html_url: "https://github.com/example/infra/actions/runs/8", updated_at: Time.current.iso8601 }
+      deliver "workflow_run", workflow_run: { id: 8, path: ".github/workflows/meridian-deploy.yml", head_sha: "m" * 40, head_branch: "main", status: "completed", conclusion: "success", html_url: "https://github.com/example/infra/actions/runs/8", updated_at: Time.current.iso8601 }
     end
 
     shop = @project.apps.find_by!(service: "shop")

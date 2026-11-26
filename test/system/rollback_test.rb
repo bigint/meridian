@@ -28,7 +28,7 @@ class RollbackTest < ApplicationSystemTestCase
     stub_github_repo(@project, head: "r" * 40, history: AFTER, files: { "deploy/web.production.version" => "v41\n" })
     perform_enqueued_jobs do
       deliver "push", ref: "refs/heads/main"
-      deliver "workflow_run", workflow_run: { id: 5, head_sha: "r" * 40, head_branch: "main", status: "completed", conclusion: "success", html_url: "https://github.com/example/infra/actions/runs/5", updated_at: Time.current.iso8601 }
+      deliver "workflow_run", workflow_run: { id: 5, path: ".github/workflows/meridian-deploy.yml", head_sha: "r" * 40, head_branch: "main", status: "completed", conclusion: "success", html_url: "https://github.com/example/infra/actions/runs/5", updated_at: Time.current.iso8601 }
     end
 
     # Kamal ran; agents now see v41.

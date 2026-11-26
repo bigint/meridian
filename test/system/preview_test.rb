@@ -14,8 +14,8 @@ class PreviewSystemTest < ApplicationSystemTestCase
 
   test "pull request opens, preview goes live, pull request closes, preview is removed" do
     perform_enqueued_jobs do
-      deliver "pull_request", { action: "opened", number: 3, pull_request: { head: { sha: "h" * 40 }, html_url: "https://github.com/example/api-src/pull/3" } }, repo: "example/api-src"
-      deliver "workflow_run", { workflow_run: { event: "workflow_dispatch", display_title: "deploy deploy/api.yml pr-3", head_branch: "main", status: "completed", conclusion: "success" } }
+      deliver "pull_request", { action: "opened", number: 3, pull_request: { head: { sha: "h" * 40, repo: { full_name: "example/api-src" } }, html_url: "https://github.com/example/api-src/pull/3" } }, repo: "example/api-src"
+      deliver "workflow_run", { workflow_run: { path: ".github/workflows/meridian-deploy.yml", event: "workflow_dispatch", display_title: "deploy deploy/api.yml pr-3", head_branch: "main", status: "completed", conclusion: "success" } }
     end
 
     sign_in users(:viewer)
@@ -27,8 +27,8 @@ class PreviewSystemTest < ApplicationSystemTestCase
 
     stub_github_files(@project, { "deploy/api.yml" => file_fixture("infra/deploy/api.yml").read, "deploy/api.pr-3.yml" => @writes.sole["content"] }, head: "z" * 40)
     perform_enqueued_jobs do
-      deliver "pull_request", { action: "closed", number: 3, pull_request: { merged: true, head: { sha: "h" * 40 } } }, repo: "example/api-src"
-      deliver "workflow_run", { workflow_run: { event: "workflow_dispatch", display_title: "remove deploy/api.yml pr-3", head_branch: "main", status: "completed", conclusion: "success" } }
+      deliver "pull_request", { action: "closed", number: 3, pull_request: { merged: true, head: { sha: "h" * 40, repo: { full_name: "example/api-src" } } } }, repo: "example/api-src"
+      deliver "workflow_run", { workflow_run: { path: ".github/workflows/meridian-deploy.yml", event: "workflow_dispatch", display_title: "remove deploy/api.yml pr-3", head_branch: "main", status: "completed", conclusion: "success" } }
     end
 
     visit previews_path

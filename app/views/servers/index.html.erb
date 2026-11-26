@@ -24,7 +24,7 @@
           <th scope="row"><%= link_to server.name, server, class: "mono txt-small" %></th>
           <td class="mono txt-small"><%= server.hostname unless server.hostname == server.name %></td>
           <td class="nowrap"><%= place(server) %></td>
-          <td><%= labels_list(server.labels, except: ApplicationHelper::PLACE_LABELS) %></td>
+          <td><%= labels_list(server.labels, except: Server::PLACE_LABELS) %></td>
           <td class="mono txt-small"><%= server.agent_version || tag.span("no agent", class: "txt-faint") %></td>
           <td class="nowrap"><%= safe_join([ time_ago(server.last_seen_at), (badge("silent") if server.stale?) ].compact, " ") %></td>
         </tr>

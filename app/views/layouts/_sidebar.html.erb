@@ -6,7 +6,7 @@
   <% end %>
 
   <nav class="sidebar__nav" aria-label="Main">
-    <%= sidebar_link("Board", root_path, :board, attention_count) %>
+    <%= sidebar_link("Board", root_path, :board, Board.attention_count) %>
     <%= sidebar_link("Map", map_path, :map) %>
     <%= sidebar_link("Apps", apps_path, :apps) %>
     <%= sidebar_link("Servers", servers_path, :servers) %>

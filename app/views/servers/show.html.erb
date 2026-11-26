@@ -124,9 +124,9 @@
         </div>
       <% end %>
 
-      <% if @server.labels.except(*ApplicationHelper::PLACE_LABELS).any? %>
+      <% if @server.labels.except(*Server::PLACE_LABELS).any? %>
         <%= titled_section "Labels" do %>
-          <div class="flex flex-wrap gap-xs"><%= labels_list(@server.labels, except: ApplicationHelper::PLACE_LABELS) %></div>
+          <div class="flex flex-wrap gap-xs"><%= labels_list(@server.labels, except: Server::PLACE_LABELS) %></div>
         <% end %>
       <% end %>
 

@@ -10,6 +10,8 @@ class Server < ApplicationRecord
   # spaces, quotes, newlines or "<%", so it can't add YAML keys or ERB, which
   # Kamal evaluates whenever it reads the config.
   HOST_FORMAT = /\A[A-Za-z0-9][A-Za-z0-9._:-]{0,252}\z/
+  # Labels that say where a server is, shown in a column of their own.
+  PLACE_LABELS = %w[ city region lat lng ].freeze
 
   has_many :assignments, dependent: :delete_all
   has_many :apps, -> { distinct }, through: :assignments

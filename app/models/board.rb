@@ -14,6 +14,10 @@ class Board
     # What the server reported running, never Git's version standing in for it.
     def version = versions.compact.first
     def roles_in(state) = role_states.select { |_, it| it == state }.keys
+
+    # Every container here runs release: a server with an old container left,
+    # or a role down, doesn't. Quiet agents count by their last report.
+    def runs?(release) = state == "in_sync" || (state.in?(%w[ stale stray ]) && versions.any? && versions.all?(release))
   end
 
   Group = Data.define(:name, :rows, :columns, :cells) do
@@ -50,6 +54,11 @@ class Board
     @summary ||= all_cells.group_by(&:state).transform_values(&:count)
   end
 
+  # The sidebar's count, cached briefly since every page shows it.
+  def self.attention_count
+    Rails.cache.fetch("attention-count", expires_in: 15.seconds) { new.attention.size }
+  end
+
   def attention
     @attention ||= begin
       items = all_cells.select { it.state.in?(%w[ missing drifted stray ]) }.map { Attention.new(state: it.state, app: it.app, server: it.server, count: 1, cell: it) }
@@ -73,6 +82,12 @@ class Board
 
   def pages = [ (rows.size / PER_PAGE.to_f).ceil, 1 ].max
   def page_rows = rows.slice((page - 1) * PER_PAGE, PER_PAGE) || []
+
+  # The newest release of an app, from any of its cells.
+  def release_for(app)
+    groups.each { |group| group.cells.each_value { |cell| return cell.release if cell.app == app } }
+    nil
+  end
 
   def groups
     @groups ||= begin

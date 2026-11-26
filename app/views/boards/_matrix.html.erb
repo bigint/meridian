@@ -32,7 +32,7 @@
             <th scope="row" class="matrix__name">
               <%= link_to app.name, board_path(request.query_parameters.merge(inspect: app.id)), data: { turbo_frame: "inspector", turbo_action: "advance" } %>
             </th>
-            <td class="matrix__git"><%= matrix_release(board, app)&.first(12) || "–" %></td>
+            <td class="matrix__git"><%= board.release_for(app)&.first(12) || "–" %></td>
             <% board.groups.each do |group| %>
               <% group.columns.each_with_index do |server, index| %>
                 <td class="<%= "matrix__first" if index.zero? %>"><% if (cell = group.cells[[ app.id, server.id ]]) %><%= version_cell cell %><% end %></td>

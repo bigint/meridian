@@ -67,10 +67,7 @@ module BoardsHelper
     return badge("No version file yet, so Meridian can't compare versions.") unless app.versioned?
 
     release = app.latest_release&.version
-    # A server runs the release when every container there runs it: a server
-    # with an old container left, or a role down, doesn't. Quiet agents count
-    # by their last report, which the note below says may be old.
-    running = cells.count { it.state == "in_sync" || (it.state.in?(%w[ stale stray ]) && it.versions.any? && it.versions.all?(release)) }
+    running = cells.count { it.runs?(release) }
     quiet = cells.count { it.state == "stale" }
 
     status = if running == cells.size
@@ -91,12 +88,6 @@ module BoardsHelper
 
   def matrix_group_title(board, group)
     group.name || (board.group_by ? "No #{board.group_by}" : "All servers")
-  end
-
-  # The newest release of an app, from any of its cells.
-  def matrix_release(board, app)
-    board.groups.each { |group| group.cells.each_value { |cell| return cell.release if cell.app == app } }
-    nil
   end
 
   def deploy_heading(deploy)

@@ -18,10 +18,6 @@ module ApplicationHelper
     end
   end
 
-  def attention_count
-    Rails.cache.fetch("attention-count", expires_in: 15.seconds) { Board.new.attention.size }
-  end
-
   def time_ago(time)
     return tag.span("never", class: "txt-faint") unless time
     tag.time("#{time_ago_in_words(time)} ago", datetime: time.iso8601, data: { tooltip: time.to_fs(:long) })
@@ -30,9 +26,6 @@ module ApplicationHelper
   def short_sha(sha)
     tag.code(sha.to_s.first(7))
   end
-
-  # Labels other than the place ones, which have a column of their own.
-  PLACE_LABELS = %w[ city region lat lng ].freeze
 
   def labels_list(labels, except: [])
     safe_join(labels.except(*except).sort.map { |key, value| badge("#{key}=#{value}", mono: true) }, " ")

@@ -27,9 +27,10 @@ class LogsChannel < ApplicationCable::Channel
     end
 
     def find_placements
-      return unless reader&.can_deploy?
+      user, ids = reader, params[:placement_ids]
+      return unless user&.can_deploy? && ids.is_a?(Array) && ids.size <= MAX_PLACEMENTS && ids.all?(Integer)
+      return unless LiveLogs.granted?(params[:grant], user, "logs", *ids) # only what a page recorded as viewed
 
-      ids = params[:placement_ids]
-      Placement.includes(:server).where(id: ids).to_a if ids.is_a?(Array) && ids.size <= MAX_PLACEMENTS && ids.all?(Integer)
+      Placement.includes(:server).where(id: ids).to_a
     end
 end

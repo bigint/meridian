@@ -63,8 +63,22 @@ module LiveLogs
     end
   end
 
+  # Every viewing is an Event, and the page records it. So the page hands its
+  # channel a grant for exactly what it shows, and LogsChannel and
+  # TrafficChannel stream nothing a page didn't record. A grant is bound to
+  # its reader, so it can't be passed on; a reconnect reuses it, so it isn't
+  # another viewing.
+  def grant(user, *subject)
+    grants.generate([ user.id, *subject ], purpose: :live)
+  end
+
+  def granted?(grant, user, *subject)
+    user.present? && grant.is_a?(String) && grants.verified(grant, purpose: :live) == [ user.id, *subject ]
+  end
+
+  def grants = Rails.application.message_verifier(:live_grants)
   def lease_key(placement_id) = [ "live-tail-lease", placement_id ]
-  private_class_method :lease_key
+  private_class_method :grants, :lease_key
 
   def line(raw)
     return unless raw.is_a?(Hash) && STREAMS.include?(raw["s"])

@@ -25,6 +25,7 @@ class TrafficChannel < ApplicationCable::Channel
     end
 
     def find_app
-      App.find_by(id: params[:app_id]) if reader&.can_deploy? && params[:app_id].is_a?(Integer)
+      user, id = reader, params[:app_id]
+      App.find_by(id: id) if user&.can_deploy? && id.is_a?(Integer) && LiveLogs.granted?(params[:grant], user, "traffic", id)
     end
 end

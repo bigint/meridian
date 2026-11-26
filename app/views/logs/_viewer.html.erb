@@ -3,7 +3,7 @@
     optionally channel (the subscription; LogsChannel for these placements by default), empty, and streams
     (false hides the stdout/stderr switch). %>
 <% sources = log_sources(placements) %>
-<% channel = local_assigns.fetch(:channel) { { channel: "LogsChannel", placement_ids: placements.map(&:id) } } %>
+<% channel = local_assigns.fetch(:channel) { { channel: "LogsChannel", placement_ids: placements.map(&:id), grant: live_grant("logs", *placements.map(&:id)) } } %>
 <% empty = local_assigns.fetch(:empty, "No lines yet. Whatever the container writes shows up here.") %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 

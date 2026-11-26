@@ -10,6 +10,22 @@ class LogsChannelTest < ActionCable::Channel::TestCase
     stub_connection current_user: users(:deployer), agent_token: nil
   end
 
+  # Subscribes as a page would, with the grant the page hands over.
+  def subscribe(placement_ids: nil, grant: :page, **params)
+    grant = (LiveLogs.grant(connection.current_user, "logs", *placement_ids) if connection.current_user) if grant == :page
+    super(placement_ids: placement_ids, grant: grant, **params)
+  end
+
+  # Every viewing is an Event, recorded by the page; the channel streams only what a page granted.
+  test "a subscription no page granted is refused, even for a deployer" do
+    [ nil, "forged", LiveLogs.grant(users(:deployer), "logs", @worker.id), LiveLogs.grant(users(:admin), "logs", @web.id),
+      LiveLogs.grant(users(:deployer), "traffic", @web.id) ].each do |grant|
+      subscribe placement_ids: [ @web.id ], grant: grant
+      assert subscription.rejected?, grant.inspect
+    end
+    assert_no_broadcasts AgentChannel.broadcasting_for(@web_1)
+  end
+
   test "a deployer streams each container's lines" do
     subscribe placement_ids: [ @web.id, @worker.id ]
 

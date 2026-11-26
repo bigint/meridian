@@ -18,7 +18,9 @@ class TrafficTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select ".logs[data-logs-channel-value=?]", { channel: "TrafficChannel", app_id: @app.id }.to_json
+    channel = JSON.parse(css_select(".logs").first["data-logs-channel-value"])
+    assert_equal({ "channel" => "TrafficChannel", "app_id" => @app.id }, channel.except("grant"))
+    assert LiveLogs.granted?(channel["grant"], users(:deployer), "traffic", @app.id)
     assert_select ".logs__chip", text: "web-1"
     assert_select ".logs__chip", text: "web-2"
     targets = JSON.parse(css_select(".logs").first["data-logs-targets-value"])

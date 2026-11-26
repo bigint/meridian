@@ -1,6 +1,11 @@
 module LogsHelper
   TONES = 8
 
+  # What the page's channel needs to stream what this viewing recorded (LiveLogs.grant).
+  def live_grant(*subject)
+    LiveLogs.grant(current_user, *subject)
+  end
+
   # What the viewer needs to know about each container it merges: a short
   # name that tells them apart, and a colour that stays the same for the
   # same container whenever the set doesn't change.

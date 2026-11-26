@@ -13,6 +13,19 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     stub_connection current_user: users(:deployer), agent_token: nil
   end
 
+  # Subscribes as the Traffic page would, with the grant it hands over.
+  def subscribe(app_id: nil, grant: :page, **params)
+    grant = (LiveLogs.grant(connection.current_user, "traffic", app_id) if connection.current_user) if grant == :page
+    super(app_id: app_id, grant: grant, **params)
+  end
+
+  test "a subscription the Traffic page didn't grant is refused" do
+    [ nil, "forged", LiveLogs.grant(users(:admin), "traffic", @app.id), LiveLogs.grant(users(:deployer), "logs", @app.id) ].each do |grant|
+      subscribe app_id: @app.id, grant: grant
+      assert subscription.rejected?, grant.inspect
+    end
+  end
+
   # kamal-proxy lines run to a kilobyte, and the agent sends at most 512 KB a
   # second of one container, history included, dropping the newest lines past
   # that. 200 lines fit; 1,000 lost the most recent requests.

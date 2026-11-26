@@ -18,7 +18,7 @@ class LogsTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select ".logs[data-logs-channel-value=?]", { channel: "LogsChannel", placement_ids: [ @web.id ] }.to_json
+    assert_channel users(:deployer), { "placement_ids" => [ @web.id ] }, "logs", @web.id
     assert_select ".logs__chip", count: 0
     event = Event.find_by!(action: "logs.viewed")
     assert_equal users(:deployer), event.actor
@@ -34,7 +34,7 @@ class LogsTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select ".logs[data-logs-channel-value=?]", { channel: "LogsChannel", placement_ids: [ @web.id, @worker.id ] }.to_json
+    assert_channel users(:admin), { "placement_ids" => [ @web.id, @worker.id ] }, "logs", @web.id, @worker.id
     assert_select ".logs__chip", count: 2
     assert_select ".logs__chip", text: "web-1"
     assert_select ".logs__chip", text: "web-2"
@@ -135,4 +135,12 @@ class LogsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]", app_log_path(@app), count: 0
   end
+
+  private
+    # The page subscribes with a grant for exactly what it recorded as viewed.
+    def assert_channel(reader, params, *subject)
+      channel = JSON.parse(css_select(".logs").first["data-logs-channel-value"])
+      assert_equal({ "channel" => "LogsChannel", **params }, channel.except("grant"))
+      assert LiveLogs.granted?(channel["grant"], reader, *subject)
+    end
 end

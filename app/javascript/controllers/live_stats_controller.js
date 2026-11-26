@@ -184,7 +184,8 @@ export default class extends Controller {
       tile.capacity.textContent = metric.caption(host)
       tile.range.textContent = `avg ${metric.format(average)} · peak ${metric.format(peak)}`
       const used = metric.share ? metric.share(host) : current
-      tile.share.textContent = metric.share && used != null ? percent(used) : ""
+      // The space lives in here, not between the spans, where it would slide as the value changes width.
+      tile.share.textContent = metric.share && used != null ? ` ${percent(used)}` : ""
       setLevel(tile.element, level(used))
       this.#drawSparkline(tile, series, metric.capacity(host))
     }

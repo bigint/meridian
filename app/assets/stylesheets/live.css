@@ -32,6 +32,9 @@
 
   /* Four across, or two by two: never three and a straggler. */
   .live { container-type: inline-size; }
+  /* The pill sits by the title, not at the far end: its words change
+     with the state, and a right-aligned pill would jump as they do. */
+  .live .section__header { justify-content: flex-start; }
   .live__tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space); }
   @container (inline-size < 44rem) {
     .live__tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -41,14 +44,14 @@
     padding: var(--space) var(--space) 0; overflow: hidden;
     border: 1px solid var(--color-line); border-radius: var(--radius-large); background: var(--color-canvas);
   }
-  .live__label { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-s); font-size: var(--text-s); }
+  .live__label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-s); font-size: var(--text-s); }
   .live__name {
     display: inline-flex; align-items: center; gap: 0.375rem; font-weight: 600; color: var(--color-accent);
     svg { inline-size: 0.875rem; block-size: 0.875rem; align-self: center; }
   }
   .live__unit { font-weight: 400; color: var(--color-ink-faint); }
   .live__share { font-size: var(--text-s); font-weight: 400; letter-spacing: 0; color: var(--color-ink-faint); }
-  .live__capacity { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink-faint); }
+  .live__capacity { flex: 1; min-inline-size: 0; text-align: end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink-faint); }
   .live__value { margin-block-start: var(--space-xs); font-size: 1.5rem; font-weight: 600; line-height: 1.75rem; letter-spacing: -0.02em; white-space: nowrap; color: var(--color-ink); }
   .live__range { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); color: var(--color-ink-faint); }
   .live__spark { inline-size: calc(100% + 2 * var(--space)); max-inline-size: none; block-size: 2.25rem; margin-inline: calc(-1 * var(--space)); margin-block-start: var(--space-s); color: var(--color-accent); }
@@ -77,6 +80,8 @@
     font-family: var(--font-mono); font-size: var(--text-s); color: var(--color-ink);
     svg { color: var(--color-ink-faint); }
   }
+  /* The rate fills the cell after its icon, so neither moves as "—" becomes a number. */
+  .stat--net .stat__value > [data-part] { flex: 1; text-align: end; }
   .meter { display: block; overflow: hidden; block-size: 0.25rem; margin-block-start: 0.25rem; border-radius: 999px; background: var(--color-raised); }
   .meter__fill {
     display: block; block-size: 100%; inline-size: calc(var(--share, 0) * 1%); max-inline-size: 100%;

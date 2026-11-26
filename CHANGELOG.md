@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.1.0 (2026-11-26)
+
+The first release: the milestones M0 to M6, and everything built on them since.
 
 ### Cloudflare Tunnel
 
@@ -68,10 +70,6 @@
 - `GITHUB_TOKEN` can stand in for a GitHub App.
 - Fixed: `GITHUB_APP_ID` was read from the wrong variable. Redeploys are tracked like deploys. The CI template runs on self-hosted runners via `MERIDIAN_RUNS_ON`.
 - New-app Dockerfiles carry `LABEL service=…`, which Kamal requires of images it didn't build.
-
-## v0.1.0 (2026-11-25)
-
-The first release: M0 to M6.
 
 ### M0: Read-only board from Git
 

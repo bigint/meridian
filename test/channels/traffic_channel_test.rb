@@ -66,4 +66,13 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     end
     assert_equal [ { reason: "unauthorized" } ], closed
   end
+
+  test "a page that stops renewing lets the leases lapse" do
+    subscribe app_id: @app.id
+    travel ApplicationCable::Renewal::SILENCE + 1.second
+
+    assert_no_broadcasts AgentChannel.broadcasting_for(@web_1) do
+      TrafficChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
+    end
+  end
 end

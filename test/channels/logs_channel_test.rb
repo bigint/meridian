@@ -92,4 +92,18 @@ class LogsChannelTest < ActionCable::Channel::TestCase
     end
     assert_equal [ { reason: "unauthorized" } ], closed
   end
+
+  # A laptop asleep keeps its socket open for minutes, and ActionCable never
+  # times it out: only a page that says it is still there keeps the lease.
+  test "a page that stops renewing lets the lease lapse, and one that renews keeps it" do
+    subscribe placement_ids: [ @web.id ]
+    renew = -> { LogsChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) } }
+
+    travel ApplicationCable::Renewal::SILENCE + 1.second
+    assert_no_broadcasts(AgentChannel.broadcasting_for(@web_1)) { renew.call }
+
+    perform :renew
+    travel LiveLogs::RENEW_EVERY + 1.second
+    assert_broadcasts(AgentChannel.broadcasting_for(@web_1), 1) { renew.call }
+  end
 end

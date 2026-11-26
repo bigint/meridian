@@ -55,6 +55,15 @@ class ServerStatsChannelTest < ActionCable::Channel::TestCase
     end
   end
 
+  test "a page that stops renewing lets the lease lapse" do
+    subscribe server_id: @server.id
+    travel ApplicationCable::Renewal::SILENCE + 1.second
+
+    assert_no_broadcasts AgentChannel.broadcasting_for(@server) do
+      ServerStatsChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
+    end
+  end
+
   test "an agent is rejected" do
     stub_connection current_user: nil, agent_token: agent_tokens(:web_1)
     subscribe server_id: @server.id

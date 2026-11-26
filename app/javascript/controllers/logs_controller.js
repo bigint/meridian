@@ -3,6 +3,7 @@ import { cable } from "@hotwired/turbo-rails"
 
 const MAX_LINES = 5_000        // rows kept in the page; the oldest go first
 const WAITING_AFTER = 10_000   // ms without anything from the agents
+const RENEW_EVERY = 10_000     // ms between telling the channel this page is still open
 const NEAR_BOTTOM = 4          // px from the end that still counts as the end
 const MAX_MARKS = 200          // highlights drawn in one line
 
@@ -283,11 +284,13 @@ export default class extends Controller {
 
     this.#subscribe()
     this.ticker = setInterval(() => this.#drawStatus(), 1000)
+    this.renewer = setInterval(() => this.subscription?.perform("renew"), RENEW_EVERY)
     this.#drawStatus()
   }
 
   disconnect() {
     clearInterval(this.ticker)
+    clearInterval(this.renewer)
     cancelAnimationFrame(this.drawFrame)
     cancelAnimationFrame(this.filterFrame)
     this.closed = true

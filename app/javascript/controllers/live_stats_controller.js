@@ -4,6 +4,7 @@ import { cable } from "@hotwired/turbo-rails"
 const WINDOW = 120            // frames kept for the averages and sparklines
 const PAUSED_AFTER = 5_000    // ms without a frame
 const HINT_AFTER = 15_000     // ms without ever getting one
+const RENEW_EVERY = 10_000    // ms between telling the channel this page is still open
 const WIDTH = 120, HEIGHT = 32 // the sparkline's viewBox
 
 const UNITS = [ "B", "KB", "MB", "GB", "TB" ]
@@ -92,11 +93,13 @@ export default class extends Controller {
 
     this.#subscribe()
     this.ticker = setInterval(() => this.#drawStatus(), 1000)
+    this.renewer = setInterval(() => this.subscription?.perform("renew"), RENEW_EVERY)
     this.#drawStatus()
   }
 
   disconnect() {
     clearInterval(this.ticker)
+    clearInterval(this.renewer)
     this.closed = true
     this.subscription?.unsubscribe()
     this.subscription = null

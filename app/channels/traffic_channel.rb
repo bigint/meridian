@@ -3,8 +3,11 @@
 # Subscribing, and every ten seconds after, renews the tail leases, as
 # LogsChannel does. The servers come from the app, never from the browser.
 class TrafficChannel < ApplicationCable::Channel
+  include ApplicationCable::Renewal
+
   periodically every: LogsChannel::RENEW_EVERY do
     next hang_up unless reader&.can_deploy?
+    next unless heard_lately?
 
     LiveTraffic.watch(@app, @proxies)
     @proxies.each { LiveLogs.tail(it, backlog: 0) }

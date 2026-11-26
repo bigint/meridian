@@ -1,12 +1,16 @@
 # A deployer reading container logs. Subscribing, and every ten seconds
-# after, renews the tail lease that makes each container's agent stream.
+# after while the page still renews, renews the tail lease that makes each
+# container's agent stream.
 # Logs can hold secrets, so unlike stats this is for deployers only.
 class LogsChannel < ApplicationCable::Channel
+  include ApplicationCable::Renewal
+
   MAX_PLACEMENTS = 20
   RENEW_EVERY = 10.seconds
 
   periodically every: RENEW_EVERY do
     next hang_up unless reader&.can_deploy?
+    next unless heard_lately?
 
     @placements.each { LiveLogs.tail(it, backlog: 0) }
   end

@@ -109,6 +109,21 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_equal 1, queries.size, queries.join("\n")
   end
 
+  test "the board says everything matches Git only when every cell was compared" do
+    get root_path
+    assert_select "[data-board-grid] [data-cell][data-state=unknown]", minimum: 1
+    assert_select ".page-header__meta", text: /compared with Git/
+
+    Server.update_all(last_seen_at: Time.current)
+    App.where.not(version_path: nil).find_each do |app|
+      app.assignments.each { server_placement(app, it.server, it.role, app.latest_release.version) }
+    end
+    App.where(version_path: nil).destroy_all
+    get root_path
+    assert_select "[data-board-grid] [data-cell]:not([data-state=in_sync])", 0
+    assert_select ".page-header__meta", text: /all matching Git/
+  end
+
   test "the CSP allows nonced scripts and styles, and nothing inline" do
     get root_path
     policy = response.headers["Content-Security-Policy"]
@@ -116,4 +131,10 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_match(/style-src 'self' 'nonce-[^']+'/, policy)
     assert_no_match(/unsafe-inline/, policy)
   end
+
+  private
+    def server_placement(app, server, role, version)
+      server.placements.create!(app: app, container_id: "#{app.id}-#{role}", name: "#{app.service}-#{role}-#{version}", service: app.service, role: role,
+        destination: app.destination, version: version, state: "running", observed_at: Time.current)
+    end
 end

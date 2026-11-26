@@ -106,6 +106,16 @@ class PreviewTest < ActiveSupport::TestCase
     assert_equal 2, @dispatches.count { it.dig("inputs", "command") == "remove" }
   end
 
+  test "an overlay GitHub won't delete keeps its preview in removing" do
+    preview = Preview.deploy(@app, number: 7, head_sha: "h" * 40, url: nil)
+    preview.close
+    stub_overlay
+    stub_request(:delete, %r{/contents/deploy/api.pr-7.yml}).to_return(status: 502, body: "{}", headers: { "Content-Type" => "application/json" })
+
+    assert_raises(GitHost::Error) { track("remove deploy/api.yml pr-7") }
+    assert preview.reload.removing?
+  end
+
   test "a run is matched to a preview in its own repository only" do
     other = Project.create!(name: "Other", repo_full_name: "example/other", installation_id: 2, config_globs: [ "deploy/*.yml" ])
     theirs = other.apps.create!(service: "api", config_path: "deploy/api.yml", source_repo: "example/other-src")

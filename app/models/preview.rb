@@ -72,12 +72,13 @@ class Preview < ApplicationRecord
     Event.record("preview.removing", subject: self, actor: actor, summary: "Removing #{app.service} preview for ##{pr_number} (#{reason})")
   end
 
+  # Removed once the overlay is gone. If GitHub refuses the delete, the
+  # preview stays in removing, and the hourly job tries again.
   def finish_removal
     existing = project.git.file(overlay_path)
     project.git.delete_file(overlay_path, sha: existing.sha, message: "chore(#{app.service}): remove preview pr-#{pr_number}")
+    update!(state: "removed")
   rescue GitHost::NotFound
-    nil
-  ensure
     update!(state: "removed")
   end
 

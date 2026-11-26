@@ -41,15 +41,15 @@
     <% end %>
 
     <% arrange = segmented("Arrange the grid", [
-         [ "Apps × servers", request.query_parameters.merge(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
-         [ "Servers × apps", request.query_parameters.merge(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
+         [ "Apps × servers", current_path_with(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
+         [ "Servers × apps", current_path_with(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
     <%= titled_section "Every app on every server", id: "everything", actions: arrange do %>
       <div class="chips" data-summary aria-label="Filter by state">
-        <%= chip "All", @board.summary.values.sum, current: @board.state.nil?, href: request.query_parameters.merge(state: nil, page: nil, anchor: "everything") %>
+        <%= chip "All", @board.summary.values.sum, current: @board.state.nil?, href: current_path_with(state: nil, page: nil, anchor: "everything") %>
         <% Drift::STATES.each do |state| %>
           <% next if @board.summary.fetch(state, 0).zero? && @board.state != state %>
           <%= chip Drift::LABELS[state], @board.summary.fetch(state, 0), state: state, current: @board.state == state,
-                href: request.query_parameters.merge(state: (@board.state == state ? nil : state), page: nil, anchor: "everything") %>
+                href: current_path_with(state: (@board.state == state ? nil : state), page: nil, anchor: "everything") %>
         <% end %>
       </div>
 
@@ -76,8 +76,8 @@
       <% end %>
 
       <%= pagination label: "Page #{@board.page} of #{@board.pages}",
-            previous_url: (request.query_parameters.merge(page: @board.page - 1, anchor: "everything") if @board.page > 1),
-            next_url: (request.query_parameters.merge(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages) %>
+            previous_url: (current_path_with(page: @board.page - 1, anchor: "everything") if @board.page > 1),
+            next_url: (current_path_with(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages) %>
     <% end %>
   </div>
 

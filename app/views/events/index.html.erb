@@ -41,5 +41,5 @@
 </div>
 
 <%= pagination label: "Page #{@page}", previous_label: "Newer", next_label: "Older",
-      previous_url: (request.query_parameters.merge(page: @page - 1) if @page > 1),
-      next_url: (request.query_parameters.merge(page: @page + 1) if @more) %>
+      previous_url: (current_path_with(page: @page - 1) if @page > 1),
+      next_url: (current_path_with(page: @page + 1) if @more) %>

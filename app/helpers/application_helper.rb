@@ -188,6 +188,14 @@ module ApplicationHelper
     end
   end
 
+  # This page's path and query with some parameters changed (nil drops one).
+  # Built as a string, never through url_for, so a query string can't pick
+  # the link's host, protocol, script name or route.
+  def current_path_with(anchor: nil, **changes)
+    query = request.query_parameters.merge(changes.stringify_keys).compact_blank
+    [ request.path, ("?#{query.to_query}" if query.any?), ("##{anchor}" if anchor) ].join
+  end
+
   # Errors for a form, above its fields.
   def field_errors(record, attribute)
     messages = record.respond_to?(:errors) ? record.errors[attribute] : []

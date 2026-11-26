@@ -10,7 +10,12 @@ class Agent::SnapshotsController < ActionController::API
   # the agent waits at least that long instead of backing off blindly.
   RATE_WINDOW = 1.minute
   rate_limit to: 120, within: RATE_WINDOW, by: -> { [ @token.id, (sender if @token.fleet?) ].compact.join(":") },
-    with: -> { response.set_header("Retry-After", RATE_WINDOW.to_i.to_s); head :too_many_requests }
+    with: -> { too_many_requests }
+  # The sender is whatever machine id the body says, so a fleet token also has
+  # a ceiling of its own: 3,000 servers at the default 15 seconds.
+  FLEET_CEILING = 12_000
+  rate_limit to: FLEET_CEILING, within: RATE_WINDOW, by: -> { @token.id }, name: "fleet", if: -> { @token.fleet? },
+    with: -> { too_many_requests }
 
   def create
     snapshot = Snapshot.new(JSON.parse(request.raw_post.byteslice(0, MAX_BYTES + 1)), token: @token)
@@ -30,6 +35,11 @@ class Agent::SnapshotsController < ActionController::API
     def process_action(*)
       return head :content_too_large if request.content_length.to_i > MAX_BYTES
       super
+    end
+
+    def too_many_requests
+      response.set_header("Retry-After", RATE_WINDOW.to_i.to_s)
+      head :too_many_requests
     end
 
     def authenticate

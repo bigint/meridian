@@ -105,6 +105,23 @@ class AgentSnapshotsTest < ActionDispatch::IntegrationTest
     store.singleton_class.remove_method(:increment)
   end
 
+  test "a fleet token has a ceiling however many machine ids it reports for" do
+    store = Agent::SnapshotsController.cache_store
+    counts = ActiveSupport::Cache::MemoryStore.new
+    store.define_singleton_method(:increment) { |*args, **options| counts.increment(*args, **options) }
+    token = agent_tokens(:fleet)
+    counts.write("rate-limit:agent/snapshots:fleet:#{token.id}", Agent::SnapshotsController::FLEET_CEILING, raw: true)
+
+    post agent_snapshots_path, params: JSON.parse(@body).merge("machine_id" => "never-seen").to_json, headers: headers("meridian_fleettoken")
+    assert_response :too_many_requests
+    assert_equal "60", response.headers["Retry-After"]
+
+    post agent_snapshots_path, params: @body, headers: headers("meridian_web1token")
+    assert_response :accepted, "a per-server token has no fleet ceiling"
+  ensure
+    store.singleton_class.remove_method(:increment)
+  end
+
   private
     def headers(token)
       { "Authorization" => "Bearer #{token}", "Content-Type" => "application/json" }

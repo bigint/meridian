@@ -6,8 +6,11 @@ class Agent::SnapshotsController < ActionController::API
 
   before_action :authenticate
   # Per sender: a fleet token speaks for many servers, each of which may report.
-  rate_limit to: 120, within: 1.minute, by: -> { [ @token.id, (sender if @token.fleet?) ].compact.join(":") },
-    with: -> { head :too_many_requests }
+  # Retry-After is the whole window, the longest the limit can still hold;
+  # the agent waits at least that long instead of backing off blindly.
+  RATE_WINDOW = 1.minute
+  rate_limit to: 120, within: RATE_WINDOW, by: -> { [ @token.id, (sender if @token.fleet?) ].compact.join(":") },
+    with: -> { response.set_header("Retry-After", RATE_WINDOW.to_i.to_s); head :too_many_requests }
 
   def create
     snapshot = Snapshot.new(JSON.parse(request.raw_post.byteslice(0, MAX_BYTES + 1)), token: @token)

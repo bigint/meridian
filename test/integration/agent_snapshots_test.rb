@@ -96,6 +96,7 @@ class AgentSnapshotsTest < ActionDispatch::IntegrationTest
 
     121.times { post agent_snapshots_path, params: body.merge("machine_id" => "m0").to_json, headers: headers("meridian_fleettoken") }
     assert_response :too_many_requests
+    assert_equal "60", response.headers["Retry-After"]
   ensure
     store.singleton_class.remove_method(:increment)
   end

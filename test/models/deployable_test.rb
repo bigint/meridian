@@ -26,6 +26,15 @@ class DeployableTest < ActiveSupport::TestCase
     assert_equal "app.deploy", Event.recent.first.action
   end
 
+  test "deploying the version already in the file commits nothing" do
+    writes = stub_github_writes(@project)
+
+    error = assert_raises(ArgumentError) { @app.deploy("v42", actor: @actor) }
+    assert_match "Redeploy", error.message
+    assert_empty writes
+    assert_empty @app.deploys
+  end
+
   test "a concurrent change in Git surfaces as a conflict" do
     stub_request(:put, %r{/contents/deploy/web.production.version}).to_return(status: 409, body: { message: "sha mismatch" }.to_json, headers: { "Content-Type" => "application/json" })
 

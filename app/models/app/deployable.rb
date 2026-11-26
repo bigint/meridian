@@ -18,6 +18,10 @@ module App::Deployable
     raise ArgumentError, "Version must be one line without spaces" unless version.match?(/\A[\w.+:@-]{1,128}\z/)
 
     current = read_version_file
+    # The commit would change no file, so the workflow would never run and
+    # the deploy would wait forever.
+    raise ArgumentError, "#{version} is already in #{version_file_path}. Use Redeploy to run it again." if current&.content&.strip == version
+
     commit = project.git.write_file(version_file_path, content: "#{version}\n", sha: current&.sha,
       message: commit_message("deploy", version, actor))
     record_deploy("deploy", version, commit, actor)

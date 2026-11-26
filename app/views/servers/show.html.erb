@@ -53,11 +53,8 @@
           <thead>
             <tr>
               <th scope="col">Container</th>
-              <th scope="col">Service</th>
-              <th scope="col">Role</th>
               <th scope="col">Version</th>
               <th scope="col">State</th>
-              <th scope="col">Health</th>
               <th scope="col" class="table__end">CPU</th>
               <th scope="col" class="table__end">Memory</th>
               <th scope="col" class="table__end">Network<span class="sr-only"> in and out per second</span></th>
@@ -67,12 +64,17 @@
           <tbody>
             <% @placements.each do |placement| %>
               <tr <%= tag.attributes(data: { live_container: (placement.container_id if placement.running?) }) %>>
-                <td class="mono txt-small"><%= placement.name %></td>
-                <td><%= safe_join([ (placement.app ? link_to(placement.service, placement.app) : placement.service), (badge(placement.kind) unless placement.kind == "app") ].compact, " ") %></td>
-                <td><%= placement.role %></td>
+                <td class="container-cell">
+                  <div class="container-cell__title">
+                    <%= safe_join([ (placement.app ? link_to(placement.service, placement.app) : placement.service), (badge(placement.kind) unless placement.kind == "app"), (tag.span("· #{placement.role}", class: "txt-faint") if placement.role) ].compact, " ") %>
+                  </div>
+                  <div class="container-cell__name mono txt-small txt-faint" title="<%= placement.name %>"><%= placement.name %></div>
+                </td>
                 <td class="mono txt-small"><%= placement.short_version %></td>
-                <td><%= placement.state %></td>
-                <td><%= placement.health == "unhealthy" ? badge("unhealthy", tone: :bad) : placement.health %></td>
+                <td class="nowrap">
+                  <%= placement.state %>
+                  <% if placement.health == "unhealthy" %><%= badge("unhealthy", tone: :bad) %><% elsif placement.health.present? %><span class="txt-faint">· <%= placement.health %></span><% end %>
+                </td>
                 <td class="stat" aria-live="off">
                   <span class="stat__value" data-part="cpu">—</span>
                   <span class="meter" aria-hidden="true"><span class="meter__fill" data-part="cpu-meter"></span></span>
@@ -89,7 +91,7 @@
               </tr>
             <% end %>
             <% if @placements.none? %>
-              <tr><td colspan="10" class="table__empty">No containers reported.</td></tr>
+              <tr><td colspan="7" class="table__empty">No containers reported.</td></tr>
             <% end %>
           </tbody>
         </table>

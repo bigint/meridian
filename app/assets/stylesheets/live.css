@@ -30,7 +30,12 @@
     100% { opacity: 0; scale: 2.75; }
   }
 
-  .live__tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space); }
+  /* Four across, or two by two: never three and a straggler. */
+  .live { container-type: inline-size; }
+  .live__tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space); }
+  @container (inline-size < 44rem) {
+    .live__tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .live__tile {
     display: flex; flex-direction: column; min-inline-size: 0;
     padding: var(--space) var(--space) 0; overflow: hidden;
@@ -49,6 +54,8 @@
   .live__spark { inline-size: calc(100% + 2 * var(--space)); max-inline-size: none; block-size: 2.25rem; margin-inline: calc(-1 * var(--space)); margin-block-start: var(--space-s); color: var(--color-accent); }
   .live__trace { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .live__area { fill: currentColor; fill-opacity: 0.12; stroke: none; }
+  /* The whole window, before it fills: a dotted floor the line grows along. */
+  .live__floor { stroke: var(--color-line); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
   .live__tile[data-level="warn"] { .live__value { color: var(--color-warn); } .live__spark { color: var(--color-warn); } }
   .live__tile[data-level="bad"] { .live__value { color: var(--color-bad); } .live__spark { color: var(--color-bad); } }
 
@@ -56,11 +63,15 @@
   .live[data-state="paused"] .live__value, .live[data-state="paused"] .live__spark { opacity: 0.5; }
   .split__main:has(.live[data-state="paused"]) .stat { opacity: 0.5; }
 
+  /* Service and role on top, the long Kamal container name under it,
+     cut short with the full name in its title. */
+  .container-cell__name { max-inline-size: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* A container's number with a thin meter under it. Fixed widths and
      tabular numerals keep rows from shifting as the numbers change. */
-  .stat { inline-size: 5.5rem; min-inline-size: 5.5rem; padding-inline: var(--space-s); white-space: nowrap; text-align: end; }
-  .stat--memory { inline-size: 6.25rem; min-inline-size: 6.25rem; }
-  .stat--net { inline-size: 7.5rem; min-inline-size: 7.5rem; }
+  .stat { inline-size: 4.75rem; min-inline-size: 4.75rem; padding-inline: var(--space-s); white-space: nowrap; text-align: end; }
+  .stat--memory { inline-size: 5.5rem; min-inline-size: 5.5rem; }
+  .stat--net { inline-size: 6.5rem; min-inline-size: 6.5rem; }
   .stat__value {
     display: flex; align-items: center; justify-content: flex-end; gap: 0.1875rem;
     font-family: var(--font-mono); font-size: var(--text-s); color: var(--color-ink);

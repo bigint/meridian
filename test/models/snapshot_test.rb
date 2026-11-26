@@ -118,7 +118,7 @@ class SnapshotTest < ActiveSupport::TestCase
 
   test "a rebuilt machine takes back the server Git places once the old one has been silent long enough" do
     old = ingest(@payload, token: agent_tokens(:fleet))
-    rebuilt = @payload.merge("machine_id" => "rebuilt")
+    rebuilt = @payload.merge("machine_id" => "rebuilt", "hostname" => "web-1.example.com")
 
     travel 2.minutes
     early = ingest(rebuilt, token: agent_tokens(:fleet))
@@ -129,6 +129,28 @@ class SnapshotTest < ActiveSupport::TestCase
     assert_equal old, ingest(rebuilt, token: agent_tokens(:fleet))
     assert_equal "rebuilt", old.reload.machine_id
     assert_equal "in_sync", Board.new(server_id: old.id).cells.find { it.app.service == "web" }.state
+  end
+
+  test "a new machine that only shares a silent server's first DNS label never takes it over" do
+    old = ingest(@payload, token: agent_tokens(:fleet))
+    travel 1.hour
+
+    stranger = ingest(@payload.merge("machine_id" => "stranger"), token: agent_tokens(:fleet))
+    assert_not_equal old, stranger
+    assert_equal @payload["machine_id"], old.reload.machine_id
+  end
+
+  test "a server whose agent reports seldom is taken back only once it is stale too" do
+    old = ingest(@payload.merge("interval_seconds" => 600), token: agent_tokens(:fleet))
+    rebuilt = @payload.merge("machine_id" => "rebuilt", "hostname" => "web-1.example.com")
+
+    travel Server::RECLAIM_AFTER + 1.minute
+    early = ingest(rebuilt, token: agent_tokens(:fleet))
+    assert_not_equal old, early, "silent for less than three of its intervals: still alive"
+    early.destroy
+
+    travel 30.minutes
+    assert_equal old, ingest(rebuilt, token: agent_tokens(:fleet))
   end
 
   test "a silent server Git doesn't place is never taken over" do

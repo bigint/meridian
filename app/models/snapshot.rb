@@ -103,18 +103,24 @@ class Snapshot
 
     # Git knows servers by the host Kamal SSHes to; the agent knows its own
     # hostname. Match exactly, or by the first DNS label when that is unique
-    # (never for IPs, whose first label is shared). A server Git places whose
-    # agent has been silent for RECLAIM_AFTER can be claimed again: the
-    # machine was rebuilt, with a new machine id.
+    # (never for IPs, whose first label is shared).
     def unclaimed_server
-      candidates = Server.where(machine_id: nil).or(Server.where(id: Assignment.select(:server_id), last_seen_at: ...Server::RECLAIM_AFTER.ago))
-      candidates.find_by(hostname: hostname) || candidates.find_by(name: hostname) || begin
+      candidates = Server.where(machine_id: nil)
+      candidates.find_by(hostname: hostname) || candidates.find_by(name: hostname) || reclaimable_server || begin
         return if Server.ip?(hostname)
 
         short = hostname.split(".").first
         matches = candidates.select { [ it.hostname, it.name ].any? { |name| !Server.ip?(name) && name.split(".").first == short } }
         matches.sole if matches.one?
       end
+    end
+
+    # A server Git places whose agent has gone silent (Server#reclaimable?)
+    # was rebuilt, with a new machine id. Only an exact host takes it: a first
+    # DNS label is shared too easily to hand over a server with a history.
+    def reclaimable_server
+      Server.where(hostname: hostname).or(Server.where(name: hostname)).where(id: Assignment.select(:server_id))
+        .where.not(machine_id: [ nil, machine_id ]).sort_by { it.hostname == hostname ? 0 : 1 }.find(&:reclaimable?)
     end
 
     def record_placements(server)

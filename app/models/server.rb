@@ -71,6 +71,12 @@ class Server < ApplicationRecord
     [ (interval_seconds || DEFAULT_INTERVAL.to_i).seconds * 3, STALE_AFTER ].max
   end
 
+  # Silent past RECLAIM_AFTER, and stale too: an agent that reports every
+  # 15 minutes is alive between its snapshots, not rebuilt.
+  def reclaimable?
+    reporting? && last_seen_at < [ RECLAIM_AFTER, stale_after ].max.ago
+  end
+
   # "web-1.example.com" => "web-1"; IPs stay whole.
   def short_name
     self.class.ip?(name) ? name : name.split(".").first

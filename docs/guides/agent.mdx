@@ -71,7 +71,7 @@ Git names servers by the host Kamal connects to, such as `web-1.example.com` or 
 2. the first DNS label (`web-1` matches `web-1.example.com`), when only one server has it;
 3. an IP address is matched only whole.
 
-If the agent reported before Git listed the host, it made a server of its own; Git's name takes that server over when it is the only one sharing the host's first DNS label. If a machine is rebuilt with a new machine id, its agent takes the server back once the old one has been silent for 10 minutes.
+If the agent reported before Git listed the host, it made a server of its own; Git's name takes that server over when it is the only one sharing the host's first DNS label. If a machine is rebuilt with a new machine id, its agent takes the server back once the old one has been silent for 10 minutes and has turned stale (three of its intervals), but only when it reports Git's exact host: set `MERIDIAN_HOSTNAME` to it. A first DNS label alone never hands over a server that has had an agent.
 
 When neither matches, set `MERIDIAN_HOSTNAME` on the agent to the name used in your config.
 

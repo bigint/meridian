@@ -1,3 +1,5 @@
+require "open3"
+
 # Runs bin/kamal-parse over files fetched from an infra repository.
 #
 # The parse happens in a fresh Ruby process with an empty environment, inside

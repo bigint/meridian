@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Projects sync again. In the production image every sync failed with `NameError: uninitialized constant KamalConfig::Open3`, because the config parser used Ruby's `Open3` without requiring it, so no app ever reached the board. CI now parses a Kamal config inside the built image.
+
 ## v0.1.1 (2026-11-27)
 
 ### Removed

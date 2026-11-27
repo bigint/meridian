@@ -33,6 +33,14 @@ jobs:
       - name: The image builds
         run: docker build --tag meridian:ci .
 
+      # Production loads less than development, so parse a config in the built image.
+      - name: The image parses a Kamal config
+        run: >-
+          docker run --rm
+          -v "$PWD/script/smoke_parse.rb:/rails/script/smoke_parse.rb:ro"
+          -e SECRET_KEY_BASE=ci -e MERIDIAN_URL=http://localhost
+          meridian:ci bin/rails runner script/smoke_parse.rb
+
   # The docs site in docs/: checks only, nothing is published.
   docs:
     runs-on: ubuntu-latest

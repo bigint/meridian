@@ -87,6 +87,19 @@ class SnapshotTest < ActiveSupport::TestCase
     assert_raises(Snapshot::Rejected) { ingest(@payload.merge("machine_id" => "other")) }
   end
 
+  test "a fleet token can't report for a server with a token of its own" do
+    server = ingest
+    assert_equal server, agent_tokens(:web_1).reload.server
+
+    snapshot = Snapshot.new(@payload, token: agent_tokens(:fleet))
+    assert_not snapshot.valid?
+    assert_match "token of its own", snapshot.errors.full_messages.to_sentence
+    assert_raises(Snapshot::Rejected) { ingest(@payload, token: agent_tokens(:fleet)) }
+
+    agent_tokens(:web_1).revoke
+    assert_equal server, ingest(@payload, token: agent_tokens(:fleet))
+  end
+
   test "a fleet token identifies servers by machine id" do
     a = ingest(@payload, token: agent_tokens(:fleet))
     b = ingest(@payload.merge("machine_id" => "m2", "hostname" => "web-2"), token: agent_tokens(:fleet))

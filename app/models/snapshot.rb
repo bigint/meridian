@@ -88,6 +88,8 @@ class Snapshot
     def token_fits_machine
       if machine_id && bound_elsewhere?
         errors.add(:base, "This token belongs to another server. Give each server its own token, or use a fleet token")
+      elsif machine_id && (server = Server.find_by(machine_id: machine_id)) && !server.speaks_for?(token)
+        errors.add(:base, "This server has a token of its own. Use that token, or revoke it to report with a fleet token")
       end
     end
 
@@ -106,6 +108,7 @@ class Snapshot
       # A rebuild that reported before the old machine had been silent long
       # enough made a row of its own. Once it has, that row moves onto Git's.
       server = reclaimable_server || server if server.machine_id == machine_id && server.assignments.none?
+      raise Rejected, "This server has a token of its own" unless server.speaks_for?(token)
       release_machine_id(server)
       token.update!(server: server) unless token.fleet?
       server
@@ -139,7 +142,7 @@ class Snapshot
     # DNS label is shared too easily to hand over a server with a history.
     def reclaimable_server
       Server.where(hostname: hostname).or(Server.where(name: hostname)).where(id: Assignment.select(:server_id))
-        .where.not(machine_id: [ nil, machine_id ]).sort_by { it.hostname == hostname ? 0 : 1 }.find(&:reclaimable?)
+        .where.not(machine_id: [ nil, machine_id ]).sort_by { it.hostname == hostname ? 0 : 1 }.find { it.reclaimable? && it.speaks_for?(token) }
     end
 
     def record_placements(server)

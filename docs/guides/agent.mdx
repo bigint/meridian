@@ -115,10 +115,11 @@ On the `meridian` network, the agent reaches `MERIDIAN_URL` like the server itse
 | --- | --- | --- |
 | Binds to | The first machine that uses it | Nothing. Each server is known by its machine ID. |
 | Another machine uses it | Refused with `422`: `This token belongs to another server. Give each server its own token, or use a fleet token`. The agent logs the refusal. | Accepted, as its own server |
+| A server with a token of its own | | Refused with `422`: `This server has a token of its own. Use that token, or revoke it to report with a fleet token` |
 | Revoking it silences | One server | Every server that uses it |
 | **Server** column on **Agents** | The server, or `binds on first contact` | `many` |
 
-Kamal gives every server of an accessory the same secret. So if the accessories run on several servers, use a fleet token, or give each server its own accessory and token.
+Every machine with a fleet token can report as any other server that uses it, so a fleet token is only as safe as the least safe of those machines. Kamal gives every server of an accessory the same secret. So if the accessories run on several servers, use a fleet token, or give each server its own accessory and token.
 
 To revoke a token, click **Revoke** in its row on **Agents** and confirm. Meridian refuses its snapshots from then on and closes its WebSocket at once.
 

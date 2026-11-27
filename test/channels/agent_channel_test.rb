@@ -24,6 +24,18 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     assert_has_stream_for @server
   end
 
+  test "a fleet token can't open the line of a server with a token of its own" do
+    agent_tokens(:web_1).update!(server: @server)
+    stub_connection current_user: nil, agent_token: agent_tokens(:fleet)
+    subscribe machine_id: "m-web-1"
+
+    assert subscription.rejected?
+
+    agent_tokens(:web_1).revoke
+    subscribe machine_id: "m-web-1"
+    assert subscription.confirmed?, "a revoked token no longer holds the server"
+  end
+
   test "a token bound to a server follows that server's machine id" do
     agent_tokens(:web_1).update!(server: @server)
 

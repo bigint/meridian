@@ -118,6 +118,7 @@ Git holds your configs and their history. Meridian's database holds your account
 ## Known limits
 
 - Meridian trusts snapshots as reported. A server someone has taken over can lie about what it runs. It can't change Git.
+- A fleet token is one secret on many machines. Any machine that holds it can report as any other server that uses it. It can't report for a server that has a token of its own. Give servers you trust less their own tokens.
 - An agent with a plain `http://` `MERIDIAN_URL` sends its token unencrypted, and logs a warning at start unless Meridian is on the same machine.
 - A personal access token in `GITHUB_TOKEN` acts as its owner everywhere. Use it for a homelab, not production.
 

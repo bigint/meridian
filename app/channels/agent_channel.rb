@@ -63,6 +63,6 @@ class AgentChannel < ApplicationCable::Channel
       return unless token && machine_id && AgentToken.active.exists?(token.id) # revoked since the cable opened
 
       server = token.server || Server.find_by(machine_id: machine_id)
-      server if server&.machine_id == machine_id
+      server if server&.machine_id == machine_id && server.speaks_for?(token)
     end
 end

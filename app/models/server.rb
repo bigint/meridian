@@ -65,6 +65,13 @@ class Server < ApplicationRecord
     last_seen_at.present?
   end
 
+  # A server with a token of its own is spoken for by that token only. A
+  # fleet token is one secret on many machines, so any of them could claim
+  # to be any other: it may speak only for servers without a token of their own.
+  def speaks_for?(token)
+    !token.fleet? || !agent_tokens.active.exists?
+  end
+
   def stale?
     reporting? && last_seen_at < stale_after.ago
   end

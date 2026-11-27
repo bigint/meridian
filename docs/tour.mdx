@@ -69,7 +69,7 @@ The map, at `/map`, puts every server that has a location on a world map. Server
 
 <Screenshot name="map" alt="The world map: places as coloured dots, and lines between places that share apps" />
 
-Click a place to open it: its server's page when it has one server, or else the board filtered to its region. **Places** lists every place, worst first, with what runs there. The chips and **Filters** work as on the board.
+Click a place to open it: its server's page when it has one server, or else the board filtered to its region. **Places** lists every place, worst first, with what runs there. The **App** chips show one app's cells. **Filters** narrows the map by **App**, **Project**, **Region**, **Provider** and **Role**, as on the board.
 
 A server needs a location to appear. Its agent can send `lat` and `lng` labels, or you can set one on the server's page. The map lists the servers that have none. See [board and map](/guides/board-and-map).
 
@@ -133,9 +133,9 @@ See [servers and agents](/concepts/servers-and-agents).
 
 ## Activity
 
-**Activity**, at `/events`, is the audit log. It lists each change Meridian made and each look at logs or traffic, with who did it. Entries are grouped by day, newest first, 50 to a page.
+**Activity**, at `/events`, is the audit log. It lists each change Meridian made, with who did it. Entries are grouped by day, newest first, 50 to a page.
 
-<Screenshot name="activity" alt="The activity log: deploys, rollbacks and syncs grouped by day, each with who did it and its commit" />
+<Screenshot name="activity" alt="The activity log: deploys, rollbacks and project changes grouped by day, each with who did it and its commit" />
 
 Each entry shows a sentence, such as **Deployed shop · production to v42**. It also shows who did it, the action name such as `app.deploy`, and the commit. A link to the pull request shows where there is one.
 

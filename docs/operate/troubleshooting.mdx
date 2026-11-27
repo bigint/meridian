@@ -205,7 +205,6 @@ kamal accessory logs meridian_agent
     | Message | Why, and the fix |
     | --- | --- |
     | **Only the newest release can be rolled back** | Roll back reverts one [release](/reference/glossary#release), the newest. Deploy an older version instead. |
-    | **`<file>` changed after `<sha>`** | Git has a newer release than Meridian synced. Reload and try again. |
     | **Nothing to roll back to** | The release created the version file, so there is no earlier version. Deploy one. |
     | **has no version file yet: deploy a version first** | Redeploy runs the version in the version file, and there is none. Deploy a version. |
     | **has no meridian-deploy.yml workflow** | The repository has no CI workflow. Add it first. |

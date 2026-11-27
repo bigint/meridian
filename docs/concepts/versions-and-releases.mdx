@@ -49,7 +49,7 @@ With no version file, each commit to the app's config is a release instead. For 
 All three act on the version file. They are on the app's page. [Deploy and roll back](/guides/deploy) has the steps.
 
 - **Deploy** commits a new version to the file, on the default branch. Meridian refuses a version the file already holds, because a commit that changes nothing never starts the workflow.
-- **Roll back** undoes the newest release with a new commit. The file gets back the value it held before. The button appears once an app has at least two releases. To go back further, deploy the older version.
+- **Roll back** undoes the newest release with a new commit. The file gets back the value it held before. The button appears once an app has a version file and at least two releases. To go back further, deploy the older version.
 - **Redeploy** runs the deploy workflow again for the version in the file now. It commits nothing. Use it after you rotate a secret, or when a deploy failed for a reason outside the image.
 
 A deploy commit names the service and destination, then who pressed the button:

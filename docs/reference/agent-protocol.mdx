@@ -37,12 +37,12 @@ A snapshot is what one agent saw on one server at one moment. The agent sends it
 POST /agent/snapshots HTTP/1.1
 Authorization: Bearer meridian_…
 Content-Type: application/json
-User-Agent: meridian-agent/0.1.0
+User-Agent: meridian-agent/v0.1.5
 ```
 
 ```json
 {
-  "agent_version": "0.1.0",
+  "agent_version": "v0.1.5",
   "machine_id": "0123456789abcdef0123456789abcdef",
   "hostname": "app-1",
   "interval_seconds": 15,
@@ -172,7 +172,7 @@ GET /cable HTTP/1.1
 Authorization: Bearer meridian_…
 Origin: https://meridian.example.com
 Sec-WebSocket-Protocol: actioncable-v1-json
-User-Agent: meridian-agent/0.1.0
+User-Agent: meridian-agent/v0.1.5
 ```
 
 Meridian treats a connection with an `Authorization` header as an agent, and nothing else. It never falls back to a session cookie. Meridian refuses an unknown or revoked token.
@@ -191,7 +191,7 @@ Meridian rejects the subscription until the server exists, so the agent must sen
 | No frame for 10 seconds | Closes the line and reconnects. Action Cable pings every 3 seconds. |
 | `401` or `403` on the upgrade, or `{"type":"disconnect","reason":"unauthorized","reconnect":false}` | Logs it and waits 5 minutes. |
 
-Meridian checks the token again every 60 seconds. When you revoke a token, Meridian closes its open lines at once. Messages to Meridian can be at most 1 MiB.
+Meridian checks the token again every 60 seconds. When you revoke a token, Meridian closes its open lines at once. The agent accepts messages from Meridian of at most 1 MiB.
 
 ### Leases
 

@@ -34,7 +34,7 @@ Rails' Action Cable WebSocket, a connection that stays open so Meridian can push
 
 Live pages refresh through Turbo Streams: the board, the map and an app's page. Stats, logs and traffic stream through their own channels.
 
-Logs and traffic need a grant. The page creates that grant when it records the viewing in Activity. When you sign out, or change your password and end your other sessions, Meridian closes those sessions' open connections.
+Logs and traffic need a grant. The logs or traffic page creates that grant when it loads, for exactly what it shows, and it lasts 12 hours. When you sign out, or change your password and end your other sessions, Meridian closes those sessions' open connections.
 
 See [Agent protocol](/reference/agent-protocol#the-live-line).
 
@@ -89,9 +89,10 @@ Every other address is a page for you, in a browser. The rate limits in the **Wh
 | `POST /projects/:id/sync` | Sync now |
 | `POST /projects/:id/workflow` | Add CI workflow |
 | `/settings` | Settings |
+| `PATCH /settings/account` | Save the workspace name and where Meridian runs |
 | `PATCH /settings/user` | Save your name, email address and password |
 | `/session/new` | Sign in. 10 tries in 3 minutes. No sign-in needed. |
-| `/first_run` | Create your account, with the setup code. Gone once the account exists. No sign-in needed. |
+| `/first_run` | Create your account, with the setup code. Once the account exists, it sends you to the board. No sign-in needed. |
 
 ## No general API
 

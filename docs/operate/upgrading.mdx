@@ -4,12 +4,12 @@ description: "Move Meridian to a new release with Kamal, check it, and go back i
 icon: "circle-arrow-up"
 ---
 
-To upgrade, you deploy Meridian's new image with Kamal, as you deployed the first one. Each release publishes two images, tagged with the release and with `latest`:
+To upgrade, you deploy Meridian's new image with Kamal, as you deployed the first one. Each release publishes the app and agent images, tagged with the release and with `latest`:
 
 - `ghcr.io/bigint/meridian:<tag>`, the app.
 - `ghcr.io/bigint/meridian-agent:<tag>`, the agent.
 
-Pin a tag, such as `v0.1.0`, not `latest`. Then you choose when to upgrade.
+Pin a tag, such as `v0.1.5`, not `latest`. Then you choose when to upgrade.
 
 ## Before you upgrade
 
@@ -64,14 +64,14 @@ kamal logs
 Kamal keeps the last five app containers on the host, stopped. `kamal rollback` starts one of them again. To return to the previous release:
 
 ```bash
-kamal rollback v0.1.0
+kamal rollback v0.1.5
 ```
 
 `kamal rollback` doesn't undo migrations. If the older release can't read the migrated database, restore the backup you took before the upgrade.
 
 ## Upgrade agents
 
-The agent runs as a Kamal accessory in an infra repository's config, so you upgrade it there. Change its image tag, then run `kamal accessory reboot meridian_agent`. Meridian accepts snapshots from older agents, so agents and Meridian don't need the same release. See [Upgrade the agent](/guides/agent#upgrade-the-agent).
+The agent runs as a Kamal accessory in an infra repository's config, so you upgrade it there. Change its image tag, then run `kamal accessory reboot meridian_agent`. See [Upgrade the agent](/guides/agent#upgrade-the-agent).
 
 ## Update the CI workflow
 

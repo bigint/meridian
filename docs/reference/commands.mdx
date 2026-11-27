@@ -62,7 +62,7 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
   Meridian runs it in a separate process with an empty environment. It runs inside a temporary folder that holds only the files Meridian fetched from Git.
 
   ```bash
-  echo '{"configs":[{"path":"config/deploy.yml","destination":null}]}' | bin/kamal-parse
+  echo '{"files":{"config/deploy.yml":"service: web\n..."},"configs":[{"path":"config/deploy.yml","destination":null}]}' | bin/kamal-parse
   ```
 </ResponseField>
 
@@ -108,6 +108,7 @@ The other files in `bin/` are the standard Rails and gem launchers: `bin/rails`,
 | --- | --- |
 | `ruby script/error_pages.rb` | Writes the static error pages in `public/` (`400`, `404`, `406-unsupported-browser`, `422`, `500`) and `public/error-pages.css`. |
 | `bin/rails runner script/world_map.rb ne_110m_land.geojson` | Rebuilds `app/assets/images/world.svg` from Natural Earth's land outlines. |
+| `bin/rails runner script/smoke_parse.rb` | Parses a small Kamal config through Meridian's parser, and fails if it doesn't parse. CI runs it inside the built image. |
 | `ruby script/docs_changelog.rb` | Writes `docs/changelog.mdx` from `CHANGELOG.md`. `bin/docs` runs it. |
 
 ## The agent

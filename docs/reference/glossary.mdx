@@ -18,7 +18,7 @@ A Kamal accessory: a database, a cache or a tunnel connector that a config runs 
 
 ## Activity
 
-The page that lists every event. That is each change Meridian made, and each time someone read logs or traffic. See [Activity events](/reference/activity-events).
+The page that lists every event: each change Meridian made, and who asked for it. See [Activity events](/reference/activity-events).
 
 ## Agent
 
@@ -74,7 +74,7 @@ The difference between what Git says should run and what the agent sees running.
 
 ## Edge config
 
-The accessories-only config that runs a tunnel's connectors. It is `deploy/edge.yml`, or wherever the config paths put it.
+The accessories-only config that runs a tunnel's connectors. With the default config paths it is `config/deploy-edge.yml`. Otherwise it goes wherever the config paths put it.
 
 ## Event
 
@@ -202,7 +202,7 @@ The repository an app is built from, named by the `meridian.source` label. The a
 
 ## Sync
 
-Meridian reading a project's configs and version files from Git. It runs on each push, every 30 seconds, and when you press **Sync now**.
+Meridian reading a project's configs and version files from Git. It runs every 30 seconds, when you press **Sync now**, and when you save new project settings.
 
 ## Tail lease
 

@@ -196,25 +196,7 @@ To see what the agent would send without sending it, run `meridian-agent -print`
   </Step>
 </Steps>
 
-The reboot leaves a gap of a few seconds with no snapshot, well under the 45 seconds before a server turns stale. Meridian and the agents don't need the same release. Meridian accepts snapshots from older agents, and an agent ignores messages it doesn't know.
-
-<Accordion title="Your accessories have no network: meridian line">
-  Then both accessories run on the `kamal` network, where app containers can reach the socket proxy. Move them:
-
-  1. Create the network on every server:
-
-     ```bash
-     kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
-     ```
-
-  2. Add `network: meridian` to both `meridian_docker` and `meridian_agent`.
-  3. Reboot both:
-
-     ```bash
-     kamal accessory reboot meridian_docker
-     kamal accessory reboot meridian_agent
-     ```
-</Accordion>
+The reboot leaves a gap of a few seconds with no snapshot, well under the 45 seconds before a server turns stale.
 
 ## If something goes wrong
 

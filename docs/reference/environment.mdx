@@ -191,4 +191,4 @@ The workflow passes every other repository secret to the Kamal step as an enviro
   When it is unset, `config/boot.rb` sets it to Meridian's `Gemfile`. The config parser always gets Meridian's `Gemfile`.
 </ResponseField>
 
-`bin/kamal-parse` reads your Kamal configs, and it runs with an empty environment. Meridian passes it only `BUNDLE_PATH`, `BUNDLE_WITHOUT`, `BUNDLE_DEPLOYMENT`, `BUNDLE_FROZEN`, `GEM_HOME` and `GEM_PATH`. It adds its own `BUNDLE_GEMFILE`, `PATH`, `HOME` and `LANG`. So ERB code in a Kamal config can't read any variable on this page. See [Security](/operate/security).
+`bin/kamal-parse` reads your Kamal configs, and it runs with an empty environment. Meridian passes it only `BUNDLE_PATH`, `BUNDLE_WITHOUT`, `BUNDLE_DEPLOYMENT`, `BUNDLE_FROZEN`, `BUNDLE_APP_CONFIG`, `GEM_HOME` and `GEM_PATH`. It adds its own `BUNDLE_GEMFILE`, `PATH`, `HOME` and `LANG`. So ERB code in a Kamal config can't read any variable on this page. See [Security](/operate/security).

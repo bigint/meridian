@@ -5,6 +5,11 @@ shared: &shared
   refresh_silent_agents:
     class: SilentAgentsJob
     schedule: every minute
+  # Destroyed, not deleted: the user's open cables hang up, and only those
+  # of sessions still active come back.
+  clear_expired_sessions:
+    command: "Session.expired.find_each(&:destroy)"
+    schedule: every hour at minute 42
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12

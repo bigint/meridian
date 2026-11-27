@@ -35,7 +35,7 @@ Meridian adds a second way to change the infra repository, but no new power. Any
 | Agent tokens | SHA-256 digests in SQLite. The token is shown once, when it is created. | Nobody |
 | Secret values | GitHub only, sealed with the repository's public key | Nobody. Meridian can't read them back. |
 | Passwords | bcrypt digests in SQLite | Nobody |
-| Sessions | A signed, permanent, `HttpOnly`, `SameSite=Lax` cookie, `Secure` over HTTPS | The browser |
+| Sessions | A signed `HttpOnly`, `SameSite=Lax` cookie, `Secure` over HTTPS. It ends after 14 days unused, and 90 days after sign-in at most. | The browser |
 | Live stats, logs and traffic | Nowhere. Relayed to the open page. | You, while the page is open |
 
 Git holds your configs and their history. Meridian's database holds your account, agent tokens, the activity trail and what agents last reported.
@@ -92,6 +92,7 @@ Git holds your configs and their history. Meridian's database holds your account
   <Accordion title="Access ends at once">
     - Revoking an agent token closes its open connections. Meridian also checks each agent connection's token again every 60 seconds.
     - Signing out closes your open streams.
+    - A session ends after 14 days unused, and 90 days after sign-in at most, however often it is used.
     - A new password signs you out of every other session, and closes the streams those sessions had open.
   </Accordion>
   <Accordion title="Everything has a limit">

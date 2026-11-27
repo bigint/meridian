@@ -17,6 +17,14 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
     assert_nil connection.agent_token
   end
 
+  test "an expired session's cookie is rejected" do
+    session = users(:ada).sessions.create!
+    session.update_columns(updated_at: (Session::IDLE_TIMEOUT + 1.minute).ago)
+    cookies.signed[:session_id] = session.id
+
+    assert_reject_connection { connect }
+  end
+
   test "an unknown or revoked token is rejected" do
     assert_reject_connection { connect headers: { "Authorization" => "Bearer nope" } }
     assert_reject_connection { connect headers: { "Authorization" => "Bearer meridian_revokedtoken" } }

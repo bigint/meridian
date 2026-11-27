@@ -19,7 +19,7 @@ module ApplicationCable
       end
 
       def user_from_session
-        Session.find_by(id: cookies.signed[:session_id])&.user
+        Session.resume(cookies.signed[:session_id])&.user
       end
   end
 end

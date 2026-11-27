@@ -39,4 +39,42 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     assert_empty cookies[:session_id]
   end
+
+  test "a session unused for longer than the idle timeout is over" do
+    sign_in_as(@user)
+    session = Current.session
+    session.update_columns(updated_at: (Session::IDLE_TIMEOUT + 1.minute).ago)
+
+    get root_path
+
+    assert_redirected_to new_session_path
+    Session.expired.find_each(&:destroy)
+    assert_not Session.exists?(session.id)
+  end
+
+  test "a session in use still ends at its maximum age" do
+    sign_in_as(@user)
+    Current.session.update_columns(created_at: (Session::MAX_AGE + 1.minute).ago, updated_at: 1.minute.ago)
+
+    get root_path
+
+    assert_redirected_to new_session_path
+  end
+
+  test "using a session moves it on, at most once per touch interval" do
+    sign_in_as(@user)
+    session = Current.session
+    session.update_columns(updated_at: 2.hours.ago)
+
+    get root_path
+    assert_response :success
+    assert_in_delta Time.current, session.reload.updated_at, 5.seconds
+    assert cookies[:session_id].present?
+
+    touched = session.updated_at
+    travel 10.minutes do
+      get root_path
+      assert_equal touched, session.reload.updated_at
+    end
+  end
 end

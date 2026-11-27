@@ -59,7 +59,7 @@ const METRICS = {
   disk: bytesUsed("disk_used", "disk_total")
 }
 
-const STATUS = { connecting: "Connecting…", live: "Live", paused: "Paused, the agent stopped sending" }
+const STATUS = { connecting: "Connecting…", live: "Live", paused: "Paused: the agent stopped sending" }
 
 function level(percentage) {
   if (percentage == null) return null

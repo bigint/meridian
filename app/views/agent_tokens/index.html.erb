@@ -1,5 +1,5 @@
 <% content_for :title, "Agents" %>
-<%= page_header "Agents", meta: "Each server runs a small agent that reports its containers. A token lets it report; revoke the token to cut it off." %>
+<%= page_header "Agents", meta: "Each server runs an agent that reports its containers to Meridian. It needs a token to report, and revoking the token stops it." %>
 
 <% if @token&.token %>
   <%= alert_box :warn, title: "Copy this token now" do %>
@@ -32,7 +32,7 @@
           </div>
           <label class="check">
             <%= form.check_box :fleet %>
-            <span>Fleet token, shared by many servers <span class="block txt-small txt-muted">Identity comes from each machine id. One token per server is safer: revoking it affects only that server.</span></span>
+            <span>Fleet token, shared by many servers <span class="block txt-small txt-muted">Meridian tells the servers apart by machine ID. One token per server is safer, because revoking it stops only that server.</span></span>
           </label>
           <div><%= form.submit "Create token", class: "btn btn--primary" %></div>
         <% end %>

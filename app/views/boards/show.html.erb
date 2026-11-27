@@ -75,7 +75,7 @@
       <% end %>
     <% else %>
       <%= render "boards/matrix", board: @board %>
-      <p class="txt-small txt-muted">Each cell is the version a server runs: green is what Git says, ≠ drifted, ✕ missing, dashed means its agent is quiet or Meridian can't tell. Click an app to open it.</p>
+      <p class="txt-small txt-muted">Each cell is the version a server runs. Green matches Git, ≠ is a different version, ✕ is missing, and dashed means the agent is silent or there is nothing to compare yet.</p>
     <% end %>
 
     <%= pagination label: "Page #{@board.page} of #{@board.pages}",

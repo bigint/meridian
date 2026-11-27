@@ -4,7 +4,7 @@
     (false hides the stdout/stderr switch). %>
 <% sources = log_sources(placements) %>
 <% channel = local_assigns.fetch(:channel) { { channel: "LogsChannel", placement_ids: placements.map(&:id), grant: live_grant("logs", *placements.map(&:id)) } } %>
-<% empty = local_assigns.fetch(:empty, "No lines yet. Whatever the container writes shows up here.") %>
+<% empty = local_assigns.fetch(:empty, "No lines yet. New output from the container appears here.") %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 
 <div class="logs" data-controller="logs" data-state="connecting" <%= tag.attributes(data: { multi: (sources.size > 1 || nil), wrap: true,

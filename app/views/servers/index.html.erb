@@ -1,5 +1,5 @@
 <% content_for :title, "Servers" %>
-<%= page_header "Servers", meta: "Every machine Git names or an agent reports from." do %>
+<%= page_header "Servers", meta: "Every server named in a Kamal config or reporting through an agent." do %>
   <%= form_with url: servers_path, method: :get, class: "filters items-center", data: { controller: "autosubmit" } do |form| %>
     <%= form.label :q, "Search servers", class: "sr-only" %><%= form.search_field :q, value: params[:q], placeholder: "Search servers" %>
     <label class="check items-center"><%= form.check_box :silent, { checked: @silent, data: { action: "autosubmit#submit" } }, "1", nil %> <span>Only silent agents</span></label>

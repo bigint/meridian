@@ -3,8 +3,8 @@ module BoardsHelper
   def getting_started
     [
       { title: "Connect your infra repository", detail: "Meridian reads your Kamal configs from it.", href: new_project_path, done: Project.exists? },
-      { title: "Put the agent on your servers", detail: "So the board shows what really runs, not only what Git says.", href: agent_tokens_path, done: Server.where.not(last_seen_at: nil).exists? },
-      { title: "Deploy something", detail: "Pick an app, type a version, press Deploy. CI does the rest.", href: apps_path, done: Deploy.exists? }
+      { title: "Put the agent on your servers", detail: "Then the board compares what each server runs with what Git says.", href: agent_tokens_path, done: Server.where.not(last_seen_at: nil).exists? },
+      { title: "Deploy something", detail: "Pick an app, type a version and press Deploy. Meridian commits it, and CI runs kamal deploy.", href: apps_path, done: Deploy.exists? }
     ]
   end
 
@@ -28,7 +28,7 @@ module BoardsHelper
         safe_join([ app, " runs its ", tag.code(item.cell.roles_in("stray").compact.join(", ").presence || "unnamed"), " role on ", server, ", but Git doesn't put that role there." ])
       end
     when "stale"
-      server ? safe_join([ server, "'s agent has gone quiet." ]) : safe_join([ tag.strong(pluralize(item.count, "agent")), " have gone quiet." ])
+      server ? safe_join([ server, "'s agent stopped reporting." ]) : safe_join([ tag.strong(pluralize(item.count, "agent")), " stopped reporting." ])
     end
   end
 
@@ -70,7 +70,7 @@ module BoardsHelper
     else
       badge("#{running} of #{pluralize(cells.size, "server")} run #{release&.short_version}", tone: :warn, data: tooltip)
     end
-    quiet.zero? ? status : status + tag.span(" · #{pluralize(quiet, "agent")} quiet, last report may be old", class: "txt-small txt-muted")
+    quiet.zero? ? status : status + tag.span(" · #{pluralize(quiet, "agent")} silent, so their last report may be out of date", class: "txt-small txt-muted")
   end
 
   # Under a region heading the region part of a name is noise:

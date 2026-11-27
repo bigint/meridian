@@ -55,6 +55,6 @@
       <span><svg viewBox="0 0 24 8" aria-hidden="true"><path d="M1 4 H23" class="flow deploy live"/></svg>Deploy in progress, flowing out</span>
     <% end %>
     <span>Worst state per place: <% MapsHelper::LEGEND_STATES.each do |state| %><%= state_badge state %><% end %></span>
-    <span>A number is how many servers share the spot. Names show for places that need you; hover for the rest.</span>
+    <span>A number counts the servers at that spot. Places that need attention are named; hover over the others to see theirs.</span>
   </figcaption>
 </figure>

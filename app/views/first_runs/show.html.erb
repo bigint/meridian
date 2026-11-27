@@ -9,7 +9,7 @@
   <div class="field">
     <%= label_tag :setup_code, "Setup code" %>
     <%= text_field_tag :setup_code, (User.setup_code if Rails.env.development?), required: true, autocomplete: "off", spellcheck: false, class: "mono" %>
-    <p class="field__hint">Proves you run this server. Find it in Meridian's log (<code>kamal app logs | grep "setup code"</code>), or run <code>bin/rails meridian:setup_code</code> on the server.</p>
+    <p class="field__hint">Proves you have access to the server. Find it in Meridian's log (<code>kamal app logs | grep "setup code"</code>), or run <code>bin/rails meridian:setup_code</code> on the server.</p>
     <%= field_errors(@user, :setup_code) %>
   </div>
   <div class="field">

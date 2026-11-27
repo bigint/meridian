@@ -9,7 +9,7 @@ module Drift
     "drifted" => "Running, but not the version Git says. A deploy may be rolling out, or stopped part-way.",
     "missing" => "Git says it should run here, but nothing is running.",
     "stray" => "Running here, but Git doesn't put it here.",
-    "stale" => "The server's agent has gone quiet, so Meridian can't tell what runs there right now.",
+    "stale" => "The server's agent stopped reporting, so its last report may be out of date.",
     "unknown" => "Nothing to compare yet: no agent on the server, or no version file for the app."
   }.freeze
 

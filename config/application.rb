@@ -28,6 +28,9 @@ module Meridian
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    # The release this build came from, set by the Docker build.
+    config.version = ENV.fetch("MERIDIAN_VERSION", "dev")
+
 
     # Configuration for the application, engines, and railties goes here.
     #

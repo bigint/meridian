@@ -38,6 +38,7 @@
       <div class="menu__section">
         <%= button_to session_path, method: :delete, class: "menu__item", form_class: "block" do %><%= icon :sign_out %>Sign out<% end %>
       </div>
+      <p class="menu__section account__version txt-small txt-muted">Meridian <%= Rails.configuration.version %></p>
     </div>
   </div>
 </div>

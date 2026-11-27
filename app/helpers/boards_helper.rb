@@ -66,14 +66,15 @@ module BoardsHelper
     return tag.span("Not assigned to any server yet.", class: "txt-muted") if cells.empty?
     return badge("No version file yet, so Meridian can't compare versions.") unless app.versioned?
 
-    release = app.latest_release&.version
-    running = cells.count { it.runs?(release) }
+    release = app.latest_release
+    running = cells.count { it.runs?(release&.version) }
     quiet = cells.count { it.state == "stale" }
+    tooltip = { tooltip: release&.version }
 
     status = if running == cells.size
-      badge("✓ Running #{release} everywhere", tone: :ok)
+      badge("✓ Running #{release&.short_version} everywhere", tone: :ok, data: tooltip)
     else
-      badge("#{running} of #{pluralize(cells.size, "server")} run #{release}", tone: :warn)
+      badge("#{running} of #{pluralize(cells.size, "server")} run #{release&.short_version}", tone: :warn, data: tooltip)
     end
     quiet.zero? ? status : status + tag.span(" · #{pluralize(quiet, "agent")} quiet, last report may be old", class: "txt-small txt-muted")
   end

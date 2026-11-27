@@ -16,7 +16,7 @@
         <%= link_to server.short_name, server, class: "mono txt-small", data: { tooltip: server.name } %>
         <span class="row__trail ml-auto">
           <code><%= versions.join(", ").presence || "–" %></code>
-          <%= badge(done ? "✓ Running #{deploy.version}" : "… Waiting", tone: (done ? :ok : nil)) %>
+          <%= badge(done ? "✓ Running #{deploy.version.first(12)}" : "… Waiting", tone: (done ? :ok : nil), data: { tooltip: (deploy.version if done) }) %>
         </span>
       </li>
     <% end %>

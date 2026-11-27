@@ -86,7 +86,7 @@ module BoardsHelper
 
   def deploy_heading(deploy)
     verb = { "rollback" => "Rollback to", "redeploy" => "Redeploy of" }.fetch(deploy.kind, "Deploy of")
-    safe_join([ verb, " ", tag.code(deploy.version), " · ", deploy.state_label ])
+    safe_join([ verb, " ", tag.code(deploy.version.first(12), data: { tooltip: deploy.version }) ])
   end
 
   def deploy_tone(deploy)

@@ -2,8 +2,8 @@
     agent reports the new version running. locals: deploy, app %>
 <div class="card">
   <div class="card__header">
-    <span class="flex items-center gap-s"><%= badge deploy.state_label, tone: deploy_tone(deploy) %><span><%= deploy_heading(deploy) %></span></span>
-    <span class="txt-small txt-muted"><%= time_ago(deploy.created_at) %></span>
+    <span class="flex flex-wrap items-center gap-s min-w-0"><%= badge deploy.state_label, tone: deploy_tone(deploy) %><span><%= deploy_heading(deploy) %></span></span>
+    <span class="txt-small txt-muted nowrap"><%= time_ago(deploy.created_at) %></span>
   </div>
   <div class="card__meta">
     <span>By <%= deploy.requested_by %></span>
@@ -13,9 +13,9 @@
   <ul>
     <% deploy.progress.each do |server, versions, done| %>
       <li class="row">
-        <%= link_to server.short_name, server, class: "mono txt-small", data: { tooltip: server.name } %>
-        <span class="row__trail ml-auto">
-          <code><%= versions.join(", ").presence || "–" %></code>
+        <%= link_to server.short_name, server, class: "mono txt-small nowrap", data: { tooltip: server.name } %>
+        <span class="row__trail row__trail--shrink ml-auto">
+          <%= tag.code versions.map { it.first(12) }.join(", ").presence || "–", class: "truncate", data: { tooltip: versions.join(", ").presence } %>
           <%= badge(done ? "✓ Running #{deploy.version.first(12)}" : "… Waiting", tone: (done ? :ok : nil), data: { tooltip: (deploy.version if done) }) %>
         </span>
       </li>

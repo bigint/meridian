@@ -36,6 +36,8 @@
   .row__title { color: var(--color-ink); }
   .row__meta { margin-block-start: 0.125rem; font-size: var(--text-s); color: var(--color-ink-muted); overflow-wrap: anywhere; }
   .row__trail { display: flex; flex-shrink: 0; align-items: center; gap: var(--space-s); font-size: var(--text-s); color: var(--color-ink-muted); }
+  /* A trail of long values (versions) that gives way before the row's name does. */
+  .row__trail--shrink { flex-shrink: 1; min-inline-size: 0; justify-content: flex-end; & > * { flex-shrink: 0; } & > .truncate { flex-shrink: 1; } }
   /* A row that leads with an icon in a soft tile, like a connection in Settings. */
   .connections { align-self: start; }
   .connection { align-items: flex-start; }

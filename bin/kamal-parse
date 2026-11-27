@@ -1,15 +1,18 @@
 #!/usr/bin/env ruby
 # Parses Kamal configs with Kamal's own code and prints what Meridian needs as JSON.
 #
-# Meridian runs this in a separate process with an empty environment, in a
-# temporary directory that holds only files fetched from the infra repository.
-# Kamal configs evaluate ERB, which is arbitrary Ruby, so it must never run
-# inside the Rails process where credentials live.
+# Meridian runs this in a separate process with an empty environment and, in
+# the image, as its own user (see KamalConfig). It writes the files it is
+# given into a temporary directory of its own and parses there. Kamal configs
+# evaluate ERB, which is arbitrary Ruby, so it must never run inside the
+# Rails process where credentials live.
 #
-#   echo '{"configs":[{"path":"config/deploy.yml","destination":null}]}' | bin/kamal-parse
+#   echo '{"files":{"config/deploy.yml":"service: web\n..."},"configs":[{"path":"config/deploy.yml","destination":null}]}' | bin/kamal-parse
 
 require "json"
+require "fileutils"
 require "pathname"
+require "tmpdir"
 require "psych"
 require "erb"
 require "kamal"
@@ -19,7 +22,25 @@ module KamalParse
   extend self
 
   def call(request)
-    { "configs" => request.fetch("configs").map { |entry| parse(entry.fetch("path"), entry["destination"]) } }
+    within_checkout(request.fetch("files")) do
+      { "configs" => request.fetch("configs").map { |entry| parse(entry.fetch("path"), entry["destination"]) } }
+    end
+  end
+
+  # Kamal reads configs relative to the working directory, and ERB in them
+  # sees HOME: both are a directory holding only the files sent.
+  def within_checkout(files)
+    Dir.mktmpdir("meridian-parse") do |dir|
+      files.each do |path, content|
+        target = File.expand_path(path, dir)
+        raise ArgumentError, "Refusing path outside checkout: #{path}" unless target.start_with?("#{dir}/")
+        FileUtils.mkdir_p(File.dirname(target))
+        File.write(target, content)
+      end
+
+      ENV["HOME"] = dir
+      Dir.chdir(dir) { yield }
+    end
   end
 
   def parse(path, destination)

@@ -225,3 +225,7 @@ An app's name on the board opens the app's page, and a place on the map opens it
 ## 47. Activity records changes, not page views
 
 Opening logs or traffic no longer adds `logs.viewed` or `traffic.viewed`. A page view is a read, and those rows buried the deploys and settings changes Activity is for. The upgrade deletes the old ones. Streams still need a signed grant from the page that shows them, so a channel streams nothing a page didn't hand out. This reverses the recorded viewing in [32](#32-live-logs-ride-the-same-line-opt-in-kamal-only-for-deployers).
+
+## 48. Configs are parsed as their own user
+
+`bin/kamal-parse` runs as `meridian-parse`, through `sudo`, which the image allows `rails` for `/usr/bin/env` only. An empty environment, as in [1](#1-configs-are-parsed-in-a-clean-subprocess), wasn't enough: as Meridian's own user, ERB could read `/proc/1/environ`, holding `SECRET_KEY_BASE` and the GitHub App's key, and read or write the SQLite databases. The entrypoint makes `storage`, `tmp` and `log` readable by `rails` only, and the parse writes its files into a folder of its own, from its standard input. A separate container would isolate more, the network too, but would make Meridian two containers to install.

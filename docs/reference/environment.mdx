@@ -41,6 +41,10 @@ env:
   The agent reads a variable with the same name. See [Agent](#agent).
 </ResponseField>
 
+<ResponseField name="MERIDIAN_PARSE_USER" type="string" default="meridian-parse">
+  The user Meridian parses Kamal configs as, through `sudo`, so ERB in a config can't read Meridian's databases or environment. The image creates the user and sets this. Unset, configs are parsed as Meridian's own user, which is only for development. See [Security](/operate/security#how-each-protection-works).
+</ResponseField>
+
 <ResponseField name="RAILS_LOG_LEVEL" type="string" default="info">
   How much Meridian logs in production: `debug`, `info`, `warn`, `error` or `fatal`. Meridian logs to standard output, which `kamal app logs` reads. `debug` can log personal data.
 </ResponseField>

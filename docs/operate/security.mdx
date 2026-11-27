@@ -73,9 +73,11 @@ Git holds your configs and their history. Meridian's database holds your account
     Meridian seals a value in the request that receives it, sends it to GitHub, and drops it. The value is filtered from logs, never stored on a model, never passed to a job and never broadcast. Tests check all of this with a known marker value.
   </Accordion>
   <Accordion title="Configs are parsed apart from Meridian">
-    ERB in a Kamal config is Ruby code from your infra repository. `bin/kamal-parse` runs it in a separate process with an empty environment. That process works in a temporary folder that holds only the files fetched from Git, so it can't read Meridian's keys or memory. Meridian kills a parse that runs over 60 seconds, and refuses a path that points outside the folder.
+    ERB in a Kamal config is Ruby code from your infra repository. `bin/kamal-parse` runs it in a separate process with an empty environment, in a temporary folder that holds only the files fetched from Git. Meridian kills a parse that runs over 60 seconds, and refuses a path that points outside the folder.
 
-    `bin/kamal-parse` strips the environment, but it is not a sandbox. So Meridian checks everything it writes into a Kamal config against a strict format first. That covers hosts from a URL, form fields, and host names that agents report. A host name can hold only letters, digits, `.`, `_`, `:` and `-`, so it can't carry ERB or YAML.
+    In the image, that process also runs as its own user, `meridian-parse`, through `sudo`. Meridian's databases, logs and temporary files are readable only by Meridian's user, and so is Meridian's environment, where `SECRET_KEY_BASE` and the GitHub App's key live. So ERB can't read Meridian's keys or data, or change them. Outside the image, in development, the parse runs as your own user. Don't start the container with `--security-opt no-new-privileges`: `sudo` can't change user then, and every parse fails.
+
+    The parse can still reach the network, and it is not a full sandbox. So Meridian checks everything it writes into a Kamal config against a strict format first. That covers hosts from a URL, form fields, and host names that agents report. A host name can hold only letters, digits, `.`, `_`, `:` and `-`, so it can't carry ERB or YAML.
   </Accordion>
   <Accordion title="Agents are read-only and narrow">
     The agent calls only list, inspect, stats and, with logs on, logs. It never sends environment variables, commands, entrypoints or mounts. It never sends Docker calls through an HTTP proxy. Live stats are numbers only.

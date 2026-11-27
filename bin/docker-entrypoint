@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+# Kamal configs are parsed as another user (KamalConfig). Nothing Meridian
+# writes, the databases above all, is for that user to read.
+chmod 700 /rails/storage /rails/tmp /rails/log
+
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare

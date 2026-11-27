@@ -16,7 +16,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libsodium23 sqlite3 && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libsodium23 sqlite3 sudo && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -64,9 +64,18 @@ FROM base
 ARG VERSION=dev
 ENV MERIDIAN_VERSION=$VERSION
 
-# Run and own only the runtime files as a non-root user for security
+# Run and own only the runtime files as a non-root user for security.
+# Kamal configs are parsed as a second user, which can read neither the
+# databases nor Meridian's environment (KamalConfig). rails may run only env,
+# and only as that user, which can do less than rails can.
 RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    groupadd --system --gid 1001 meridian-parse && \
+    useradd meridian-parse --system --uid 1001 --gid 1001 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin && \
+    printf '%s\n' 'Defaults:rails !use_pty, !lecture' 'rails ALL=(meridian-parse) NOPASSWD: /usr/bin/env' > /etc/sudoers.d/meridian-parse && \
+    chmod 0440 /etc/sudoers.d/meridian-parse && \
+    visudo --check --quiet
+ENV MERIDIAN_PARSE_USER=meridian-parse
 USER 1000:1000
 
 # Copy built artifacts: gems, application

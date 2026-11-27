@@ -1,14 +1,30 @@
 # Changelog
 
-## Unreleased
+## v0.1.3 (2026-11-27)
 
 ### Added
 
+- The account menu shows which Meridian release is running.
 - Syntax highlighting in every code block: Kamal configs as YAML, terminal commands as shell, an app's setup instructions as Markdown. It runs on the server with Rouge, follows the light and dark themes, and **Copy** still copies plain text.
+
+### Changed
+
+- Activity no longer records page views. Opening an app's logs, a container's logs or an app's traffic added a `logs.viewed` or `traffic.viewed` event every time, burying the changes Activity is for. Those events are gone, and upgrading deletes the ones already recorded.
 
 ### Removed
 
+- The board's app inspector. An app's name opens its page instead.
+- The map's place panel. A place links to its server, or to its region's board when it holds several.
+- The **Meridian itself** card on the Tunnels page.
 - GitHub webhooks. Meridian learns of pushes and CI runs only by polling GitHub every 30 seconds, as it already did without them. `POST /webhooks/github`, `GITHUB_APP_WEBHOOK_SECRET`, the **Webhooks** row under **Settings → Connections** and `bin/lab webhooks` are gone. GitHub no longer needs to reach Meridian, so in the App's settings untick **Webhook → Active**. See decision 44.
+
+### Fixed
+
+- Running badges on an app's page show a short version, with the full hash on hover.
+
+### Upgrading
+
+- Remove `GITHUB_APP_WEBHOOK_SECRET` from your `.kamal/secrets` and from `env.secret` in your `config/deploy.yml`, and untick **Webhook → Active** in your GitHub App.
 
 ## v0.1.2 (2026-11-27)
 

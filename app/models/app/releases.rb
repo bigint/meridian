@@ -10,7 +10,8 @@ module App::Releases
     version_path.present?
   end
 
-  # The commits that are releases Meridian doesn't know yet, read from Git.
+  # The commits that are releases Meridian doesn't know yet, read from Git,
+  # newest first as GitHub lists them.
   # Nothing is written, so sync can call this outside its transaction.
   def fetch_releases
     known = releases.pluck(:commit_sha).to_set
@@ -24,7 +25,8 @@ module App::Releases
   end
 
   def record_releases(fetched)
-    releases.create!(fetched)
+    # Oldest first, so the newest of commits in the same second has the highest id.
+    releases.create!(fetched.reverse)
   end
 
   def release_source_path

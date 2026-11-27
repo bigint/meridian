@@ -90,6 +90,7 @@ module BoardsHelper
   end
 
   def deploy_tone(deploy)
+    return :warn if deploy.unclaimed?
     return :info unless deploy.finished?
     deploy.succeeded? ? :ok : :bad
   end

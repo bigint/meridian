@@ -8,6 +8,11 @@
 - The Secrets page says when a value was last set, no longer by whom: Meridian has one user.
 - The agent snippet on the Agents page, and the quickstart, use v0.1.5 instead of v0.1.1.
 
+### Fixed
+
+- A deploy CI never starts a run for stops showing as deploying on the map after 15 minutes, and its card says **Not started by CI** instead of **Pending** forever.
+- Of several commits that landed in the same second, as a rebase-merge makes them, the newest is the app's newest release everywhere. The board and the app's page could each pick a different one.
+
 ### Upgrading
 
 - Rename `latitude`, `lon` or `longitude` in an agent's `MERIDIAN_LABELS` to `lat` and `lng`.

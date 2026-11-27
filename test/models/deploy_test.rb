@@ -38,4 +38,26 @@ class DeployTest < ActiveSupport::TestCase
     Deploy.from_workflow_run(@project, { "id" => 11, "head_sha" => "c" * 40, "status" => "completed", "conclusion" => "failure", "updated_at" => 1.minute.ago.iso8601 })
     assert_equal [ 12, "success" ], [ deploy.reload.ci_run_id, deploy.conclusion ]
   end
+
+  test "a deploy CI never picks up stops counting as under way, and says so" do
+    deploy = @app.deploys.create!(version: "v43", commit_sha: "d" * 40)
+    assert_includes Deploy.active, deploy
+    assert_equal "Pending", deploy.state_label
+
+    travel Deploy::UNCLAIMED_AFTER + 1.minute do
+      assert_not_includes Deploy.active, deploy
+      assert deploy.unclaimed?
+      assert_equal "Not started by CI", deploy.state_label
+    end
+  end
+
+  test "a deploy CI is running stays under way however long it takes" do
+    deploy = @app.deploys.create!(version: "v43", commit_sha: "d" * 40)
+    Deploy.from_workflow_run(@project, { "id" => 11, "head_sha" => "d" * 40, "status" => "in_progress" })
+
+    travel 2.hours do
+      assert_includes Deploy.active, deploy
+      assert_not deploy.reload.unclaimed?
+    end
+  end
 end

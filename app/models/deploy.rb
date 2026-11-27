@@ -3,13 +3,17 @@
 # is read from agents, not stored: a server is done when it runs the version.
 class Deploy < ApplicationRecord
   STATUSES = %w[ pending queued in_progress completed ].freeze
+  # A deploy CI hasn't started a run for in this long never will: the
+  # workflow is missing, or the commit didn't trigger it.
+  UNCLAIMED_AFTER = 15.minutes
 
   belongs_to :app
   belongs_to :release, optional: true
   belongs_to :actor, class_name: "User", optional: true
 
   scope :recent, -> { order(created_at: :desc) }
-  scope :active, -> { where.not(status: "completed") }
+  # Under way: CI is running it, or may still pick it up.
+  scope :active, -> { where.not(status: "completed").where.not(ci_run_id: nil).or(where(ci_run_id: nil, created_at: UNCLAIMED_AFTER.ago..)) }
 
   after_commit -> { broadcast_refresh_later_to app }
 
@@ -66,8 +70,11 @@ class Deploy < ApplicationRecord
   def finished? = status == "completed"
   def succeeded? = conclusion == "success"
 
+  def unclaimed? = ci_run_id.nil? && created_at < UNCLAIMED_AFTER.ago
+
   def state_label
     if finished? then conclusion.to_s.humanize.presence || "Finished"
+    elsif unclaimed? then "Not started by CI"
     else status.humanize
     end
   end

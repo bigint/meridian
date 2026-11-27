@@ -19,8 +19,10 @@ class BoardsHelperTest < ActionView::TestCase
   end
 
   test "deploy tone follows how it went" do
-    assert_equal :info, deploy_tone(Struct.new(:finished?, :succeeded?).new(false, false))
-    assert_equal :ok, deploy_tone(Struct.new(:finished?, :succeeded?).new(true, true))
-    assert_equal :bad, deploy_tone(Struct.new(:finished?, :succeeded?).new(true, false))
+    deploy = Struct.new(:finished?, :succeeded?, :unclaimed?)
+    assert_equal :info, deploy_tone(deploy.new(false, false, false))
+    assert_equal :warn, deploy_tone(deploy.new(false, false, true))
+    assert_equal :ok, deploy_tone(deploy.new(true, true, false))
+    assert_equal :bad, deploy_tone(deploy.new(true, false, false))
   end
 end

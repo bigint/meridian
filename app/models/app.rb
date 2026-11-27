@@ -15,7 +15,7 @@ class App < ApplicationRecord
   has_many :assignments, dependent: :delete_all
   has_many :servers, -> { distinct }, through: :assignments
   has_many :placements, dependent: :nullify
-  has_many :releases, -> { order(committed_at: :desc) }, dependent: :delete_all
+  has_many :releases, -> { newest_first }, dependent: :delete_all
 
   validates :service, :config_path, presence: true
   validates :kind, inclusion: { in: LABELLED_KINDS }

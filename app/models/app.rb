@@ -35,6 +35,11 @@ class App < ApplicationRecord
     "-d #{destination}" if destination.present?
   end
 
+  # A `kamal accessory` command for this config, as a person would type it.
+  def accessory_command(verb, name, *flags)
+    [ "kamal accessory", verb, name, "-c", config_path, destination_flag, *flags ].compact.join(" ")
+  end
+
   def latest_release
     releases.first
   end

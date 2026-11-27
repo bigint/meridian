@@ -18,9 +18,6 @@ Rails.application.configure do
   # Cache assets for far-future expiry since they are all digest stamped.
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
-  # Enable serving of images, stylesheets, and JavaScripts from an asset server.
-  # config.asset_host = "http://assets.example.com"
-
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   # Behind kamal-proxy with TLS (the default), trust it and require HTTPS.
   # A plain-HTTP MERIDIAN_URL (e.g. trying it locally) turns both off.

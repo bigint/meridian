@@ -15,9 +15,9 @@
 <% end %>
 
 <% @tunnels.each do |tunnel| %>
-  <section class="card" aria-labelledby="tunnel-<%= tunnel.object_id %>">
+  <section class="card" aria-labelledby="tunnel-<%= tunnel.project.id %>-<%= tunnel.secret_name.parameterize %>">
     <div class="card__header">
-      <h2 id="tunnel-<%= tunnel.object_id %>" class="flex items-center gap-s">
+      <h2 id="tunnel-<%= tunnel.project.id %>-<%= tunnel.secret_name.parameterize %>" class="flex items-center gap-s">
         <%= icon :tunnels %><span class="mono"><%= tunnel.name %></span>
         <span class="txt-small txt-muted"><%= tunnel.project.repo_full_name %> · <%= safe_join(tunnel.configs.map { tag.code(it.config_path) }, ", ") %></span>
       </h2>

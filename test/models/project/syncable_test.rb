@@ -1,6 +1,6 @@
 require "test_helper"
 
-class ProjectSyncTest < ActiveSupport::TestCase
+class Project::SyncableTest < ActiveSupport::TestCase
   setup do
     @project = projects(:infra)
     stub_github_repo(@project)

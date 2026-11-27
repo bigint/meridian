@@ -5,6 +5,8 @@ class Board
   LABELS = %w[ region provider role ].freeze
   VIEWS = %w[ apps servers ].freeze
   AUTO_GROUP_ABOVE = 30
+  # Worst first: a cell shows the worst health among its containers.
+  HEALTH = %w[ unhealthy starting healthy ].freeze
 
   # state is the worst of role_states: each role Git assigns here, and each
   # role running here that Git doesn't assign, has a state of its own.
@@ -99,7 +101,7 @@ class Board
   end
 
   # The values each label takes across the fleet, for the filter menus.
-  def label_values(key)
+  def self.label_values(key)
     Server.distinct.pluck(Arel.sql("json_extract(labels, '$.#{key}')")).compact.sort if LABELS.include?(key)
   end
 
@@ -179,21 +181,25 @@ class Board
         running = Placement.running.where(app_id: app_ids, server_id: server_ids).pluck(:app_id, :server_id, :role, :version, :health).group_by { it.first(2) }
         releases = Release.latest_per_app.where(app_id: apps.values.select(&:versioned?).map(&:id)).pluck(:app_id, :version).to_h
 
-        (assigned.keys | running.keys).filter_map do |pair|
-          app, server = apps[pair.first], servers[pair.last]
-          wanted = Array(assigned[pair]).map(&:third)
-          by_role = Array(running[pair]).group_by(&:third)
-          role_states = (wanted | by_role.keys).index_with do |role|
-            Drift.state(assigned: wanted.include?(role), versions: Array(by_role[role]).map { it[3] }.uniq, release: releases[app.id], server: server)
-          end.compact
-          state = Drift.worst(role_states.values)
-          next unless state
-
-          versions = Array(running[pair]).map { it[3] }.uniq
-          health = Array(running[pair]).map { it[4] }.compact.min_by { %w[ unhealthy starting healthy ].index(it) || 3 }
-          Cell.new(app: app, server: server, state: state, versions: versions, roles: role_states.keys.compact.sort, health: health,
-            release: releases[app.id], role_states: role_states)
+        (assigned.keys | running.keys).filter_map do |app_id, server_id|
+          pair = [ app_id, server_id ]
+          build_cell(apps[app_id], servers[server_id], wanted: Array(assigned[pair]).map(&:third), containers: Array(running[pair]), release: releases[app_id])
         end
       end
+    end
+
+    # wanted: the roles Git assigns the app on this server.
+    # containers: [ app_id, server_id, role, version, health ] for each one running.
+    # Nil when no role has a state to show.
+    def build_cell(app, server, wanted:, containers:, release:)
+      by_role = containers.group_by(&:third)
+      role_states = (wanted | by_role.keys).index_with do |role|
+        Drift.state(assigned: wanted.include?(role), versions: by_role.fetch(role, []).map(&:fourth).uniq, release: release, server: server)
+      end.compact
+      state = Drift.worst(role_states.values) or return
+
+      health = containers.filter_map(&:fifth).min_by { HEALTH.index(it) || HEALTH.size }
+      Cell.new(app: app, server: server, state: state, versions: containers.map(&:fourth).uniq, roles: role_states.keys.compact.sort,
+        health: health, release: release, role_states: role_states)
     end
 end

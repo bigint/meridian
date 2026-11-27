@@ -27,6 +27,15 @@ class Tunnel
     def partial? = !full? && !none?
   end
 
+  # The apps in #coverage that every connector's server runs (served), that
+  # only some do (gaps), and that none does (elsewhere).
+  module Covering
+    def served = coverage.select(&:full?)
+    def gaps = coverage.select(&:partial?)
+    def elsewhere = coverage.select(&:none?)
+  end
+  include Covering
+
   attr_reader :project, :secret_name, :connectors, :secret
 
   def initialize(project, secret_name, connectors, secret:, apps:, servers:)
@@ -43,14 +52,11 @@ class Tunnel
   def missing = connectors.select { it.state == :missing }
 
   def coverage = @coverage ||= Tunnel.coverage(@apps, connector_hosts, @servers)
-  def served = coverage.select(&:full?)
-  def gaps = coverage.select(&:partial?)
-  def elsewhere = coverage.select(&:none?)
   # Meridian can't see Cloudflare's routes, so an app missing from a
   # connector's server is advice, not a problem: it may not be routed here.
   def problems? = state != :running
 
-  def boot_command(connector) = Accessory.boot_command(connector.config, connector.name)
+  def boot_command(connector) = connector.config.accessory_command("boot", connector.name)
 
   # Problems first. A handful of queries however many tunnels there are.
   def self.all
@@ -80,7 +86,7 @@ class Tunnel
   # Every app with a hostname, and the hosts among these it doesn't run on.
   # Only roles behind kamal-proxy count: on a server that runs just the
   # app's workers, kamal-proxy has no route for it and answers 404.
-  def self.coverage(apps, hosts, servers)
+  def self.coverage(apps, hosts, servers = Accessory.servers_by_host(hosts))
     wanted = hosts.to_h { [ it, servers[it]&.id ] }
     apps.select { it.hostnames.any? }.map do |app|
       on = proxied_servers(app).map(&:id)

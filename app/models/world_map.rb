@@ -143,6 +143,15 @@ class WorldMap
     end
   end
 
+  # Places that need attention, by state, in the order to look at them.
+  def problems = sites.group_by(&:state).slice(*Drift::ATTENTION)
+
+  # Every place, those that need attention first, then those being deployed to.
+  def places = sites.sort_by { [ Drift::ATTENTION_RANK.fetch(it.state, Drift::ATTENTION.size), deploying?(it) ? 0 : 1, it.name ] }
+
+  # How many configs run each service, for the app chips.
+  def services = App.deployable.group(:service).order(:service).count
+
   def stream_keys
     board.servers.values.map { Board.stream_key(it) }.uniq.presence || [ "all" ]
   end

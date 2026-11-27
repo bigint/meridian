@@ -1,6 +1,6 @@
 require "test_helper"
 
-class DeployableTest < ActiveSupport::TestCase
+class App::DeployableTest < ActiveSupport::TestCase
   HISTORY = { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ], [ "b" * 40, "v41\n" ] ] }
 
   setup do

@@ -3,8 +3,8 @@
 <% content_for :head do %><%= turbo_refreshes_with method: :morph, scroll: :preserve %><% end %>
 <% @map.stream_keys.each do |key| %><%= turbo_stream_from :board, key %><% end %>
 <% sites = @map.sites %>
-<% services = App.deployable.distinct.order(:service).pluck(:service) %>
-<% problems = sites.group_by(&:state).slice(*Drift::ATTENTION_RANK.keys) %>
+<% services = @map.services %>
+<% problems = @map.problems %>
 <% deploying = sites.count { @map.deploying?(it) } %>
 
 <%= page_header "Map", meta: "#{pluralize(sites.sum { it.servers.size }, "server")} in #{pluralize(sites.size, "place")}#{" · Meridian runs in #{@map.hub_name}" if @map.hub}" %>
@@ -12,10 +12,10 @@
 <div class="chips">
   <% if services.size.between?(2, 8) %>
     <span class="chips__label">App</span>
-    <%= chip "All", services.size, current: @map.filters[:service].blank?, href: map_path(request.query_parameters.except("service")) %>
-    <% services.each do |service| %>
-      <%= chip service, App.deployable.where(service: service).count, current: @map.filters[:service] == service,
-            href: map_path(request.query_parameters.merge(service: (@map.filters[:service] == service ? nil : service))) %>
+    <%= chip "All", services.size, current: @map.filters[:service].blank?, href: current_path_with(service: nil) %>
+    <% services.each do |service, count| %>
+      <%= chip service, count, current: @map.filters[:service] == service,
+            href: current_path_with(service: (@map.filters[:service] == service ? nil : service)) %>
     <% end %>
     <span class="chips__rule" aria-hidden="true"></span>
   <% end %>
@@ -31,7 +31,7 @@
     <div class="field"><%= form.label :app %><%= form.search_field :app, value: @map.filters[:app], placeholder: "Service" %></div>
     <div class="field"><%= form.label :project %><%= form.select :project, @projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: @map.filters[:project] } %></div>
     <% Board::LABELS.each do |key| %>
-      <div class="field"><%= form.label key %><%= form.select key, Board.new.label_values(key), { include_blank: "All", selected: @map.filters[key.to_sym] } %></div>
+      <div class="field"><%= form.label key %><%= form.select key, Board.label_values(key), { include_blank: "All", selected: @map.filters[key.to_sym] } %></div>
     <% end %>
     <%= form.submit "Apply", name: nil, class: "btn" %>
     <% if @map.filters.any? %><%= link_to "Clear", map_path, class: "btn btn--plain" %><% end %>
@@ -49,7 +49,7 @@
   <% end %>
 
   <%= titled_section "Places", count: sites.size do %>
-    <% rows = sites.sort_by { [ Drift::ATTENTION_RANK.fetch(it.state, 9), @map.deploying?(it) ? 0 : 1, it.name ] } %>
+    <% rows = @map.places %>
     <div class="table-wrap">
       <table class="table">
         <thead><tr><th scope="col">Place</th><th scope="col">Region</th><th scope="col">Running</th><th scope="col">Agents</th></tr></thead>

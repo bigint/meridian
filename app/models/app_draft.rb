@@ -17,6 +17,13 @@ class AppDraft
         - Cf-Ray
   YAML
 
+  RAILS_SECRETS = <<~YAML
+
+    env:
+      secret:
+        - RAILS_MASTER_KEY
+  YAML
+
   attribute :project_id, :integer
   attribute :service, :string
   attribute :source_repo, :string
@@ -130,9 +137,12 @@ class AppDraft
 
     def config(with_servers:)
       Templates.render("kamal/app.yml",
-        service: service, description: DESCRIPTIONS.fetch(kind), image: image, kind: kind, source_repo: source_repo,
-        servers: with_servers ? servers_yaml + "\n" : "", proxy_host: with_servers ? "  host: #{hostname}\n" : "", app_port: port,
-        proxy_logging: tunnel ? PROXY_LOGGING : "", env: kind == "rails" ? "\nenv:\n  secret:\n    - RAILS_MASTER_KEY\n" : "", registry: registry, registry_username: registry_username)
+        service: service, description: DESCRIPTIONS.fetch(kind), kind: kind, source_repo: source_repo,
+        image: image, registry: registry, registry_username: registry_username, app_port: port,
+        servers: with_servers ? "#{servers_yaml}\n" : "",
+        proxy_host: with_servers ? "  host: #{hostname}\n" : "",
+        proxy_logging: tunnel ? PROXY_LOGGING : "",
+        env: kind == "rails" ? RAILS_SECRETS : "")
     end
 
     def servers_yaml

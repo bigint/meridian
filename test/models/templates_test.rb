@@ -2,7 +2,7 @@ require "test_helper"
 require "kamal"
 
 # The accessories Meridian hands out for its agent, as Kamal 2.12 boots them.
-class AgentAccessoriesTemplateTest < ActiveSupport::TestCase
+class TemplatesTest < ActiveSupport::TestCase
   test "the socket proxy and the agent run on their own network, never Kamal's" do
     accessories = YAML.safe_load(Templates.render("kamal/agent-accessories.yml", meridian_url: "https://meridian.example.com").gsub(/^  /, ""))
     config = Kamal::Configuration.new({ service: "web", image: "acme/web", servers: { "web" => [ "192.0.2.1" ] },

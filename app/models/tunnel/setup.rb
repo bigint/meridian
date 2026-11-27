@@ -5,6 +5,8 @@
 # page, the connectors in Git, the connectors running); the ones in
 # Cloudflare and .kamal/secrets it can't see.
 class Tunnel::Setup
+  include Tunnel::Covering
+
   SERVICE = "edge"
 
   attr_reader :project, :tunnel, :secret
@@ -33,10 +35,7 @@ class Tunnel::Setup
   def hosts = @picked ||= (@hosts.presence || candidates.map(&:hostname)).grep(Server::HOST_FORMAT)
 
   def apps = @apps ||= project.apps.deployable.includes(:servers).ordered.to_a
-  def coverage = @coverage ||= Tunnel.coverage(apps, hosts, Accessory.servers_by_host(hosts))
-  def served = coverage.select(&:full?)
-  def gaps = coverage.select(&:partial?)
-  def elsewhere = coverage.select(&:none?)
+  def coverage = @coverage ||= Tunnel.coverage(apps, hosts)
 
   def edge_config
     Templates.render("kamal/edge.yml", tunnel: name, secret: secret_name, config_path: config_path, service: SERVICE,

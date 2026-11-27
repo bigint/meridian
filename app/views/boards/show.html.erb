@@ -62,8 +62,8 @@
     </div>
 
     <% if @board.groups.empty? %>
-      <%= empty_state(Project.none? ? "Nothing to show yet" : "Nothing matches these filters", icon_name: :board) do %>
-        <% if Project.none? %>
+      <%= empty_state(@projects.none? ? "Nothing to show yet" : "Nothing matches these filters", icon_name: :board) do %>
+        <% if @projects.none? %>
           <%= link_to "Connect your infra repository", new_project_path, class: "btn btn--primary" %>
         <% else %>
           <%= link_to "Clear filters", board_path(view: @board.view), class: "btn" %>

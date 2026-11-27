@@ -3,6 +3,8 @@
 # and the agent streams batches into AgentChannel only while a lease runs.
 module LiveLogs
   CONTAINER_ID = LiveStats::CONTAINER_ID
+  # The most containers one page reads at once, merged.
+  MAX_PLACEMENTS = 20
   MAX_LINES = 1000
   MAX_TIME = 40
   MAX_MESSAGE = 8192 + 1 # the agent cuts at 8192 bytes and adds an ellipsis

@@ -4,7 +4,7 @@
 # under one of a watched app's services reach that app's readers; every other
 # app's requests and kamal-proxy's own lines stop here. Nothing is stored.
 module LiveTraffic
-  MAX_PROXIES = LogsChannel::MAX_PLACEMENTS
+  MAX_PROXIES = LiveLogs::MAX_PLACEMENTS
   STATUS_KEYS = %w[ dropped ended off refused ].freeze
 
   module_function

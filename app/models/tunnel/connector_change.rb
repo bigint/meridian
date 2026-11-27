@@ -7,6 +7,7 @@
 # every other accessory alone, before Meridian proposes it.
 class Tunnel::ConnectorChange
   include ActiveModel::Validations
+  include Tunnel::Covering
 
   ENTRY = /\A  ([\w.-]+):/ # a key directly under accessories:
   TOP_LEVEL = /\A[^\s#]/
@@ -31,12 +32,11 @@ class Tunnel::ConnectorChange
   # The config as it is on the default branch now.
   def source = @source ||= project.git.file(path).content
 
-  def coverage = @coverage ||= Tunnel.coverage(project.apps.deployable.includes(:servers).ordered.to_a, hosts, Accessory.servers_by_host(hosts))
-  def gaps = coverage.select(&:partial?)
+  def coverage = @coverage ||= Tunnel.coverage(project.apps.deployable.includes(:servers).ordered.to_a, hosts)
 
   # Kamal forgets a connector once its entry is gone, so remove it first.
-  def remove_commands = removed_connectors.map { "kamal accessory remove #{it.name} -c #{path} -y" }
-  def boot_commands = added.map { "kamal accessory boot #{name_for(it)} -c #{path}" }
+  def remove_commands = removed_connectors.map { config.accessory_command("remove", it.name, "-y") }
+  def boot_commands = added.map { config.accessory_command("boot", name_for(it)) }
 
   def content
     @content ||= sync_server_hosts(edit_accessories(source.lines)).join
@@ -116,20 +116,24 @@ class Tunnel::ConnectorChange
       connectors = tunnel.connectors.map(&:name).select { found.key?(it) }
       return lines if connectors.empty?
 
+      dropped = removed_connectors.map(&:name)
+      keep = connectors - dropped
+      # New entries go after the last connector kept, or where the first one was.
+      anchor = keep.last || connectors.first
+
+      # The entry to copy, from its key on, and a blank line between entries
+      # if the file puts one there.
       model = found.fetch(template.name)
       core = trim(lines[model[:key]...model[:range].end])
       gap = connectors.any? { lines[found[it][:range].end - 1].strip.empty? } ? [ "\n" ] : []
       fresh = added.flat_map { |host| gap + connector_lines(core, host) }
 
-      keep = connectors - removed_connectors.map(&:name)
-      anchor = keep.last || connectors.first
-      output = []
-      found.each do |name, entry|
+      output = found.flat_map do |name, entry|
         block = lines[entry[:range]]
         if name == anchor
-          output.concat(keep.include?(name) ? trim(block) + fresh + tail(block) : fresh.drop(gap.size) + tail(block))
-        elsif !removed_connectors.map(&:name).include?(name)
-          output.concat(block)
+          keep.include?(name) ? trim(block) + fresh + tail(block) : fresh.drop(gap.size) + tail(block)
+        elsif dropped.include?(name) then []
+        else block
         end
       end
       lines[0...found.values.first[:range].begin] + output + lines[found.values.last[:range].end..]

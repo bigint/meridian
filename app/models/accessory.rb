@@ -28,11 +28,7 @@ class Accessory
 
   def missing = instances.select { it.state == :missing }
 
-  def boot_command = Accessory.boot_command(app, name)
-
-  def self.boot_command(app, name)
-    "kamal accessory boot #{name} -c #{app.config_path}#{" -d #{app.destination}" if app.destination.present?}"
-  end
+  def boot_command = app.accessory_command("boot", name)
 
   # An app's accessories, each with an instance per host. Two queries.
   def self.for(app)

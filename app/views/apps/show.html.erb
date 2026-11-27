@@ -117,7 +117,7 @@
       <% if @app.deployable? %>
         <%= render "apps/deploys", app: @app %>
       <% else %>
-        <p class="txt-muted">This config only runs accessories, so it is never deployed. Start them with <code>kamal accessory boot all -c <%= @app.config_path %></code>.</p>
+        <p class="txt-muted">This config only runs accessories, so it is never deployed. Start them with <code><%= @app.accessory_command("boot", "all") %></code>.</p>
       <% end %>
     </div>
   </aside>

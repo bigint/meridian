@@ -5,7 +5,7 @@
     <div class="field"><%= form.label :app %><%= form.search_field :app, value: board.filters[:app], placeholder: "Service" %></div>
     <div class="field"><%= form.label :project %><%= form.select :project, projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: board.filters[:project] } %></div>
     <% Board::LABELS.each do |key| %>
-      <div class="field"><%= form.label key %><%= form.select key, board.label_values(key), { include_blank: "All", selected: board.filters[key.to_sym] } %></div>
+      <div class="field"><%= form.label key %><%= form.select key, Board.label_values(key), { include_blank: "All", selected: board.filters[key.to_sym] } %></div>
     <% end %>
     <div class="field"><%= form.label :group, "Group by" %><%= form.select :group, [ [ "Automatic", "" ], [ "Nothing", "none" ], *Board::LABELS.map { [ it.capitalize, it ] } ], { selected: board.filters[:group] } %></div>
     <%= form.submit "Apply", name: nil, class: "btn" %>

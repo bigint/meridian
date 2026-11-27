@@ -4,6 +4,6 @@ class Apps::LogsController < ApplicationController
 
   def show
     @app = App.find(params[:app_id])
-    @placements = @app.placements.includes(:server).running_first.limit(MAX_PLACEMENTS).to_a
+    @placements = @app.placements.current.includes(:server).running_first.limit(MAX_PLACEMENTS).to_a
   end
 end

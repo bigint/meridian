@@ -27,7 +27,7 @@ Open a server from **Servers**, the board, or the map. Its page has two live par
 
 Each tile has a small chart and `avg · peak` over the last 120 frames, about two minutes. A tile turns amber at 75% of its capacity and red at 90%.
 
-**Containers** lists every container with Kamal labels, as the agent last reported it. Each running container gets live **CPU**, **Memory**, and **Network** in and out per second. Hover a value for the exact figure, such as the cores in use or the container's memory limit.
+**Containers** lists what runs with Kamal labels, as the agent last reported it. Kamal keeps the stopped containers of earlier deploys for `kamal rollback`; those are left out. A stopped container shows only when nothing replaced it, such as an app that went down. Each running container gets live **CPU**, **Memory**, and **Network** in and out per second. Hover a value for the exact figure, such as the cores in use or the container's memory limit.
 
 The pill next to **Host** shows the stream's state:
 
@@ -64,7 +64,7 @@ Then reboot the accessory with `kamal accessory reboot meridian_agent`. The acce
 <Steps>
   <Step title="Pick what to read">
     - **One container**: on a server's page, click the logs icon at the end of the container's row in **Containers**.
-    - **One app, every server**: on an app's page, click **Logs**. The page merges up to 20 of the app's containers, from every server, running ones first.
+    - **One app, every server**: on an app's page, click **Logs**. The page merges up to 20 of the app's current containers, from every server, running ones first. Like **Containers**, it leaves out the stopped ones Kamal keeps for rollback.
   </Step>
   <Step title="Read">
     Each container starts with its last 200 lines, then new lines as they are written. Lines from several containers are merged by time. Each line has a coloured chip for its container.

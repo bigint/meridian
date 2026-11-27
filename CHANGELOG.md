@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- A server's **Containers** and an app's logs page show only what runs now. The stopped containers Kamal keeps for `kamal rollback`, and the `_replaced_` ones a redeploy leaves, are left out. A stopped container still shows when nothing replaced it, such as an app that went down.
+
 ## v0.1.4 (2026-11-27)
 
 ### Changed

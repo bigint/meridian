@@ -47,7 +47,7 @@
     <% end %>
 
     <%= titled_section "Containers", count: @placements.size do %>
-      <p class="txt-small txt-muted">Everything with Kamal labels, as the agent last reported it.</p>
+      <p class="txt-small txt-muted">What runs with Kamal labels, as the agent last reported it. Stopped containers Kamal keeps for rollback are left out.</p>
       <div class="table-wrap">
         <table class="table">
           <thead>

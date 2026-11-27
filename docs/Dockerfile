@@ -23,7 +23,7 @@ COPY script/docs_changelog.rb script/
 COPY docs/ docs/
 RUN ruby script/docs_changelog.rb > /dev/null
 
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22-slim AS build
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26-slim AS build
 ARG MINT_VERSION
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y unzip && \

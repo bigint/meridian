@@ -12,10 +12,10 @@
 <div class="chips">
   <% if services.size.between?(2, 8) %>
     <span class="chips__label">App</span>
-    <%= chip "All", services.size, current: @map.filters[:service].blank?, href: map_path(request.query_parameters.except("service", "place")) %>
+    <%= chip "All", services.size, current: @map.filters[:service].blank?, href: map_path(request.query_parameters.except("service")) %>
     <% services.each do |service| %>
       <%= chip service, App.deployable.where(service: service).count, current: @map.filters[:service] == service,
-            href: map_path(request.query_parameters.except("place").merge(service: (@map.filters[:service] == service ? nil : service))) %>
+            href: map_path(request.query_parameters.merge(service: (@map.filters[:service] == service ? nil : service))) %>
     <% end %>
     <span class="chips__rule" aria-hidden="true"></span>
   <% end %>
@@ -38,48 +38,36 @@
   <% end %>
 <% end %>
 
-<div class="split">
-  <div class="split__main">
-    <%= render "maps/world", map: @map, selected: @selected %>
+<div class="stack-l">
+  <%= render "maps/world", map: @map %>
 
-    <% unless @map.hub %>
-      <%= alert_box do %><p>
-        <%= link_to "Set where Meridian runs", settings_account_path %>
-        to see agent reports and deploys flowing on the map.
-      </p><% end %>
-    <% end %>
+  <% unless @map.hub %>
+    <%= alert_box do %><p>
+      <%= link_to "Set where Meridian runs", settings_account_path %>
+      to see agent reports and deploys flowing on the map.
+    </p><% end %>
+  <% end %>
 
-    <%= titled_section "Places", count: sites.size do %>
-      <% rows = sites.sort_by { [ Drift::ATTENTION_RANK.fetch(it.state, 9), @map.deploying?(it) ? 0 : 1, it.name ] } %>
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr><th scope="col">Place</th><th scope="col">Region</th><th scope="col">Running</th><th scope="col">Agents</th></tr></thead>
-          <tbody>
-            <% rows.each do |site| %>
-              <tr>
-                <th scope="row"><%= link_to site.name, map_place_path(site), class: (site == @selected ? "txt-accent txt-strong" : nil), aria: { current: (site == @selected ? "true" : nil) } %></th>
-                <td class="mono txt-small nowrap"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
-                <td><div class="cells"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= version_cell cell %><% end %></div></td>
-                <td class="nowrap"><%= site.stale? ? badge("… quiet") : "reporting" %></td>
-              </tr>
-            <% end %>
-            <% if rows.none? %><tr><td colspan="4" class="table__empty">No server has a location yet.</td></tr><% end %>
-          </tbody>
-        </table>
-      </div>
-      <% if (unlocated = @map.unlocated).any? %>
-        <p class="txt-small txt-muted"><%= pluralize(unlocated.size, "server") %> without a location (<%= unlocated.first(5).map(&:short_name).join(", ") %><%= "…" if unlocated.size > 5 %>). Add <code>lat=…,lng=…</code> to <code>MERIDIAN_LABELS</code> on their agent, or set it on the server page.</p>
-      <% end %>
-    <% end %>
-  </div>
-
-  <aside class="split__aside" aria-label="Selected place">
-    <div id="place" class="panel">
-      <% if @selected %>
-        <%= render "maps/place", map: @map, site: @selected %>
-      <% else %>
-        <p class="txt-muted">No server has a location yet. Agents report one with <code>lat</code> and <code>lng</code> labels, or set it on a server's page.</p>
-      <% end %>
+  <%= titled_section "Places", count: sites.size do %>
+    <% rows = sites.sort_by { [ Drift::ATTENTION_RANK.fetch(it.state, 9), @map.deploying?(it) ? 0 : 1, it.name ] } %>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th scope="col">Place</th><th scope="col">Region</th><th scope="col">Running</th><th scope="col">Agents</th></tr></thead>
+        <tbody>
+          <% rows.each do |site| %>
+            <tr>
+              <th scope="row"><%= link_to site.name, place_path(site) %></th>
+              <td class="mono txt-small nowrap"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
+              <td><div class="cells"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= version_cell cell %><% end %></div></td>
+              <td class="nowrap"><%= site.stale? ? badge("… quiet") : "reporting" %></td>
+            </tr>
+          <% end %>
+          <% if rows.none? %><tr><td colspan="4" class="table__empty">No server has a location yet.</td></tr><% end %>
+        </tbody>
+      </table>
     </div>
-  </aside>
+    <% if (unlocated = @map.unlocated).any? %>
+      <p class="txt-small txt-muted"><%= pluralize(unlocated.size, "server") %> without a location (<%= unlocated.first(5).map(&:short_name).join(", ") %><%= "…" if unlocated.size > 5 %>). Add <code>lat=…,lng=…</code> to <code>MERIDIAN_LABELS</code> on their agent, or set it on the server page.</p>
+    <% end %>
+  <% end %>
 </div>

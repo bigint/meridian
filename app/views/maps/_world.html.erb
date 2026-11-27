@@ -1,6 +1,6 @@
 <%# Servers on a world map: places, shared-app links, and Meridian's own
     traffic in and out. Geometry comes from WorldMap.
-    locals: map, selected (a site) %>
+    locals: map %>
 <% sites, links, flows, hub = map.sites, map.links, map.flows, map.hub %>
 <figure class="world">
   <div class="world__frame">
@@ -28,9 +28,9 @@
 
       <g class="world__sites">
         <% sites.each do |site| %>
-          <%= link_to map_place_path(site), class: site_class(map, site, selected),
+          <%= link_to place_path(site), class: site_class(map, site),
                 data: { controller: "svg-link", action: "svg-link#visit", turbo_prefetch: false, tooltip: site_title(map, site) },
-                aria: { label: site_title(map, site), current: (site == selected ? "true" : nil) } do %>
+                aria: { label: site_title(map, site) } do %>
             <g transform="translate(<%= site.x %> <%= site.y %>)">
               <circle r="<%= map.radius(site) %>"/>
               <text class="symbol" dy="0.35em"><%= site_text(map, site) %></text>
@@ -40,7 +40,7 @@
       </g>
 
       <g class="world__labels" aria-hidden="true">
-        <% map_labels(map, selected).each do |label, site| %>
+        <% map_labels(map).each do |label, site| %>
           <% if label.leader %><line x1="<%= label.leader[0] %>" y1="<%= label.leader[1] %>" x2="<%= label.x %>" y2="<%= label.y %>"/><% end %>
           <text x="<%= label.x %>" y="<%= label.y %>" dy="0.35em" text-anchor="<%= label.anchor %>" class="<%= site ? "place" : "hub" %>"><%= label.text %></text>
         <% end %>

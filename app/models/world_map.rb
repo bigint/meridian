@@ -100,26 +100,12 @@ class WorldMap
     end
   end
 
-  def site(key) = sites.find { it.key.to_s == key.to_s }
-
-  # The place shown in the side panel when none was asked for: the one most
-  # in need of attention, else the biggest.
-  def default_site
-    sites.min_by { [ Drift::ATTENTION_RANK.fetch(it.state, 9), deploying?(it) ? 0 : 1, -it.servers.size, it.name ] }
-  end
-
-  # Places that share an app with this one, and the apps they share.
-  def neighbours(site)
-    links.filter_map { |link| [ link.from == site ? link.to : link.from, link.apps ] if link.from == site || link.to == site }
-  end
-
   def deploying?(site) = deploying_keys.include?(site.key)
 
-  # Names on the map: Meridian, places that need you or are being deployed
-  # to, and the one you picked. The rest are named on hover.
-  def named_keys(selected = nil)
+  # Names on the map: Meridian and places that need you or are being
+  # deployed to. The rest are named on hover.
+  def named_keys
     keys = sites.select { it.state.in?(Drift::ATTENTION_RANK.keys) || deploying?(it) }.map(&:key)
-    keys << selected.key if selected
     keys << :hub if hub
     keys.uniq
   end

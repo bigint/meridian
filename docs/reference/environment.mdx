@@ -140,7 +140,7 @@ The [agent](/reference/glossary#agent) reads these in `agent/config.go`. If a va
 <ResponseField name="MERIDIAN_LABELS" type="string">
   Labels for the server, as `key=value` pairs separated by commas: `region=sgp,provider=ovh`. The board groups and filters by them.
 
-  `lat` and `lng` (or `latitude`, `lon`, `longitude`) place the server on the map. Meridian keeps up to 32 labels.
+  `lat` and `lng` place the server on the map. Meridian keeps up to 32 labels.
 </ResponseField>
 
 <ResponseField name="MERIDIAN_MACHINE_ID" type="string">
@@ -192,12 +192,3 @@ The workflow passes every other repository secret to the Kamal step as an enviro
 </ResponseField>
 
 `bin/kamal-parse` reads your Kamal configs, and it runs with an empty environment. Meridian passes it only `BUNDLE_PATH`, `BUNDLE_WITHOUT`, `BUNDLE_DEPLOYMENT`, `BUNDLE_FROZEN`, `GEM_HOME` and `GEM_PATH`. It adds its own `BUNDLE_GEMFILE`, `PATH`, `HOME` and `LANG`. So ERB code in a Kamal config can't read any variable on this page. See [Security](/operate/security).
-
-## Ignored
-
-Meridian and the agent don't read these names. Remove them from your configs.
-
-| Variable | Why |
-| --- | --- |
-| `MERIDIAN_PROXY_STATE` | The agent doesn't read kamal-proxy's state file. |
-| `OIDC_*` | Meridian has no OpenID Connect sign-in. You sign in with email and password. |

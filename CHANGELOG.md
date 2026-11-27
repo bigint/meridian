@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- An agent places its server on the map with the `lat` and `lng` labels only. `latitude`, `lon` and `longitude` are no longer read.
+- The Secrets page says when a value was last set, no longer by whom: Meridian has one user.
+- The agent snippet on the Agents page, and the quickstart, use v0.1.5 instead of v0.1.1.
+
+### Upgrading
+
+- Rename `latitude`, `lon` or `longitude` in an agent's `MERIDIAN_LABELS` to `lat` and `lng`.
+
 ## v0.1.5 (2026-11-27)
 
 ### Added

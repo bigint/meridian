@@ -58,7 +58,7 @@ It never sends environment variables, commands, entrypoints or mounts, which can
           - /var/run/docker.sock:/var/run/docker.sock:ro
 
       meridian_agent:
-        image: ghcr.io/bigint/meridian-agent:v0.1.1
+        image: ghcr.io/bigint/meridian-agent:v0.1.5
         roles: [ web ]
         network: meridian
         env:
@@ -154,7 +154,7 @@ A server can also report before Git lists it, or be rebuilt with a new machine I
 | `role` | Board filter and grouping, and label selectors for new apps |
 | `city` | Map place names, and the server's place |
 
-To put the server on the map, add `lat` and `lng` in decimal degrees. `latitude`, `longitude` and `lon` work too.
+To put the server on the map, add `lat` and `lng` in decimal degrees.
 
 ```yaml
 MERIDIAN_LABELS: region=sgp,provider=ovh,role=web,city=Singapore,lat=1.35,lng=103.82

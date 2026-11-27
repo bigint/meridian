@@ -42,7 +42,7 @@ The pill next to **Host** shows the stream's state:
 | Note under the tiles | Fix |
 | --- | --- |
 | `Host numbers need the agent's /proc mount.` | The agent can't read the host's `/proc`, so it sends only container numbers. Mount `/proc:/host/proc:ro` on the agent. The accessory template on the **Agents** page does this. |
-| `Nothing yet. The agent needs a version with live stats and a reachable /cable.` | No frame came in 15 seconds. Check three things: the agent is a version with live stats, `MERIDIAN_LIVE` isn't `0`, and your proxy passes WebSockets through to Meridian's `/cable`. |
+| `Nothing yet. The agent needs MERIDIAN_LIVE on, and a reachable /cable.` | No frame came in 15 seconds. Check two things: `MERIDIAN_LIVE` isn't `0`, and your proxy passes WebSockets through to Meridian's `/cable`. |
 
 ## Logs
 

@@ -1,4 +1,11 @@
 module ApplicationHelper
+  DOCS_URL = "https://meridian.yoginth.com"
+
+  # A link to a page of the docs site, by its path there, such as /guides/agent.
+  def docs_link(text, path)
+    link_to text, "#{DOCS_URL}#{path}", class: "link"
+  end
+
   # Whether this browser collapsed the sidebar to its icon rail.
   def sidebar_collapsed? = cookies[:sidebar] == "collapsed"
 

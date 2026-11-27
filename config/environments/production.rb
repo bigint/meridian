@@ -76,6 +76,6 @@ Rails.application.configure do
     config.hosts << host
     config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   elsif !ENV["SECRET_KEY_BASE_DUMMY"]
-    abort "MERIDIAN_URL must be the address Meridian is reached at, such as https://meridian.example.com. See docs/reference/environment.mdx."
+    abort "MERIDIAN_URL must be the address Meridian is reached at, such as https://meridian.example.com. See https://meridian.yoginth.com/reference/environment."
   end
 end

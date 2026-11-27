@@ -36,7 +36,7 @@
         MERIDIAN_URL: %{meridian_url}
         DOCKER_HOST: tcp://SERVICE-meridian_docker:2375
         MERIDIAN_LABELS: region=REGION,provider=PROVIDER
-        # Let deployers read Kamal containers' logs live in Meridian. Logs can
+        # Lets you read Kamal containers' logs live in Meridian. Logs can
         # hold secrets; they are relayed, never stored. Remove to turn off.
         MERIDIAN_LOGS: 1
       secret:

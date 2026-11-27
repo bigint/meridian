@@ -75,6 +75,6 @@
     <% connections.each do |connection| %>
       <%= render "settings/accounts/connection", connection: connection %>
     <% end %>
-    <div class="card__footer txt-small txt-muted">Read from the environment, never stored. See <code>docs/reference/environment.mdx</code>.</div>
+    <div class="card__footer txt-small txt-muted">Read from the environment, never stored. See <%= docs_link "Environment", "/reference/environment" %>.</div>
   </div>
 </div>

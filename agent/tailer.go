@@ -24,6 +24,11 @@ const (
 	// far as one slow WebSocket write can back Docker's stream up.
 	linesAhead     = 64
 	backlogTimeout = 15 * time.Second // the one-shot fetch of history
+	// Followers send at most maxTailed batches per batchEvery, 80 a second,
+	// of the 100 log frames a second Meridian accepts from an agent. History
+	// fetched beside a follow has its own batcher, so the fetches share this
+	// many a second between them, which keeps the total under the cap.
+	historyBatchesPerSecond = 10
 )
 
 // Why a tail is refused. Meridian shows these.
@@ -62,6 +67,7 @@ type tailer struct {
 
 	followers map[string]*follower // by full container id; owned by run
 	wg        sync.WaitGroup       // every follower and fetch goroutine
+	history   pacer                // spaces the batches of history fetches
 }
 
 func newTailer(docker *dockerClient, send func([]byte) bool, log *slog.Logger, now func() time.Time, enabled bool, self string) *tailer {
@@ -76,6 +82,7 @@ func newTailer(docker *dockerClient, send func([]byte) bool, log *slog.Logger, n
 		batchEvery:  batchEvery,
 		reopenAfter: reopenInterval,
 		followers:   map[string]*follower{},
+		history:     pacer{gap: time.Second / historyBatchesPerSecond},
 	}
 }
 
@@ -93,16 +100,11 @@ func (t *tailer) run(ctx context.Context, tails <-chan tailRequest) {
 		case <-ctx.Done():
 			return
 		case req := <-tails:
-			t.guard("tail", func() { t.handle(ctx, req) })
+			guard(t.log, "tail", func() { t.handle(ctx, req) })
 		case <-ticker.C:
-			t.guard("sweep", t.sweep)
+			guard(t.log, "sweep", t.sweep)
 		}
 	}
-}
-
-func (t *tailer) guard(what string, fn func()) {
-	defer recoverPanic(t.log, what)
-	fn()
 }
 
 // handle is the lease rule per container, as the sampler has it for a whole
@@ -168,8 +170,10 @@ func (t *tailer) sendJSON(v any) {
 	t.send(body)
 }
 
-func (t *tailer) newBatcher(id string) *batcher {
-	b := newBatcher(id, time.Now, t.sendBatch)
+// newBatcher batches on the wall clock, not t.now: batches pace what goes
+// on the wire, while t.now only measures leases and tests move it by hand.
+func (t *tailer) newBatcher(id string, emit func(logBatch)) *batcher {
+	b := newBatcher(id, time.Now, emit)
 	b.every = t.batchEvery
 	return b
 }
@@ -234,7 +238,7 @@ func (f *follower) run() {
 		return
 	}
 	t.log.Debug("following container logs", "container", short(f.id), "backlog", f.backlog)
-	b := t.newBatcher(f.id)
+	b := t.newBatcher(f.id, t.sendBatch)
 	from := since
 	for {
 		last := f.pump(body, since, b)
@@ -396,7 +400,11 @@ func (f *follower) fetchBacklog(n int) {
 		return
 	}
 	defer body.Close()
-	b := f.t.newBatcher(f.id)
+	b := f.t.newBatcher(f.id, func(lb logBatch) {
+		if f.t.history.wait(ctx) {
+			f.t.sendBatch(lb)
+		}
+	})
 	readLogs(body, f.tty, func(l logLine) bool {
 		for b.held() {
 			select {
@@ -410,6 +418,34 @@ func (f *follower) fetchBacklog(n int) {
 	})
 	if ctx.Err() == nil {
 		b.flush(false)
+	}
+}
+
+// pacer spaces calls to wait at least gap apart, across goroutines.
+type pacer struct {
+	gap time.Duration
+
+	mu   sync.Mutex
+	next time.Time // the earliest the next turn may start
+}
+
+// wait blocks until this caller's turn, and reports false if ctx ended first.
+func (p *pacer) wait(ctx context.Context) bool {
+	p.mu.Lock()
+	at := time.Now()
+	if p.next.After(at) {
+		at = p.next
+	}
+	p.next = at.Add(p.gap)
+	p.mu.Unlock()
+
+	timer := time.NewTimer(time.Until(at))
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
 	}
 }
 

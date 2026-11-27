@@ -41,6 +41,13 @@ func (a *agent) startLive(ctx context.Context) <-chan struct{} {
 	return done
 }
 
+// guard runs fn and turns a panic into a log line, so one bad step of a
+// loop never takes the loop down.
+func guard(log *slog.Logger, what string, fn func()) {
+	defer recoverPanic(log, what)
+	fn()
+}
+
 // recoverPanic is deferred at the top of every goroutine the live path
 // starts: a bug there must cost a log line, never the agent.
 func recoverPanic(log *slog.Logger, what string) {

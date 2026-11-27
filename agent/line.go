@@ -290,16 +290,7 @@ func (l *line) setLive(ws *wsConn) {
 // retryDelay is base doubled per failure past the first, capped at ceiling,
 // then jittered by ±20%.
 func retryDelay(base, ceiling time.Duration, failures int, r float64) time.Duration {
-	d := base
-	for i := 1; i < failures && d < ceiling; i++ {
-		d *= 2
-	}
-	return jittered(min(d, ceiling), r)
-}
-
-// jittered scales d by a factor in [0.8, 1.2) from r in [0, 1).
-func jittered(d time.Duration, r float64) time.Duration {
-	return time.Duration(float64(d) * (0.8 + 0.4*r))
+	return jittered(doubled(base, ceiling, failures-1), r)
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {

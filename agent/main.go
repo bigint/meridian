@@ -11,7 +11,6 @@ import (
 	"flag"
 	"log/slog"
 	"math/rand/v2"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -52,7 +51,7 @@ func main() {
 	a := &agent{
 		cfg:    cfg,
 		docker: docker,
-		http:   &http.Client{Timeout: postTimeout},
+		http:   newSnapshotClient(),
 		log:    logger,
 		rand:   rand.Float64,
 	}

@@ -115,7 +115,7 @@ func testAgent(t *testing.T, dockerHost string, cfg config) *agent {
 	}
 }
 
-var wantContainers = []Container{
+var wantContainers = []kamalContainer{
 	{
 		ID: strings.Repeat("d4", 32), Name: "kamal-proxy", Image: "basecamp/kamal-proxy:v0.10.3",
 		Kind: kindProxy, State: "running", StartedAt: "2026-11-16T00:00:00Z",
@@ -280,6 +280,7 @@ func TestNextDelay(t *testing.T) {
 		{3, 0.5, 120 * time.Second},
 		{5, 0.5, maxBackoff},
 		{100, 0.999999, maxBackoff},
+		{100, 0, 4 * time.Minute}, // jittered below the cap too, so a fleet spreads out
 	}
 	for _, tt := range tests {
 		got := nextDelay(15*time.Second, tt.failures, tt.r).Round(time.Second)
@@ -289,10 +290,21 @@ func TestNextDelay(t *testing.T) {
 	}
 }
 
+// A long interval is the agent's own pace, not a backoff: it is kept until
+// a failure, and the first failure retries within maxBackoff.
+func TestNextDelayKeepsAnIntervalLongerThanTheCap(t *testing.T) {
+	if got := nextDelay(10*time.Minute, 0, 0.5); got != 10*time.Minute {
+		t.Errorf("no failure: %s, want the 10m interval", got)
+	}
+	if got := nextDelay(10*time.Minute, 1, 0.999999); got != maxBackoff {
+		t.Errorf("one failure: %s, want %s", got, maxBackoff)
+	}
+}
+
 func TestEncodeCappedTruncatesContainers(t *testing.T) {
-	snap := Snapshot{AgentVersion: "test", MachineID: "m", Hostname: "h"}
+	snap := snapshot{AgentVersion: "test", MachineID: "m", Hostname: "h"}
 	for range 20000 {
-		snap.Containers = append(snap.Containers, Container{
+		snap.Containers = append(snap.Containers, kamalContainer{
 			ID: strings.Repeat("f", 64), Name: "web-web-production-" + shaProd, Image: "registry.example.com/acme/web:" + shaProd,
 			Service: "web", Role: "web", Destination: "production", Version: shaProd, Kind: kindApp, State: "running",
 		})
@@ -304,7 +316,7 @@ func TestEncodeCappedTruncatesContainers(t *testing.T) {
 	if !truncated || len(body) > maxPayload {
 		t.Fatalf("truncated=%v len=%d; want truncated and <= %d", truncated, len(body), maxPayload)
 	}
-	var got Snapshot
+	var got snapshot
 	if err := json.Unmarshal(body, &got); err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +331,7 @@ func TestEncodeCappedTruncatesContainers(t *testing.T) {
 }
 
 func TestEncodeCappedSmallSnapshotUntouched(t *testing.T) {
-	body, truncated, err := encodeCapped(Snapshot{MachineID: "m"}, maxPayload)
+	body, truncated, err := encodeCapped(snapshot{MachineID: "m"}, maxPayload)
 	if err != nil || truncated {
 		t.Fatalf("truncated=%v err=%v", truncated, err)
 	}
@@ -329,7 +341,7 @@ func TestEncodeCappedSmallSnapshotUntouched(t *testing.T) {
 }
 
 func TestEncodeCappedErrorsInsteadOfPanicking(t *testing.T) {
-	snap := Snapshot{Labels: map[string]string{"huge": strings.Repeat("x", 2*maxPayload)}, Containers: []Container{{Name: "a"}}}
+	snap := snapshot{Labels: map[string]string{"huge": strings.Repeat("x", 2*maxPayload)}, Containers: []kamalContainer{{Name: "a"}}}
 	if _, _, err := encodeCapped(snap, maxPayload); err == nil {
 		t.Fatal("want error when labels alone exceed the cap")
 	}
@@ -358,6 +370,28 @@ func TestPostSnapshotRejectsNon2xx(t *testing.T) {
 	defer srv.Close()
 	if err := postSnapshot(context.Background(), srv.Client(), srv.URL, "bad", []byte(`{}`)); err == nil {
 		t.Fatal("want error on 401")
+	}
+}
+
+// A redirect is a failure, never followed: following it would resend the
+// token, over plain http if that is where it points.
+func TestPostSnapshotDoesNotFollowRedirects(t *testing.T) {
+	var redirectedAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/elsewhere" {
+			redirectedAuth = r.Header.Get("Authorization")
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+		http.Redirect(w, r, "/elsewhere", http.StatusPermanentRedirect)
+	}))
+	defer srv.Close()
+	err := postSnapshot(context.Background(), newSnapshotClient(), srv.URL+postPath, "tok", []byte(`{}`))
+	if err == nil || !strings.Contains(err.Error(), "308") {
+		t.Fatalf("err = %v, want the 308 reported as an unexpected status", err)
+	}
+	if redirectedAuth != "" {
+		t.Fatal("the redirect was followed and the token sent again")
 	}
 }
 
@@ -410,9 +444,9 @@ func TestParseRetryAfter(t *testing.T) {
 
 func TestRunPostsImmediatelyAndStopsOnCancel(t *testing.T) {
 	_, host := startUnixDocker(t)
-	received := make(chan Snapshot, 1)
+	received := make(chan snapshot, 1)
 	meridian := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var s Snapshot
+		var s snapshot
 		json.NewDecoder(r.Body).Decode(&s)
 		select {
 		case received <- s:

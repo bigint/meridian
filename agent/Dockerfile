@@ -1,10 +1,13 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.27 AS build
+# The build stage runs on the builder's own platform and cross-compiles for
+# the target, so a multi-platform build never runs Go under emulation.
+FROM --platform=$BUILDPLATFORM golang:1.27 AS build
 WORKDIR /src
 COPY go.mod ./
 COPY *.go ./
 ARG VERSION=dev
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
+ARG TARGETOS TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath \
       -ldflags "-s -w -X main.version=${VERSION}" \
       -o /out/meridian-agent .
 

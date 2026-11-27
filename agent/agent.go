@@ -83,7 +83,7 @@ func (a *agent) snapshotBody(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("docker: %w", err)
 	}
-	snap := Snapshot{
+	snap := snapshot{
 		AgentVersion:    version,
 		MachineID:       a.cfg.machineID,
 		Hostname:        a.cfg.hostname,
@@ -99,6 +99,17 @@ func (a *agent) snapshotBody(ctx context.Context) ([]byte, error) {
 		a.log.Warn("snapshot truncated to fit payload cap", "limit_bytes", maxPayload, "containers_total", len(containers))
 	}
 	return body, nil
+}
+
+// newSnapshotClient bounds the whole POST. Like the live line's client, it
+// does not follow redirects: net/http would resend the Authorization header
+// to the same host over plain http, and turn the POST into a GET on a 301 or
+// 302. A redirect is reported as the unexpected status it is.
+func newSnapshotClient() *http.Client {
+	return &http.Client{
+		Timeout:       postTimeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
 }
 
 func postSnapshot(ctx context.Context, client *http.Client, endpoint, token string, body []byte) error {
@@ -153,16 +164,26 @@ func intervalSeconds(d time.Duration) int {
 	return max(int(d.Round(time.Second)/time.Second), 1)
 }
 
-// nextDelay is interval doubled per consecutive failure (capped at
-// maxBackoff), scaled by a jitter factor in [0.8, 1.2) from r in [0, 1).
+// nextDelay is interval doubled per consecutive failure, jittered by ±20%
+// from r in [0, 1). After a failure it is never more than maxBackoff; with
+// none it is the interval as configured, however long.
 func nextDelay(interval time.Duration, failures int, r float64) time.Duration {
-	d := interval
-	for i := 0; i < failures && d < maxBackoff; i++ {
+	if failures == 0 {
+		return jittered(interval, r)
+	}
+	return min(jittered(doubled(interval, maxBackoff, failures), r), maxBackoff)
+}
+
+// doubled is d doubled n times, but no more than ceiling. Both backoffs use
+// it: the snapshot loop's and the live line's.
+func doubled(d, ceiling time.Duration, n int) time.Duration {
+	for i := 0; i < n && d < ceiling; i++ {
 		d *= 2
 	}
-	d = time.Duration(float64(d) * (0.8 + 0.4*r))
-	if failures > 0 && d > maxBackoff {
-		d = maxBackoff
-	}
-	return d
+	return min(d, ceiling)
+}
+
+// jittered scales d by a factor in [0.8, 1.2) from r in [0, 1).
+func jittered(d time.Duration, r float64) time.Duration {
+	return time.Duration(float64(d) * (0.8 + 0.4*r))
 }

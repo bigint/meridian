@@ -18,8 +18,8 @@ const (
 	proxyContainerName = "kamal-proxy"
 )
 
-// Snapshot is the JSON document POSTed to Meridian.
-type Snapshot struct {
+// snapshot is the JSON document POSTed to Meridian.
+type snapshot struct {
 	AgentVersion string `json:"agent_version"`
 	MachineID    string `json:"machine_id"`
 	Hostname     string `json:"hostname"`
@@ -27,11 +27,12 @@ type Snapshot struct {
 	// Meridian knows how long a silence means the agent is gone.
 	IntervalSeconds int               `json:"interval_seconds"`
 	Labels          map[string]string `json:"labels"`
-	Containers      []Container       `json:"containers"`
+	Containers      []kamalContainer  `json:"containers"`
 	Truncated       bool              `json:"truncated,omitempty"`
 }
 
-type Container struct {
+// kamalContainer is one entry of a snapshot's containers.
+type kamalContainer struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Image       string `json:"image"`
@@ -52,9 +53,9 @@ type Container struct {
 // "<service>-<role>[-<destination>]-<version>" (kamal v2.12.0,
 // lib/kamal/configuration/role.rb and commands/app.rb). Accessories carry only
 // a service label ("<service>-<accessory>"). kamal-proxy is recognised by name.
-func classify(name string, labels map[string]string) (Container, bool) {
+func classify(name string, labels map[string]string) (kamalContainer, bool) {
 	service, role, destination := labels["service"], labels["role"], labels["destination"]
-	c := Container{Name: name, Service: service, Role: role, Destination: destination}
+	c := kamalContainer{Name: name, Service: service, Role: role, Destination: destination}
 	switch {
 	case service != "" && role != "":
 		c.Kind = kindApp
@@ -70,7 +71,7 @@ func classify(name string, labels map[string]string) (Container, bool) {
 	case service != "":
 		c.Kind = kindAccessory
 	default:
-		return Container{}, false
+		return kamalContainer{}, false
 	}
 	return c, true
 }
@@ -84,12 +85,12 @@ func containerName(names []string) string {
 
 // collectContainers lists every container, keeps Kamal's, and inspects each
 // one for state, health and start time.
-func collectContainers(ctx context.Context, docker *dockerClient) ([]Container, error) {
+func collectContainers(ctx context.Context, docker *dockerClient) ([]kamalContainer, error) {
 	listed, err := docker.listContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]Container, 0, len(listed))
+	out := make([]kamalContainer, 0, len(listed))
 	for _, l := range listed {
 		if _, ok := classify(containerName(l.Names), l.Labels); !ok {
 			continue
@@ -119,18 +120,18 @@ func collectContainers(ctx context.Context, docker *dockerClient) ([]Container, 
 		}
 		out = append(out, c)
 	}
-	slices.SortFunc(out, func(a, b Container) int { return strings.Compare(a.Name, b.Name) })
+	slices.SortFunc(out, func(a, b kamalContainer) int { return strings.Compare(a.Name, b.Name) })
 	return out, nil
 }
 
 // encodeCapped marshals s, dropping trailing containers until the document
 // fits in limit bytes.
-func encodeCapped(s Snapshot, limit int) ([]byte, bool, error) {
+func encodeCapped(s snapshot, limit int) ([]byte, bool, error) {
 	if s.Labels == nil {
 		s.Labels = map[string]string{}
 	}
 	if s.Containers == nil {
-		s.Containers = []Container{}
+		s.Containers = []kamalContainer{}
 	}
 	body, err := json.Marshal(s)
 	if err != nil || len(body) <= limit {

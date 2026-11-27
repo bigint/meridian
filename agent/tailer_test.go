@@ -1143,3 +1143,40 @@ func TestStartLiveFollowsLogsOnlyWhenTheyAreOnAndWarnsWhenLiveIsOff(t *testing.T
 		})
 	}
 }
+
+// History fetches share one pacer: however many goroutines send at once,
+// their turns are gap apart, and a cancelled wait gives up.
+func TestPacerSpacesTurnsAcrossGoroutines(t *testing.T) {
+	const gap, turns = 20 * time.Millisecond, 5
+	p := &pacer{gap: gap}
+	start := time.Now()
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var at []time.Duration
+	for range turns {
+		wg.Go(func() {
+			if p.wait(context.Background()) {
+				mu.Lock()
+				at = append(at, time.Since(start))
+				mu.Unlock()
+			}
+		})
+	}
+	wg.Wait()
+	slices.Sort(at)
+	if len(at) != turns {
+		t.Fatalf("%d of %d turns ran", len(at), turns)
+	}
+	// Each turn is booked gap after the one before, so the last cannot come
+	// sooner than this, however late any single timer wakes.
+	if want := (turns - 1) * gap; at[turns-1] < want {
+		t.Fatalf("%d turns took %v, want at least %v", turns, at[turns-1], want)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	p.next = time.Now().Add(time.Hour)
+	cancel()
+	if p.wait(ctx) {
+		t.Fatal("a cancelled wait took its turn")
+	}
+}

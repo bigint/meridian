@@ -82,14 +82,14 @@ func (s *sampler) run(ctx context.Context, watches <-chan int) {
 		case seconds := <-watches:
 			s.lease.watch(seconds)
 			if s.win == nil && s.lease.live() {
-				s.guard("start", func() { s.startLive(ctx) })
+				guard(s.log, "start", func() { s.startLive(ctx) })
 			}
 		case <-ticker.C:
 			if s.win != nil && !s.lease.live() {
 				s.stopLive()
 			}
 			if s.win != nil {
-				s.guard("frame", s.sendFrame)
+				guard(s.log, "frame", s.sendFrame)
 			}
 		}
 	}
@@ -105,7 +105,7 @@ func (s *sampler) startLive(ctx context.Context) {
 		t := time.NewTicker(s.reconcileEvery)
 		defer t.Stop()
 		for {
-			s.guard("reconcile", func() { s.reconcile(w) })
+			guard(s.log, "reconcile", func() { s.reconcile(w) })
 			select {
 			case <-w.ctx.Done():
 				return
@@ -121,13 +121,6 @@ func (s *sampler) stopLive() {
 		s.win.cancel()
 		s.win = nil
 	}
-}
-
-// guard runs fn and turns a panic into a log line, so one bad step never
-// takes the agent down.
-func (s *sampler) guard(what string, fn func()) {
-	defer recoverPanic(s.log, what)
-	fn()
 }
 
 // reconcile starts a stream for each running Kamal container that has none,

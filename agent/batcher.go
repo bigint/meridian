@@ -18,13 +18,16 @@ const (
 // the first line, and no more than budgetBytes of message (plus lineOverhead a
 // line) per second. What the budget refuses is counted and reported in the
 // next batch's dropped. Lines from history (the backlog) and live lines never
-// share a batch. Batches go out at most once per every, so Meridian's
-// per-agent frame cap holds: a caller that finds the batch held either waits
-// before adding more (history, which is bounded) or drops the line with skip,
-// which counts it like the budget's drops (live lines, which are not).
+// share a batch. Batches go out at most once per every, which keeps a
+// container's follow inside its share of Meridian's per-agent frame cap (the
+// tailer paces history fetched beside it): a caller that finds the batch held
+// either waits before adding more (history, which is bounded) or drops the
+// line with skip, which counts it like the budget's drops (live lines, which
+// are not).
 //
 // A batcher belongs to one goroutine; it never blocks and never queues beyond
-// the one batch it is building. emit decides what happens to a finished batch.
+// the one batch it is building. emit decides what happens to a finished batch,
+// and may wait its turn to send it.
 type batcher struct {
 	container string
 	now       func() time.Time

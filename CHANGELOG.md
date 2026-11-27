@@ -5,6 +5,12 @@
 ### Changed
 
 - A server's **Containers** and an app's logs page show only what runs now. The stopped containers Kamal keeps for `kamal rollback`, and the `_replaced_` ones a redeploy leaves, are left out. A stopped container still shows when nothing replaced it, such as an app that went down.
+- After several failed snapshots in a row, agents retry between 4 and 5 minutes apart, so a whole fleet no longer retries at exactly 5 minutes together.
+
+### Fixed
+
+- The agent no longer follows a redirect when it posts a snapshot. Following one could send its token again over plain `http://`, and a 301 or 302 turned the snapshot into a GET. A redirect now shows as a failed snapshot with its status.
+- The agent spaces out the past log lines it fetches for a container it already follows. With many containers tailed at once, it now stays under the 100 log frames a second Meridian accepts.
 
 ## v0.1.4 (2026-11-27)
 

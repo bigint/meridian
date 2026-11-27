@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -66,11 +67,11 @@ func (c *dockerClient) logs(ctx context.Context, id string, follow bool, tail in
 	if follow {
 		followFlag = 1
 	}
-	path := fmt.Sprintf("/containers/%s/logs?follow=%d&stdout=1&stderr=1&timestamps=1&tail=%d", url.PathEscape(id), followFlag, tail)
+	lines := strconv.Itoa(tail)
 	if !since.IsZero() {
-		path = fmt.Sprintf("/containers/%s/logs?follow=%d&stdout=1&stderr=1&timestamps=1&tail=all&since=%d.%09d",
-			url.PathEscape(id), followFlag, since.Unix(), since.Nanosecond())
+		lines = fmt.Sprintf("all&since=%d.%09d", since.Unix(), since.Nanosecond())
 	}
+	path := fmt.Sprintf("/containers/%s/logs?follow=%d&stdout=1&stderr=1&timestamps=1&tail=%s", url.PathEscape(id), followFlag, lines)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
 	if err != nil {
 		return nil, err
@@ -99,7 +100,6 @@ func (c *dockerClient) logs(ctx context.Context, id string, follow bool, tail in
 // A stream that ends cleanly returns nil; a partial last line is emitted
 // either way.
 func readLogs(r io.Reader, tty bool, emit func(logLine) bool) error {
-	br := bufio.NewReaderSize(r, readChunk)
 	var out, errs lineSplitter
 	out.stream, errs.stream = streamOut, streamErr
 	finish := func(err error) error {
@@ -109,10 +109,10 @@ func readLogs(r io.Reader, tty bool, emit func(logLine) bool) error {
 		return err
 	}
 
-	if tty {
-		buf := make([]byte, readChunk)
+	buf := make([]byte, readChunk)
+	if tty { // whole chunks straight from the stream: no frames to parse
 		for {
-			n, err := br.Read(buf)
+			n, err := r.Read(buf)
 			if !out.write(buf[:n], emit) {
 				return nil
 			}
@@ -122,8 +122,8 @@ func readLogs(r io.Reader, tty bool, emit func(logLine) bool) error {
 		}
 	}
 
+	br := bufio.NewReaderSize(r, readChunk)
 	var header [8]byte
-	buf := make([]byte, readChunk)
 	for {
 		if _, err := io.ReadFull(br, header[:]); err != nil {
 			return finish(cleanEOF(err))

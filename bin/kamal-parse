@@ -52,20 +52,30 @@ module KamalParse
 
   private
     def describe(config)
+      raw = config.raw_config.to_h.deep_stringify_keys
       {
         "service" => config.service,
         "image" => config.image,
         "roles" => config.roles.map { |role| describe_role(role) },
-        "accessories" => config.accessories.map { |accessory| { "name" => accessory.name, "service" => accessory.service_name, "image" => accessory.image, "hosts" => accessory.hosts, "secrets" => accessory.env.secret_keys.map { |key| key.to_s.split(":", 2).last } } },
+        "accessories" => config.accessories.map { |accessory| describe_accessory(accessory) },
         "hostnames" => config.roles.select(&:running_proxy?).flat_map { |role| role.proxy.hosts }.uniq,
-        "app_port" => config.proxy&.app_port,
-        "secrets" => secret_names(config.raw_config.to_h.deep_stringify_keys),
-        "labels" => (config.raw_config.to_h.deep_stringify_keys["labels"] || {}).transform_values(&:to_s)
+        "secrets" => secret_names(raw),
+        "labels" => (raw["labels"] || {}).transform_values(&:to_s)
       }
     end
 
     def describe_role(role)
-      { "name" => role.name, "hosts" => role.hosts, "container_prefix" => role.container_prefix, "proxy" => role.running_proxy? }
+      { "name" => role.name, "hosts" => role.hosts, "proxy" => role.running_proxy? }
+    end
+
+    def describe_accessory(accessory)
+      {
+        "name" => accessory.name,
+        "service" => accessory.service_name,
+        "image" => accessory.image,
+        "hosts" => accessory.hosts,
+        "secrets" => accessory.env.secret_keys.map { |key| key.to_s.split(":", 2).last }
+      }
     end
 
     # Names only. Kamal reads secret values lazily, and we never ask for one.

@@ -10,7 +10,6 @@
 # else kamal-proxy answers 404.
 class Tunnel
   IMAGE = "cloudflare/cloudflared"
-  LEGACY_NAME = "cloudflared"
   SECRET = "CLOUDFLARE_TUNNEL_TOKEN"
 
   STATES = Accessory::STATES
@@ -61,7 +60,7 @@ class Tunnel
     servers = Accessory.servers_by_host(pairs.flat_map { |_, accessory| accessory["hosts"] }.uniq)
     placements = Placement.where(kind: "accessory", service: pairs.map { |_, accessory| accessory["service"] }.uniq)
       .running_first.group_by { [ it.server_id, it.service ] }
-    groups = pairs.group_by { |app, accessory| [ app.project, token_secret(app, accessory) || "#{app.service}/#{accessory["name"]}" ] }
+    groups = pairs.group_by { |app, accessory| [ app.project, token_secret(accessory) || "#{app.service}/#{accessory["name"]}" ] }
     secrets = SecretName.where(name: groups.keys.map(&:last)).index_by { [ it.project_id, it.name ] }
     apps = App.deployable.where(project_id: groups.keys.map(&:first)).includes(:servers).ordered.group_by(&:project_id)
 
@@ -97,20 +96,18 @@ class Tunnel
   end
   private_class_method :proxied_servers
 
-  # The repository secret a connector reads its token from. Configs synced
-  # before the parser reported accessory secrets fall back to the app's.
-  def self.token_secret(app, accessory)
-    (accessory["secrets"] || app.secret_names).find { it.end_with?("TUNNEL_TOKEN") }
+  # The repository secret a connector reads its token from.
+  def self.token_secret(accessory)
+    accessory["secrets"].find { it.end_with?("TUNNEL_TOKEN") }
   end
 
   # The name a connector on this host goes by: the first DNS label, or a
   # whole IP address, whose first part is shared by its neighbours.
   def self.label_for(host)
-    host.match?(/\A[\d.:]+\z/) ? host.tr(".:", "-") : host.split(".").first
+    Server.ip?(host) ? host.tr(".:", "-") : host.split(".").first
   end
 
-  # Configs synced before the parser reported images are found by name.
   def self.cloudflared?(accessory)
-    accessory["image"] ? accessory["image"].start_with?(IMAGE) : accessory["name"] == LEGACY_NAME
+    accessory["image"].to_s.start_with?(IMAGE)
   end
 end

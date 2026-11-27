@@ -88,15 +88,15 @@ class PagesTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a deploy by someone since removed still says who asked for it" do
+  test "a deploy says who asked for it, and one nobody asked for came from Git" do
     app = @project.apps.find_by!(service: "web", destination: "production")
-    leaver = User.create!(name: "Lee", email_address: "lee@example.com", password: "a long enough password")
-    app.deploys.create!(version: "v43", commit_sha: "d" * 40, actor: leaver)
-    leaver.destroy!
-
+    app.deploys.create!(version: "v43", commit_sha: "d" * 40, actor: users(:ada))
     get app_path(app)
+    assert_select ".card__meta", text: /By #{users(:ada).display_name}/
 
-    assert_select ".card__meta", text: /By Lee \(removed\)/
+    app.deploys.create!(version: "v44", commit_sha: "e" * 40, created_at: 1.minute.from_now)
+    get app_path(app)
+    assert_select ".card__meta", text: /By Git/
   end
 
   test "an app runs its release everywhere only when no server runs another version too" do

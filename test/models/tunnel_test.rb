@@ -23,12 +23,6 @@ class TunnelTest < ActiveSupport::TestCase
     assert_equal %w[ CLOUDFLARE_TUNNEL_TOKEN OTHER_TUNNEL_TOKEN ], Tunnel.all.map(&:secret_name).sort
   end
 
-  test "an accessory synced before images were reported is a connector by the name cloudflared" do
-    make_app("shop", accessories: [ { "name" => "cloudflared", "hosts" => [ "a.example.com" ] }, { "name" => "db", "hosts" => [ "a.example.com" ] } ])
-
-    assert_equal [ "cloudflared" ], Tunnel.all.sole.connectors.map(&:name)
-  end
-
   test "apps without a connector are no tunnel" do
     make_app("blog", accessories: [ { "name" => "db", "image" => "postgres:17", "service" => "blog-db", "hosts" => [ "a.example.com" ] } ])
 

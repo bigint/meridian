@@ -44,12 +44,19 @@ class Server < ApplicationRecord
   # A row already named by another of Git's hosts is that host's, even before
   # a sync writes its assignment (web-1.sgp and web-1.fra in one config).
   def self.reported_as(host)
-    return if ip?(host)
-
-    short = host.split(".").first
-    matches = where.not(machine_id: nil).where.missing(:assignments).select { [ it.hostname, it.name ].any? { |name| !ip?(name) && name.split(".").first == short } }
+    matches = sharing_first_label(where.not(machine_id: nil).where.missing(:assignments), host)
     matches -= matches.select { git_hosts.include?(it.name) } if matches.any?
     matches.sole.tap { it.update!(name: host, hostname: host) } if matches.one?
+  end
+
+  # The servers in scope whose name or hostname starts with the same DNS label
+  # as host: web-1 for web-1.example.com. Never for IPs, whose first part is
+  # shared by their neighbours.
+  def self.sharing_first_label(scope, host)
+    return [] if ip?(host)
+
+    label = host.split(".").first
+    scope.select { [ it.hostname, it.name ].any? { |name| !ip?(name) && name.split(".").first == label } }
   end
 
   # Every host a config lists, for its roles or its accessories.

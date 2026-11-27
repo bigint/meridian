@@ -102,7 +102,7 @@
 
     <%= disclosure "Configuration" do %>
       <dl class="facts">
-        <dt>Config</dt><dd><%= link_to @app.config_path, "#{@app.project.repo_url}/blob/#{@app.project.default_branch}/#{@app.config_path}", class: "mono" %> <%= tag.code(@app.destination_flag) if @app.destination_flag %></dd>
+        <dt>Config</dt><dd><%= link_to @app.config_path, @app.project.git.file_url(@app.config_path), class: "mono" %> <%= tag.code(@app.destination_flag) if @app.destination_flag %></dd>
         <dt>Image</dt><dd><code><%= @app.image %></code></dd>
         <dt>Roles</dt><dd><%= @app.roles.map { "#{it["name"]} (#{pluralize(it["hosts"].size, "host")})" }.join(", ").presence || "–" %></dd>
         <dt>Version file</dt><dd><%= @app.version_path ? tag.code(@app.version_path) : tag.span("none yet: drift can't compare versions until one exists", class: "txt-muted") %></dd>

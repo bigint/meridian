@@ -6,7 +6,6 @@ class TrafficChannel < ApplicationCable::Channel
   include ApplicationCable::Renewal
 
   periodically every: LogsChannel::RENEW_EVERY do
-    next hang_up unless reader
     next unless heard_lately?
 
     LiveTraffic.watch(@app, @proxies)
@@ -25,7 +24,7 @@ class TrafficChannel < ApplicationCable::Channel
     end
 
     def find_app
-      user, id = reader, params[:app_id]
-      App.find_by(id: id) if user && id.is_a?(Integer) && LiveLogs.granted?(params[:grant], user, "traffic", id)
+      id = params[:app_id]
+      App.find_by(id: id) if id.is_a?(Integer) && LiveGrant.granted?(params[:grant], current_user, "traffic", id)
     end
 end

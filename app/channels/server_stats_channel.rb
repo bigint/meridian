@@ -6,7 +6,6 @@ class ServerStatsChannel < ApplicationCable::Channel
   RENEW_EVERY = 10.seconds
 
   periodically every: RENEW_EVERY do
-    next hang_up unless reader
     next unless heard_lately?
 
     LiveStats.watch(@server)
@@ -14,7 +13,7 @@ class ServerStatsChannel < ApplicationCable::Channel
 
   private
     def subscribed
-      @server = Server.find_by(id: params[:server_id]) if reader
+      @server = Server.find_by(id: params[:server_id]) if current_user
       return reject unless @server
 
       stream_for @server

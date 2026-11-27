@@ -17,7 +17,6 @@ class Project < ApplicationRecord
 
   def repo_url = git.repo_url
 
-
   # Where a new config for this service goes: the first config glob with one
   # "*", which the service replaces ("deploy/**/*.yml" counts as
   # "deploy/*.yml").

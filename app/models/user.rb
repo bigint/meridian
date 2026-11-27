@@ -1,10 +1,6 @@
 class User < ApplicationRecord
   has_secure_password
   has_many :sessions, dependent: :destroy
-  # What they did stays on record when they are removed, by nobody in particular.
-  has_many :deploys, foreign_key: :actor_id, inverse_of: :actor, dependent: :nullify
-  has_many :events, foreign_key: :actor_id, inverse_of: :actor, dependent: :nullify
-  has_many :secret_names_set, class_name: "SecretName", foreign_key: :last_set_by_id, inverse_of: :last_set_by, dependent: :nullify
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
   validates :password, length: { minimum: 12 }, allow_nil: true

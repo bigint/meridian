@@ -1,9 +1,8 @@
 # An app's logs, merged across every server it runs on.
 class Apps::LogsController < ApplicationController
-  MAX_PLACEMENTS = LogsChannel::MAX_PLACEMENTS
+  include AppScoped
 
   def show
-    @app = App.find(params[:app_id])
-    @placements = @app.placements.current.includes(:server).running_first.limit(MAX_PLACEMENTS).to_a
+    @placements = @app.placements.current.includes(:server).running_first.limit(LogsChannel::MAX_PLACEMENTS).to_a
   end
 end

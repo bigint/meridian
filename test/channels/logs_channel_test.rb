@@ -12,15 +12,15 @@ class LogsChannelTest < ActionCable::Channel::TestCase
 
   # Subscribes as a page would, with the grant the page hands over.
   def subscribe(placement_ids: nil, grant: :page, **params)
-    grant = (LiveLogs.grant(connection.current_user, "logs", *placement_ids) if connection.current_user) if grant == :page
+    grant = (LiveGrant.grant(connection.current_user, "logs", *placement_ids) if connection.current_user) if grant == :page
     super(placement_ids: placement_ids, grant: grant, **params)
   end
 
   # The channel streams only what a page granted: these containers, for logs, for this person.
   test "a subscription no page granted is refused" do
-    leaver = User.create!(name: "Lee", email_address: "lee@example.com", password: "a long enough password")
-    [ nil, "forged", LiveLogs.grant(users(:ada), "logs", @worker.id), LiveLogs.grant(users(:ada), "traffic", @web.id),
-      LiveLogs.grant(leaver, "logs", @web.id) ].each do |grant|
+    stranger = User.create!(name: "Lee", email_address: "lee@example.com", password: "a long enough password")
+    [ nil, "forged", LiveGrant.grant(users(:ada), "logs", @worker.id), LiveGrant.grant(users(:ada), "traffic", @web.id),
+      LiveGrant.grant(stranger, "logs", @web.id) ].each do |grant|
       subscribe placement_ids: [ @web.id ], grant: grant
       assert subscription.rejected?, grant.inspect
     end
@@ -30,7 +30,7 @@ class LogsChannelTest < ActionCable::Channel::TestCase
   # A page open past the grant's life is turned down when it next
   # reconnects, and asks for a reload, which grants afresh.
   test "a grant lapses after twelve hours, so one page load doesn't stream for good" do
-    grant = LiveLogs.grant(users(:ada), "logs", @web.id)
+    grant = LiveGrant.grant(users(:ada), "logs", @web.id)
 
     travel 12.hours - 1.minute do
       subscribe placement_ids: [ @web.id ], grant: grant

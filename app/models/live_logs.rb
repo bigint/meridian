@@ -12,7 +12,6 @@ module LiveLogs
   BACKLOG = 200
   LEASE = 30.seconds
   RENEW_EVERY = 5.seconds
-  GRANT_FOR = 12.hours
 
   module_function
 
@@ -64,23 +63,8 @@ module LiveLogs
     end
   end
 
-  # The page hands its channel a grant for exactly what it shows, and
-  # LogsChannel and TrafficChannel stream nothing a page didn't grant. A grant
-  # is bound to its reader, so it can't be passed on; a reconnect reuses it.
-  # It lapses after GRANT_FOR, so one page load isn't a way to read for good:
-  # a page still open then is turned down when it next reconnects, and asks
-  # for a reload, which checks access again.
-  def grant(user, *subject)
-    grants.generate([ user.id, *subject ], purpose: :live, expires_in: GRANT_FOR)
-  end
-
-  def granted?(grant, user, *subject)
-    user.present? && grant.is_a?(String) && grants.verified(grant, purpose: :live) == [ user.id, *subject ]
-  end
-
-  def grants = Rails.application.message_verifier(:live_grants)
   def lease_key(placement_id) = [ "live-tail-lease", placement_id ]
-  private_class_method :grants, :lease_key
+  private_class_method :lease_key
 
   def line(raw)
     return unless raw.is_a?(Hash) && STREAMS.include?(raw["s"])

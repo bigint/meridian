@@ -134,6 +134,7 @@ class GitHost::GitHub
 
   def repo_url = "#{self.class.web_url}/#{repo}"
   def commit_url(sha) = "#{repo_url}/commit/#{sha}"
+  def file_url(path, ref: project.default_branch, line: nil) = "#{repo_url}/blob/#{ref}/#{path}#{"#L#{line}" if line}"
 
   private
     def repo = project.repo_full_name

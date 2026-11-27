@@ -8,7 +8,6 @@ class LogsChannel < ApplicationCable::Channel
   RENEW_EVERY = 10.seconds
 
   periodically every: RENEW_EVERY do
-    next hang_up unless reader
     next unless heard_lately?
 
     @placements.each { LiveLogs.tail(it, backlog: 0) }
@@ -26,9 +25,9 @@ class LogsChannel < ApplicationCable::Channel
     end
 
     def find_placements
-      user, ids = reader, params[:placement_ids]
-      return unless user && ids.is_a?(Array) && ids.size <= MAX_PLACEMENTS && ids.all?(Integer)
-      return unless LiveLogs.granted?(params[:grant], user, "logs", *ids) # only what a page granted
+      ids = params[:placement_ids]
+      return unless ids.is_a?(Array) && ids.size <= MAX_PLACEMENTS && ids.all?(Integer)
+      return unless LiveGrant.granted?(params[:grant], current_user, "logs", *ids) # only what a page granted
 
       Placement.includes(:server).where(id: ids).to_a
     end

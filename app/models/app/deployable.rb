@@ -20,13 +20,13 @@ module App::Deployable
   def deploy(version, actor:)
     ensure_deployable!
     version = version.to_s.strip
-    raise ArgumentError, "Version can't be blank" if version.blank?
-    raise ArgumentError, "Version must be an image tag: letters, digits, _ . and -, not starting with . or -" unless version.match?(VERSION_FORMAT)
+    raise App::Refused, "Version can't be blank" if version.blank?
+    raise App::Refused, "Version must be an image tag: letters, digits, _ . and -, not starting with . or -" unless version.match?(VERSION_FORMAT)
 
     current = read_version_file
     # The commit would change no file, so the workflow would never run and
     # the deploy would wait forever.
-    raise ArgumentError, "#{version} is already in #{version_file_path}. Use Redeploy to run it again." if current&.content&.strip == version
+    raise App::Refused, "#{version} is already in #{version_file_path}. Use Redeploy to run it again." if current&.content&.strip == version
 
     commit = project.git.write_file(version_file_path, content: "#{version}\n", sha: current&.sha,
       message: commit_message("deploy", version, actor))
@@ -39,14 +39,14 @@ module App::Deployable
   # newer change, so that's a conflict.
   def roll_back(release, actor:)
     ensure_deployable!
-    raise ArgumentError, "Only the newest release can be rolled back" unless release == latest_release
+    raise App::Refused, "Only the newest release can be rolled back" unless release == latest_release
     raise GitHost::Conflict, "#{version_file_path} changed after #{release.short_sha}" unless newest_release_sha == release.commit_sha
 
     parent = project.git.parent_sha(release.commit_sha)
     previous = begin
       project.git.file(version_file_path, ref: parent).content.strip
     rescue GitHost::NotFound
-      raise ArgumentError, "Nothing to roll back to: #{version_file_path} didn't exist before #{release.short_sha}. Deploy a version instead."
+      raise App::Refused, "Nothing to roll back to: #{version_file_path} didn't exist before #{release.short_sha}. Deploy a version instead."
     end
     current = read_version_file
 
@@ -65,7 +65,7 @@ module App::Deployable
   def redeploy(actor:)
     ensure_deployable!
     version = read_version_file&.content.to_s.strip.presence
-    raise ArgumentError, "#{name} has no version file yet: deploy a version first" unless version
+    raise App::Refused, "#{name} has no version file yet: deploy a version first" unless version
 
     head = project.git.head_sha
     project.git.dispatch_workflow(Project::Changes::WORKFLOW_FILE, inputs: { config: config_path, destination: destination, version: version, command: "deploy" })
@@ -87,7 +87,7 @@ module App::Deployable
 
   private
     def ensure_deployable!
-      raise ArgumentError, "#{name} only runs accessories: start them with kamal accessory boot, not a deploy" unless deployable?
+      raise App::Refused, "#{name} only runs accessories: start them with kamal accessory boot, not a deploy" unless deployable?
     end
 
     def read_version_file

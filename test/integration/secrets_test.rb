@@ -43,8 +43,20 @@ class SecretsTest < ActionDispatch::IntegrationTest
     assert_not @project.secret_names.exists?(name: "DATABASE_URL"), "a name nobody set goes with its last reference"
   end
 
+  test "an empty value is turned away before anything reaches GitHub" do
+    sign_in_as users(:ada)
+    secret = @project.secret_names.find_by!(name: "DATABASE_URL")
+
+    patch secret_path(secret), params: { secret_value: " " }
+
+    assert_redirected_to secrets_path
+    assert_equal "Type a value for DATABASE_URL.", flash[:alert]
+    assert_not_requested @put
+    assert_nil secret.reload.last_set_at
+  end
+
   test "secret_names has no column that could hold a value" do
-    assert_equal %w[ apps created_at id last_set_at last_set_by_id name project_id updated_at ], SecretName.column_names.sort
+    assert_equal %w[ apps created_at id last_set_at name project_id updated_at ], SecretName.column_names.sort
   end
 
   test "a rotated value is sealed for GitHub and never persisted, logged, enqueued or broadcast" do

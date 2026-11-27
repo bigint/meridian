@@ -1,6 +1,6 @@
 require "test_helper"
 
-# Without webhooks Meridian polls: the scheduled sync also reads recent
+# Meridian polls GitHub: the scheduled sync also reads recent
 # workflow runs, so deploys made outside Meridian still show up and finish.
 class ProjectPollTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper

@@ -29,7 +29,7 @@ class DeployableTest < ActiveSupport::TestCase
   test "deploying the version already in the file commits nothing" do
     writes = stub_github_writes(@project)
 
-    error = assert_raises(ArgumentError) { @app.deploy("v42", actor: @actor) }
+    error = assert_raises(App::Refused) { @app.deploy("v42", actor: @actor) }
     assert_match "Redeploy", error.message
     assert_empty writes
     assert_empty @app.deploys
@@ -39,9 +39,9 @@ class DeployableTest < ActiveSupport::TestCase
     @app.update!(kind: App::ACCESSORIES)
     writes = stub_github_writes(@project)
 
-    assert_raises(ArgumentError) { @app.deploy("v43", actor: @actor) }
-    assert_raises(ArgumentError) { @app.roll_back(@app.latest_release, actor: @actor) }
-    assert_raises(ArgumentError) { @app.redeploy(actor: @actor) }
+    assert_raises(App::Refused) { @app.deploy("v43", actor: @actor) }
+    assert_raises(App::Refused) { @app.roll_back(@app.latest_release, actor: @actor) }
+    assert_raises(App::Refused) { @app.redeploy(actor: @actor) }
     assert_empty writes
     assert_not_requested :post, %r{/dispatches}
   end
@@ -54,10 +54,10 @@ class DeployableTest < ActiveSupport::TestCase
   end
 
   test "rejects versions that aren't one plain token" do
-    assert_raises(ArgumentError) { @app.deploy("v1; rm -rf /", actor: @actor) }
-    assert_raises(ArgumentError) { @app.deploy(" ", actor: @actor) }
-    assert_raises(ArgumentError, "CI would pass it to Kamal as a flag") { @app.deploy("--skip-hooks", actor: @actor) }
-    assert_raises(ArgumentError, "not valid in a container name") { @app.deploy("v1@sha256:abc", actor: @actor) }
+    assert_raises(App::Refused) { @app.deploy("v1; rm -rf /", actor: @actor) }
+    assert_raises(App::Refused) { @app.deploy(" ", actor: @actor) }
+    assert_raises(App::Refused, "CI would pass it to Kamal as a flag") { @app.deploy("--skip-hooks", actor: @actor) }
+    assert_raises(App::Refused, "not valid in a container name") { @app.deploy("v1@sha256:abc", actor: @actor) }
   end
 
   test "roll back restores the version file from before the newest release" do
@@ -86,12 +86,12 @@ class DeployableTest < ActiveSupport::TestCase
     stub_github_commit(@project, "c" * 40, parent: "0" * 40)
     stub_request(:get, %r{/contents/deploy/web.production.version\?ref=0{40}}).to_return(status: 404, body: "{}", headers: { "Content-Type" => "application/json" })
 
-    error = assert_raises(ArgumentError) { @app.roll_back(@app.latest_release, actor: @actor) }
+    error = assert_raises(App::Refused) { @app.roll_back(@app.latest_release, actor: @actor) }
     assert_match "didn't exist before cccccc", error.message
   end
 
   test "only the newest release can be rolled back" do
-    assert_raises(ArgumentError) { @app.roll_back(@app.releases.last, actor: @actor) }
+    assert_raises(App::Refused) { @app.roll_back(@app.releases.last, actor: @actor) }
   end
 
   test "CI runs move deploys along" do
@@ -162,7 +162,7 @@ class DeployableTest < ActiveSupport::TestCase
   test "an app without a version file has nothing to redeploy" do
     blog = @project.apps.find_by!(service: "blog")
 
-    error = assert_raises(ArgumentError) { blog.redeploy(actor: @actor) }
+    error = assert_raises(App::Refused) { blog.redeploy(actor: @actor) }
     assert_match "no version file", error.message
     assert_not_requested :post, %r{/dispatches}
   end

@@ -77,7 +77,7 @@ class WorkflowTest < ActionDispatch::IntegrationTest
     post app_deploys_path(app), params: { deploy: { version: "v43" } }
 
     assert_redirected_to app_path(app)
-    assert_match "GitHub refused the commit", flash[:alert]
+    assert_match "GitHub refused", flash[:alert]
     assert_match "Changes must be made through a pull request", flash[:alert]
   end
 

@@ -28,17 +28,16 @@ class Snapshot
   def hostname = payload["hostname"].to_s.strip.first(255).presence
   def agent_version = payload["agent_version"].to_s.first(64)
   def truncated? = payload["truncated"] == true
-  # The agent's configured interval, before jitter. Older agents don't send it.
+  # The agent's configured interval, before jitter.
   def interval_seconds = (payload["interval_seconds"] if payload["interval_seconds"].is_a?(Integer) && payload["interval_seconds"].between?(1, 1.day))
 
   def labels
     Hash(payload["labels"]).to_h { |key, value| [ key.to_s.first(64), value.to_s.first(128) ] }.first(32).to_h
   end
 
-  # MERIDIAN_LABELS=lat=1.35,lng=103.82 (or latitude/longitude/lon).
+  # MERIDIAN_LABELS=lat=1.35,lng=103.82
   def location
-    lat = Float(labels["lat"] || labels["latitude"], exception: false)
-    lng = Float(labels["lng"] || labels["lon"] || labels["longitude"], exception: false)
+    lat, lng = Float(labels["lat"], exception: false), Float(labels["lng"], exception: false)
     lat && lng && lat.between?(-90, 90) && lng.between?(-180, 180) ? { latitude: lat, longitude: lng } : {}
   end
 
@@ -124,17 +123,11 @@ class Snapshot
     end
 
     # Git knows servers by the host Kamal SSHes to; the agent knows its own
-    # hostname. Match exactly, or by the first DNS label when that is unique
-    # (never for IPs, whose first label is shared).
+    # hostname. Match exactly, or by the first DNS label when that is unique.
     def unclaimed_server
       candidates = Server.where(machine_id: nil)
-      candidates.find_by(hostname: hostname) || candidates.find_by(name: hostname) || reclaimable_server || begin
-        return if Server.ip?(hostname)
-
-        short = hostname.split(".").first
-        matches = candidates.select { [ it.hostname, it.name ].any? { |name| !Server.ip?(name) && name.split(".").first == short } }
-        matches.sole if matches.one?
-      end
+      candidates.find_by(hostname: hostname) || candidates.find_by(name: hostname) || reclaimable_server ||
+        Server.sharing_first_label(candidates, hostname).then { it.sole if it.one? }
     end
 
     # A server Git places whose agent has gone silent (Server#reclaimable?)

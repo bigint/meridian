@@ -1,10 +1,15 @@
 class App < ApplicationRecord
   include Deployable, Releases
 
-  KINDS = %w[ static node rails other ]
+  # A deploy, rollback or redeploy Meridian won't make, and why.
+  class Refused < StandardError; end
+
+  # What New app can make. Configs label theirs with meridian.kind.
+  KINDS = %w[ static node rails other ].freeze
   # A config that only runs accessories, such as a Cloudflare Tunnel's
   # connectors: Kamal never deploys an app from it, so the board leaves it out.
   ACCESSORIES = "accessories"
+  LABELLED_KINDS = [ *KINDS, ACCESSORIES ].freeze
 
   belongs_to :project
   has_many :assignments, dependent: :delete_all
@@ -13,7 +18,7 @@ class App < ApplicationRecord
   has_many :releases, -> { order(committed_at: :desc) }, dependent: :delete_all
 
   validates :service, :config_path, presence: true
-  validates :kind, inclusion: { in: [ *KINDS, ACCESSORIES ] }
+  validates :kind, inclusion: { in: LABELLED_KINDS }
 
   scope :ordered, -> { order(:service, :destination) }
   scope :deployable, -> { where.not(kind: ACCESSORIES) }
@@ -50,7 +55,7 @@ class App < ApplicationRecord
     self.version_path = tree.key?(version_path) ? version_path : nil
     labels = result["labels"] || {}
     # Git is the record: a label taken out of the config clears it.
-    self.kind = [ *KINDS, ACCESSORIES ].include?(labels["meridian.kind"]) ? labels["meridian.kind"] : "other"
+    self.kind = labels["meridian.kind"].presence_in(LABELLED_KINDS) || "other"
     self.source_repo = labels["meridian.source"].presence
 
     shas = sources.index_with { tree.fetch(it).sha }

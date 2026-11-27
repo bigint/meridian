@@ -10,20 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_171433) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", default: "Meridian", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.string "location_name"
     t.float "latitude"
     t.float "longitude"
-    t.string "location_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "agent_tokens", force: :cascade do |t|
     t.integer "server_id"
-    t.string "digest", null: false
     t.string "label", null: false
+    t.string "digest", null: false
     t.boolean "fleet", default: false, null: false
     t.datetime "last_used_at"
     t.datetime "revoked_at"
@@ -67,19 +67,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
     t.integer "app_id", null: false
     t.integer "release_id"
     t.integer "actor_id"
+    t.string "kind", default: "deploy", null: false
     t.string "version", null: false
     t.string "commit_sha", null: false
-    t.string "kind", default: "deploy", null: false
-    t.bigint "ci_run_id"
-    t.string "ci_url"
     t.string "status", default: "pending", null: false
     t.string "conclusion"
+    t.bigint "ci_run_id"
+    t.string "ci_url"
+    t.datetime "ci_updated_at"
     t.datetime "started_at"
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.datetime "ci_updated_at"
-    t.string "actor_name"
     t.index ["actor_id"], name: "index_deploys_on_actor_id"
     t.index ["app_id", "commit_sha"], name: "index_deploys_on_app_id_and_commit_sha", unique: true
     t.index ["commit_sha"], name: "index_deploys_on_commit_sha"
@@ -104,10 +103,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
     t.integer "app_id"
     t.string "container_id", null: false
     t.string "name", null: false
+    t.string "kind", default: "app", null: false
     t.string "service"
     t.string "role"
     t.string "destination", default: "", null: false
-    t.string "kind", default: "app", null: false
     t.string "image"
     t.string "version"
     t.string "state"
@@ -125,14 +124,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
     t.string "default_branch", default: "main", null: false
     t.bigint "installation_id"
     t.json "config_globs", default: ["config/deploy*.yml"], null: false
+    t.boolean "direct_commits", default: false, null: false
     t.string "last_synced_sha"
     t.datetime "synced_at"
     t.json "config_errors", default: [], null: false
-    t.boolean "direct_commits", default: false, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.string "parse_failed_sha"
     t.integer "parse_failures", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["repo_full_name"], name: "index_projects_on_repo_full_name", unique: true
   end
 
@@ -154,10 +153,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
     t.string "name", null: false
     t.json "apps", default: [], null: false
     t.datetime "last_set_at"
-    t.integer "last_set_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["last_set_by_id"], name: "index_secret_names_on_last_set_by_id"
     t.index ["project_id", "name"], name: "index_secret_names_on_project_id_and_name", unique: true
   end
 
@@ -166,13 +163,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
     t.string "name", null: false
     t.string "hostname", null: false
     t.json "labels", default: {}, null: false
+    t.float "latitude"
+    t.float "longitude"
     t.string "agent_version"
+    t.integer "interval_seconds"
     t.datetime "last_seen_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.float "latitude"
-    t.float "longitude"
-    t.integer "interval_seconds"
     t.index ["hostname"], name: "index_servers_on_hostname"
     t.index ["machine_id"], name: "index_servers_on_machine_id", unique: true
     t.index ["name"], name: "index_servers_on_name"
@@ -188,11 +185,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.string "name"
     t.string "email_address", null: false
     t.string "password_digest", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "name"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
@@ -208,6 +205,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_000002) do
   add_foreign_key "placements", "servers"
   add_foreign_key "releases", "apps"
   add_foreign_key "secret_names", "projects"
-  add_foreign_key "secret_names", "users", column: "last_set_by_id"
   add_foreign_key "sessions", "users"
 end

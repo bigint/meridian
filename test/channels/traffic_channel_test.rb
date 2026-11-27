@@ -15,13 +15,13 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
 
   # Subscribes as the Traffic page would, with the grant it hands over.
   def subscribe(app_id: nil, grant: :page, **params)
-    grant = (LiveLogs.grant(connection.current_user, "traffic", app_id) if connection.current_user) if grant == :page
+    grant = (LiveGrant.grant(connection.current_user, "traffic", app_id) if connection.current_user) if grant == :page
     super(app_id: app_id, grant: grant, **params)
   end
 
   test "a subscription the Traffic page didn't grant is refused" do
-    leaver = User.create!(name: "Lee", email_address: "lee@example.com", password: "a long enough password")
-    [ nil, "forged", LiveLogs.grant(leaver, "traffic", @app.id), LiveLogs.grant(users(:ada), "logs", @app.id) ].each do |grant|
+    stranger = User.create!(name: "Lee", email_address: "lee@example.com", password: "a long enough password")
+    [ nil, "forged", LiveGrant.grant(stranger, "traffic", @app.id), LiveGrant.grant(users(:ada), "logs", @app.id) ].each do |grant|
       subscribe app_id: @app.id, grant: grant
       assert subscription.rejected?, grant.inspect
     end
@@ -30,7 +30,7 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
   # One page load isn't a way to read for good: a page open past the
   # grant's life is turned down when it reconnects, and asks for a reload.
   test "a grant lapses after twelve hours" do
-    grant = LiveLogs.grant(users(:ada), "traffic", @app.id)
+    grant = LiveGrant.grant(users(:ada), "traffic", @app.id)
 
     travel 12.hours - 1.minute do
       subscribe app_id: @app.id, grant: grant
@@ -77,19 +77,6 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     Placement.where(kind: "proxy").delete_all
     subscribe app_id: @app.id
     assert subscription.rejected?
-  end
-
-  test "a reader removed mid-stream is hung up instead of renewed" do
-    subscribe app_id: @app.id
-    closed = []
-    connection.define_singleton_method(:close) { |**options| closed << options }
-    users(:ada).destroy!
-    travel LiveLogs::RENEW_EVERY + 1.second
-
-    assert_no_broadcasts AgentChannel.broadcasting_for(@web_1) do
-      TrafficChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
-    end
-    assert_equal [ { reason: "unauthorized" } ], closed
   end
 
   test "a page that stops renewing lets the leases lapse" do

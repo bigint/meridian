@@ -15,7 +15,7 @@ class Tunnels::ConnectorsController < ApplicationController
       render :edit, status: :unprocessable_entity
     end
   rescue GitHost::Error => error
-    flash.now[:alert] = "GitHub refused: #{error.message.truncate(200)}"
+    flash.now[:alert] = github_refused(error)
     render :edit, status: :unprocessable_entity
   end
 

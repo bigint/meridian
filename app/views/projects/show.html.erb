@@ -33,7 +33,7 @@
               <div>
                 <code class="txt-strong"><%= [ error["file"], error["line"] ].compact.join(":") %></code>
                 <% if error["file"] %>
-                  <%= link_to "view", "#{@project.repo_url}/blob/#{@project.last_synced_sha || @project.default_branch}/#{error["file"]}#{"#L#{error["line"]}" if error["line"]}", class: "link txt-small" %>
+                  <%= link_to "view", @project.git.file_url(error["file"], ref: @project.last_synced_sha || @project.default_branch, line: error["line"]), class: "link txt-small" %>
                 <% end %>
               </div>
               <p><%= error["message"] %></p>

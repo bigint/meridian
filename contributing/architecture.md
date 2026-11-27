@@ -108,7 +108,7 @@ sequenceDiagram
   M->>G: commit deploy/web.version
   G->>CI: push runs the workflow
   CI->>S: kamal deploy --version v42
-  G-->>M: workflow_run, or a poll
+  M->>G: poll the workflow's runs
   M->>M: queued, in_progress, completed
   A->>M: snapshot: web runs v42
   M->>M: cells turn in sync
@@ -176,7 +176,7 @@ Meridian pins **kamal 2.12.0** and has been checked against **kamal-proxy 0.10.3
 - **Where it lives.** Kamal mounts that directory from the **named volume `kamal-proxy-config`** ([K commands/proxy.rb#L18](https://github.com/basecamp/kamal/blob/v2.12.0/lib/kamal/commands/proxy.rb#L18)). The directory has mode 0700.
 - **Partial writes.** The file is rewritten in place, not atomically ([P router.go#L407-L429](https://github.com/basecamp/kamal-proxy/blob/v0.10.3/internal/server/router.go#L407-L429)), so a reader can see half a file.
 - **Other ways to list routes.** `kamal-proxy list` uses a unix socket inside the container ([P cmd/list.go](https://github.com/basecamp/kamal-proxy/blob/v0.10.3/internal/cmd/list.go#L20-L60)), so reaching it requires `docker exec`. kamal-proxy has no HTTP endpoint that lists routes.
-- **Conclusion.** Route reporting is possible read-only, by mounting `kamal-proxy-config` read-only into an agent running as root so it can read the 0700 directory. The agent did this until Meridian found it never used the routes. See [decision 35](decisions.md#35-agents-no-longer-report-kamal-proxy-routes). The agent ignores `MERIDIAN_PROXY_STATE` now.
+- **Conclusion.** Route reporting is possible read-only, by mounting `kamal-proxy-config` read-only into an agent running as root so it can read the 0700 directory. The agent did this until Meridian found it never used the routes. See [decision 35](decisions.md#35-agents-no-longer-report-kamal-proxy-routes).
 
 ### Destination files
 

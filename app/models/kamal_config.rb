@@ -44,8 +44,9 @@ class KamalConfig
     Open3.popen3(env, *command, chdir: Dir.tmpdir, unsetenv_others: true, pgroup: true) do |stdin, stdout, stderr, thread|
       stdin.write(input)
       stdin.close
-      output = Thread.new { stdout.read }
-      errors = Thread.new { stderr.read }
+      # A parse that is killed may leave the pipes open until this block
+      # closes them under the readers, which then end quietly.
+      output, errors = [ stdout, stderr ].map { |io| Thread.new { io.read }.tap { it.report_on_exception = false } }
 
       # As the parse user, `timeout` kills the parse; this is the backstop,
       # and the only limit without that user.
@@ -55,9 +56,6 @@ class KamalConfig
         rescue Errno::EPERM, Errno::ESRCH
           # Another user's processes: theirs to end, and `timeout` will.
         end
-        # The pipes close when this block returns; let the readers see EOF
-        # first instead of dying on a stream closed under them.
-        [ output, errors ].each { it.join(1) }
         raise Error, "Parsing timed out after #{TIMEOUT.inspect}"
       end
 

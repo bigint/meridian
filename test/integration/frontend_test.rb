@@ -38,12 +38,12 @@ class FrontendTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a secret set by someone since removed says so" do
-    SecretName.create!(project: @project, name: "API_KEY", last_set_at: 1.day.ago, last_set_by: nil)
+  test "a secret says when it was last set through Meridian" do
+    SecretName.create!(project: @project, name: "API_KEY", last_set_at: 1.day.ago)
 
     get secrets_path
 
-    assert_select "tr", text: /API_KEY.*1 day ago by a removed user/m
+    assert_select "tr", text: /API_KEY.*1 day ago/m
   end
 
   test "search results say which query they answer, as it was typed" do

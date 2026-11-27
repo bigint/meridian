@@ -168,11 +168,11 @@ kamal-proxy already logs every request as JSON, with the service it routed to an
 
 ## 35. Agents no longer report kamal-proxy routes
 
-This reverses [9](#9-kamal-proxy-routes-are-read-from-the-state-file-in-its-volume). The agent read the state file and sent `proxy_routes`, but nothing in Meridian ever used them. Git says which hosts an app should answer, and Traffic reads kamal-proxy's logs ([34](#34-app-traffic-is-the-kamal-proxy-logs-filtered-by-meridian)). The feature asked for a root agent and an extra volume for nothing, so it is gone, and `MERIDIAN_PROXY_STATE` is ignored. The research stays in [Architecture](architecture.md#kamal-proxy-routes-read-only) in case routes are ever worth showing.
+This reverses [9](#9-kamal-proxy-routes-are-read-from-the-state-file-in-its-volume). The agent read the state file and sent `proxy_routes`, but nothing in Meridian ever used them. Git says which hosts an app should answer, and Traffic reads kamal-proxy's logs ([34](#34-app-traffic-is-the-kamal-proxy-logs-filtered-by-meridian)). The feature asked for a root agent and an extra volume for nothing, so it is gone. The research stays in [Architecture](architecture.md#kamal-proxy-routes-read-only) in case routes are ever worth showing.
 
 ## 36. A server is stale after three agent intervals
 
-The agent sends `interval_seconds` in every snapshot. Meridian stores it on the server and calls the server stale after three times that, never under 45 seconds, and assumes 15 for older agents that don't send it. A fixed 45 seconds showed an agent with a longer `MERIDIAN_INTERVAL` as stale between every snapshot.
+The agent sends `interval_seconds` in every snapshot. Meridian stores it on the server and calls the server stale after three times that, never under 45 seconds, and assumes 15 when a snapshot carries none. A fixed 45 seconds showed an agent with a longer `MERIDIAN_INTERVAL` as stale between every snapshot.
 
 ## 37. A silent server can be reclaimed
 
@@ -224,8 +224,20 @@ An app's name on the board opens the app's page, and a place on the map opens it
 
 ## 47. Activity records changes, not page views
 
-Opening logs or traffic no longer adds `logs.viewed` or `traffic.viewed`. A page view is a read, and those rows buried the deploys and settings changes Activity is for. The upgrade deletes the old ones. Streams still need a signed grant from the page that shows them, so a channel streams nothing a page didn't hand out. This reverses the recorded viewing in [32](#32-live-logs-ride-the-same-line-opt-in-kamal-only-for-deployers).
+Opening logs or traffic no longer adds `logs.viewed` or `traffic.viewed`. A page view is a read, and those rows buried the deploys and settings changes Activity is for. Streams still need a signed grant from the page that shows them, so a channel streams nothing a page didn't hand out. This reverses the recorded viewing in [32](#32-live-logs-ride-the-same-line-opt-in-kamal-only-for-deployers).
 
 ## 48. Configs are parsed as their own user
 
 `bin/kamal-parse` runs as `meridian-parse`, through `sudo`, which the image allows `rails` for `/usr/bin/env` only. An empty environment, as in [1](#1-configs-are-parsed-in-a-clean-subprocess), wasn't enough: as Meridian's own user, ERB could read `/proc/1/environ`, holding `SECRET_KEY_BASE` and the GitHub App's key, and read or write the SQLite databases. The entrypoint makes `storage`, `tmp` and `log` readable by `rails` only, and the parse writes its files into a folder of its own, from its standard input. A separate container would isolate more, the network too, but would make Meridian two containers to install.
+
+## 49. One migration builds the schema
+
+Before anyone ran Meridian, the migrations that added and then dropped previews, identities, roles and page-view events were folded into one, `CreateMeridian`, which builds today's schema directly. It keeps the first migration's version, so a database the old ones made counts it as run. Every later schema change is a migration of its own.
+
+## 50. Nothing is kept for a user who can't be removed
+
+With one user ([45](#45-meridian-is-single-user)), nobody is ever removed, so deploys and events no longer copy the actor's name aside, and a secret no longer records who set it: it was always you. A deploy or event with no actor came from Git or from Meridian itself. A cable checks who is reading when it subscribes; signing out hangs it up.
+
+## 51. A server is placed with lat and lng
+
+The agent's `lat` and `lng` labels place a server on the map. `latitude`, `lon` and `longitude` worked too, but the servers page hid only `lat` and `lng` among the labels, so the other spellings showed up twice. One spelling is less to explain.

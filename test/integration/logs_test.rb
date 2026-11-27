@@ -101,6 +101,6 @@ class LogsTest < ActionDispatch::IntegrationTest
     def assert_channel(reader, params, *subject)
       channel = JSON.parse(css_select(".logs").first["data-logs-channel-value"])
       assert_equal({ "channel" => "LogsChannel", **params }, channel.except("grant"))
-      assert LiveLogs.granted?(channel["grant"], reader, *subject)
+      assert LiveGrant.granted?(channel["grant"], reader, *subject)
     end
 end

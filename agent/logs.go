@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -72,21 +71,9 @@ func (c *dockerClient) logs(ctx context.Context, id string, follow bool, tail in
 		lines = fmt.Sprintf("all&since=%d.%09d", since.Unix(), since.Nanosecond())
 	}
 	path := fmt.Sprintf("/containers/%s/logs?follow=%d&stdout=1&stderr=1&timestamps=1&tail=%s", url.PathEscape(id), followFlag, lines)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
+	resp, err := c.open(ctx, c.stream, path)
 	if err != nil {
 		return nil, err
-	}
-	resp, err := c.stream.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("GET %s: %w", path, err)
-	}
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		resp.Body.Close()
-		return nil, fmt.Errorf("GET %s: %w", path, errNotFound)
-	case resp.StatusCode != http.StatusOK:
-		resp.Body.Close()
-		return nil, fmt.Errorf("GET %s: unexpected status %s", path, resp.Status)
 	}
 	return resp.Body, nil
 }
@@ -100,8 +87,7 @@ func (c *dockerClient) logs(ctx context.Context, id string, follow bool, tail in
 // A stream that ends cleanly returns nil; a partial last line is emitted
 // either way.
 func readLogs(r io.Reader, tty bool, emit func(logLine) bool) error {
-	var out, errs lineSplitter
-	out.stream, errs.stream = streamOut, streamErr
+	out, errs := lineSplitter{stream: streamOut}, lineSplitter{stream: streamErr}
 	finish := func(err error) error {
 		if out.flush(emit) {
 			errs.flush(emit)
@@ -216,15 +202,10 @@ func parseLine(raw []byte, stream string) logLine {
 func cleanMessage(raw []byte) string {
 	s := string(bytes.TrimSuffix(raw, []byte("\r")))
 	if !utf8.ValidString(s) {
+		// Ranging over a string yields U+FFFD for each byte that is not UTF-8.
 		var b strings.Builder
-		for i := 0; i < len(s); {
-			r, size := utf8.DecodeRuneInString(s[i:])
-			if r == utf8.RuneError && size == 1 {
-				b.WriteRune(utf8.RuneError)
-			} else {
-				b.WriteString(s[i : i+size])
-			}
-			i += size
+		for _, r := range s {
+			b.WriteRune(r)
 		}
 		s = b.String()
 	}

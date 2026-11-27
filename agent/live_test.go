@@ -494,10 +494,7 @@ func (w *waitLog) await(t *testing.T, n int) []time.Duration {
 // sleeps recorded in the returned log.
 func startLine(t *testing.T, url string, tweak func(*line)) (*line, *waitLog) {
 	t.Helper()
-	l, err := newLine(config{url: url, token: "tok", machineID: "0123456789abcdef"}, discardLog(), func() float64 { return 0.5 })
-	if err != nil {
-		t.Fatal(err)
-	}
+	l := newLine(config{url: url, token: "tok", machineID: "0123456789abcdef"}, discardLog(), func() float64 { return 0.5 })
 	waits := &waitLog{}
 	l.wait = waits.wait
 	if tweak != nil {
@@ -668,7 +665,7 @@ func TestLineBacksOffFiveMinutesWhenRefused(t *testing.T) {
 
 func TestLineDetectsASilentServer(t *testing.T) {
 	cs := newCableServer(t)
-	_, waits := startLine(t, cs.srv.URL, func(l *line) { l.timings.readTimeout = 300 * time.Millisecond })
+	_, waits := startLine(t, cs.srv.URL, func(l *line) { l.readTimeout = 300 * time.Millisecond })
 
 	c := cs.accept(t)
 	c.welcome(t)
@@ -681,7 +678,7 @@ func TestLineDetectsASilentServer(t *testing.T) {
 
 func TestLineStaysUpWhileThePingsKeepComing(t *testing.T) {
 	cs := newCableServer(t)
-	l, waits := startLine(t, cs.srv.URL, func(l *line) { l.timings.readTimeout = 300 * time.Millisecond })
+	l, waits := startLine(t, cs.srv.URL, func(l *line) { l.readTimeout = 300 * time.Millisecond })
 
 	c := cs.accept(t)
 	c.welcome(t)
@@ -699,7 +696,7 @@ func TestLineStaysUpWhileThePingsKeepComing(t *testing.T) {
 
 func TestLineGivesUpOnASubscriptionThatIsNeverConfirmed(t *testing.T) {
 	cs := newCableServer(t)
-	_, waits := startLine(t, cs.srv.URL, func(l *line) { l.timings.confirmTimeout = 200 * time.Millisecond })
+	_, waits := startLine(t, cs.srv.URL, func(l *line) { l.confirmTimeout = 200 * time.Millisecond })
 
 	c := cs.accept(t)
 	c.welcome(t)
@@ -713,10 +710,7 @@ func TestLineGivesUpOnASubscriptionThatIsNeverConfirmed(t *testing.T) {
 
 func TestLineClosesCleanlyOnShutdown(t *testing.T) {
 	cs := newCableServer(t)
-	l, err := newLine(config{url: cs.srv.URL, token: "tok", machineID: "0123456789abcdef"}, discardLog(), func() float64 { return 0.5 })
-	if err != nil {
-		t.Fatal(err)
-	}
+	l := newLine(config{url: cs.srv.URL, token: "tok", machineID: "0123456789abcdef"}, discardLog(), func() float64 { return 0.5 })
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { l.run(ctx); close(done) }()
@@ -742,7 +736,6 @@ func TestLineClosesCleanlyOnShutdown(t *testing.T) {
 }
 
 func TestRetryDelay(t *testing.T) {
-	const base, ceiling = 5 * time.Second, 60 * time.Second
 	for _, tc := range []struct {
 		failures int
 		r        float64
@@ -759,7 +752,7 @@ func TestRetryDelay(t *testing.T) {
 		{1, 0.75, 5500 * time.Millisecond}, // +10%
 		{5, 0, 48 * time.Second},           // the cap is applied before the jitter
 	} {
-		got := retryDelay(base, ceiling, tc.failures, tc.r)
+		got := retryDelay(tc.failures, tc.r)
 		if diff := got - tc.want; diff < -2*time.Microsecond || diff > 2*time.Microsecond {
 			t.Errorf("retryDelay(failures=%d, r=%v) = %s, want %s", tc.failures, tc.r, got, tc.want)
 		}

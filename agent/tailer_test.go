@@ -76,7 +76,7 @@ func (fd *logDocker) docker(t *testing.T) *dockerClient { return mustDocker(t, f
 
 // kamalApp is a running Kamal app container (name and labels as classify wants).
 func kamalApp(history ...logEntry) *logBox {
-	return &logBox{name: "web-web-production-3f2a", labels: map[string]string{"service": "web", "role": "web"}, status: "running", history: history, subs: map[*logSub]struct{}{}}
+	return &logBox{name: "web-web-production-3f2a", labels: map[string]string{"service": "web", "role": "web"}, status: "running", history: history}
 }
 
 func (fd *logDocker) add(id string, b *logBox) *logBox {
@@ -344,20 +344,19 @@ type logRig struct {
 	tl    *tailer
 }
 
-// startLogRig connects a line to a fake server and runs a tailer behind it,
-// on a fake clock for leases and with fast timers.
-func startLogRig(t *testing.T, fd *logDocker, enabled bool, tweak ...func(*tailer)) *logRig {
-	t.Helper()
-	rig := &logRig{fd: fd, cs: newCableServer(t), clock: newFakeClock()}
-	l, _ := startLine(t, rig.cs.srv.URL, nil)
-	rig.tl = newTailer(fd.docker(t), l.send, discardLog(), rig.clock.Now, enabled, "")
-	rig.tl.sweepEvery, rig.tl.batchEvery = 20*time.Millisecond, 20*time.Millisecond
-	for _, f := range tweak {
-		f(rig.tl)
-	}
+// newTestTailer is a tailer on a fake clock for leases, with fast timers.
+func newTestTailer(t *testing.T, fd *logDocker, send func([]byte) bool, log *slog.Logger, enabled bool) (*tailer, *fakeClock) {
+	clock := newFakeClock()
+	tl := newTailer(fd.docker(t), send, log, clock.Now, enabled, "")
+	tl.sweepEvery, tl.batchEvery = 20*time.Millisecond, 20*time.Millisecond
+	return tl, clock
+}
+
+// runTailer runs tl until the test ends.
+func runTailer(t *testing.T, tl *tailer, tails <-chan tailRequest) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	go func() { rig.tl.run(ctx, l.tails); close(done) }()
+	go func() { tl.run(ctx, tails); close(done) }()
 	t.Cleanup(func() {
 		cancel()
 		select {
@@ -366,6 +365,18 @@ func startLogRig(t *testing.T, fd *logDocker, enabled bool, tweak ...func(*taile
 			t.Error("tailer.run did not return after cancel")
 		}
 	})
+}
+
+// startLogRig connects a line to a fake server and runs a tailer behind it.
+func startLogRig(t *testing.T, fd *logDocker, enabled bool, tweak ...func(*tailer)) *logRig {
+	t.Helper()
+	rig := &logRig{fd: fd, cs: newCableServer(t)}
+	l, _ := startLine(t, rig.cs.srv.URL, nil)
+	rig.tl, rig.clock = newTestTailer(t, fd, l.send, discardLog(), enabled)
+	for _, f := range tweak {
+		f(rig.tl)
+	}
+	runTailer(t, rig.tl, l.tails)
 	rig.c = rig.cs.accept(t)
 	rig.c.welcome(t)
 	rig.c.confirm()
@@ -942,14 +953,9 @@ func TestTailKeepsConsumingWhileTheLineIsDownAndNeverReplays(t *testing.T) {
 		mu.Unlock()
 		return true
 	}
-	clock := newFakeClock()
-	tl := newTailer(fd.docker(t), send, discardLog(), clock.Now, true, "")
-	tl.sweepEvery, tl.batchEvery = 20*time.Millisecond, 20*time.Millisecond
+	tl, _ := newTestTailer(t, fd, send, discardLog(), true)
 	tails := make(chan tailRequest, 8)
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { tl.run(ctx, tails); close(done) }()
-	defer func() { cancel(); <-done }()
+	runTailer(t, tl, tails)
 
 	tails <- tailRequest{container: id, seconds: 30}
 	waitFor(t, "the follow", func() bool { return fd.activeFor(id) == 1 })
@@ -988,14 +994,9 @@ func TestTailSurvivesAPanicInAFollower(t *testing.T) {
 		got <- o
 		return true
 	}
-	clock := newFakeClock()
-	tl := newTailer(fd.docker(t), send, slog.New(slog.NewTextHandler(&logs, nil)), clock.Now, true, "")
-	tl.sweepEvery, tl.batchEvery = 20*time.Millisecond, 20*time.Millisecond
+	tl, _ := newTestTailer(t, fd, send, slog.New(slog.NewTextHandler(&logs, nil)), true)
 	tails := make(chan tailRequest, 8)
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { tl.run(ctx, tails); close(done) }()
-	defer func() { cancel(); <-done }()
+	runTailer(t, tl, tails)
 
 	tails <- tailRequest{container: a, seconds: 30, backlog: 10} // its first batch panics
 	waitFor(t, "the panic to be logged", func() bool { return strings.Contains(logs.String(), "recovered from panic") })

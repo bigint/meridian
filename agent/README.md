@@ -76,8 +76,7 @@ and `Content-Type: application/json`:
   were dropped from the end to fit.
 - `interval_seconds` is `MERIDIAN_INTERVAL` in whole seconds (at least 1),
   before jitter, so Meridian can tell a quiet agent from a slow one. Meridian
-  calls a server stale after three intervals, and never sooner than 45 s; it
-  assumes 15 when the key is missing.
+  calls a server stale after three intervals, and never sooner than 45 s.
 - Any 2xx response counts as delivered. After a 429 the agent waits at least
   the response's `Retry-After` (seconds or an HTTP date, capped at 5 minutes,
   plus up to 20% jitter) before the next try, even when its backoff is
@@ -87,7 +86,7 @@ and `Content-Type: application/json`:
 
 Snapshots say what is running. Live stats say how hard it is working, and they
 only flow while someone is looking. The agent stays outbound-only and
-read-only, and snapshots carry on exactly as before. Two independent loops
+read-only, and snapshots are unaffected. Two independent loops
 share the process: the snapshot loop above, and the line below.
 
 **The line.** The agent opens one WebSocket to `$MERIDIAN_URL/cable` (Rails'
@@ -183,8 +182,8 @@ Set `MERIDIAN_LIVE=0` (or `false`) to turn the line off entirely: no
 connection, no streams, no `/proc` reads, and no container logs, which ride the
 same line. `meridian-agent -print` never starts
 it. If `/host/proc` is not mounted the frames simply have no `host`. If
-Meridian has no `/cable` yet, the agent keeps retrying in the background with
-the backoff above and one log line per attempt. A panic in the live path is
+Meridian's `/cable` cannot be reached, the agent keeps retrying in the
+background with the backoff above and one log line per attempt. A panic in the live path is
 logged and contained. It never reaches the snapshot loop.
 
 ## Container logs

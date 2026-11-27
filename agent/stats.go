@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -139,21 +138,11 @@ func roundTo(v float64, places int) float64 {
 // the container stopped returns nil.
 func (c *dockerClient) streamStats(ctx context.Context, id string, fn func(counters)) error {
 	path := "/containers/" + url.PathEscape(id) + "/stats?stream=true"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
+	resp, err := c.open(ctx, c.stream, path)
 	if err != nil {
 		return err
 	}
-	resp, err := c.stream.Do(req)
-	if err != nil {
-		return fmt.Errorf("GET %s: %w", path, err)
-	}
 	defer resp.Body.Close()
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		return fmt.Errorf("GET %s: %w", path, errNotFound)
-	case resp.StatusCode != http.StatusOK:
-		return fmt.Errorf("GET %s: unexpected status %s", path, resp.Status)
-	}
 
 	budget := &budgetReader{r: resp.Body, left: maxStatsSample}
 	dec := json.NewDecoder(budget)

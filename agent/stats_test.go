@@ -195,7 +195,7 @@ func fakeStatfs(path string) (uint64, uint64, error) {
 }
 
 func TestHostMetricsFromProc(t *testing.T) {
-	h := &hostMetrics{proc: "testdata/proc-a", diskPath: hostDiskPath, statfs: fakeStatfs}
+	h := &hostMetrics{proc: "testdata/proc-a", statfs: fakeStatfs}
 	h.reset() // the baseline
 	h.proc = "testdata/proc-b"
 	got, ok := h.sample()
@@ -235,7 +235,7 @@ func assertJSONKeys(t *testing.T, what string, raw []byte, want ...string) {
 }
 
 func TestHostMetricsAreOmittedWithoutProc(t *testing.T) {
-	h := &hostMetrics{proc: "testdata/not-mounted", diskPath: hostDiskPath, statfs: fakeStatfs}
+	h := &hostMetrics{proc: "testdata/not-mounted", statfs: fakeStatfs}
 	h.reset()
 	if _, ok := h.sample(); ok {
 		t.Fatal("host reported without /host/proc")
@@ -243,7 +243,7 @@ func TestHostMetricsAreOmittedWithoutProc(t *testing.T) {
 }
 
 func TestHostMetricsNeedABaselineForCPU(t *testing.T) {
-	h := &hostMetrics{proc: "testdata/proc-a", diskPath: hostDiskPath, statfs: fakeStatfs}
+	h := &hostMetrics{proc: "testdata/proc-a", statfs: fakeStatfs}
 	if _, ok := h.sample(); ok { // no reset: nothing to measure the rate against
 		t.Fatal("a CPU rate was reported from a single reading")
 	}
@@ -253,7 +253,7 @@ func TestHostMetricsNeedABaselineForCPU(t *testing.T) {
 }
 
 func TestHostMetricsOmitDiskWhenStatfsFails(t *testing.T) {
-	h := &hostMetrics{proc: "testdata/proc-a", diskPath: hostDiskPath, statfs: func(string) (uint64, uint64, error) { return 0, 0, os.ErrNotExist }}
+	h := &hostMetrics{proc: "testdata/proc-a", statfs: func(string) (uint64, uint64, error) { return 0, 0, os.ErrNotExist }}
 	h.reset()
 	got, ok := h.sample()
 	if !ok {
@@ -638,7 +638,7 @@ func frameIDs(f liveFrame) []string {
 }
 
 func testHost() *hostMetrics {
-	return &hostMetrics{proc: "testdata/proc-b", diskPath: hostDiskPath, statfs: fakeStatfs}
+	return &hostMetrics{proc: "testdata/proc-b", statfs: fakeStatfs}
 }
 
 func TestSamplerStreamsOnlyWhileWatchedAndOnlyRunningKamalContainers(t *testing.T) {
@@ -756,22 +756,11 @@ func TestSamplerSkipsAStalledContainer(t *testing.T) {
 func TestSamplerSurvivesPanics(t *testing.T) {
 	// A nil docker client panics inside reconcile. The frame loop must carry on.
 	var logs syncBuffer
-	ls := &liveSampler{frames: make(chan liveFrame, 100), clock: newFakeClock()}
-	ls.sampler = newSampler(nil, testHost(), func(body []byte) bool {
-		var f liveFrame
-		json.Unmarshal(body, &f)
-		select {
-		case ls.frames <- f:
-		default:
-		}
-		return true
-	}, slog.New(slog.NewTextHandler(&logs, nil)), ls.clock.Now)
-	ls.frameEvery, ls.reconcileEvery = 20*time.Millisecond, 20*time.Millisecond
 	watches := make(chan int, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { ls.run(ctx, watches); close(done) }()
-	defer func() { cancel(); <-done }()
+	ls := startSampler(t, nil, testHost(), nil, watches, func(s *sampler) {
+		s.log = slog.New(slog.NewTextHandler(&logs, nil))
+		s.reconcileEvery = 20 * time.Millisecond
+	})
 
 	watches <- 30
 	ls.frameWith(t, "a host-only frame", func(f liveFrame) bool { return f.Host != nil && len(f.Containers) == 0 })

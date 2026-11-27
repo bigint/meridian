@@ -84,7 +84,7 @@ func containerName(names []string) string {
 }
 
 // collectContainers lists every container, keeps Kamal's, and inspects each
-// one for state, health and start time.
+// one for its image, state, health and start time.
 func collectContainers(ctx context.Context, docker *dockerClient) ([]kamalContainer, error) {
 	listed, err := docker.listContainers(ctx)
 	if err != nil {
@@ -92,6 +92,8 @@ func collectContainers(ctx context.Context, docker *dockerClient) ([]kamalContai
 	}
 	out := make([]kamalContainer, 0, len(listed))
 	for _, l := range listed {
+		// The list only decides what to inspect; what is reported comes from
+		// the inspect.
 		if _, ok := classify(containerName(l.Names), l.Labels); !ok {
 			continue
 		}
@@ -108,9 +110,6 @@ func collectContainers(ctx context.Context, docker *dockerClient) ([]kamalContai
 		}
 		c.ID = in.ID
 		c.Image = in.Config.Image
-		if c.Image == "" {
-			c.Image = l.Image
-		}
 		c.State = in.State.Status
 		if in.State.Health != nil {
 			c.Health = in.State.Health.Status
@@ -145,11 +144,14 @@ func encodeCapped(s snapshot, limit int) ([]byte, bool, error) {
 		b, err := json.Marshal(s)
 		return b, err == nil && len(b) <= limit
 	}
-	// Smallest n that does not fit; n-1 is the most that does.
-	n := sort.Search(len(all)+1, func(n int) bool { _, ok := encode(n); return !ok })
-	if n > 0 {
-		b, _ := encode(n - 1)
-		return b, true, nil
+	// The smallest n that does not fit; n-1 is the most that does.
+	n := sort.Search(len(all)+1, func(n int) bool {
+		_, fits := encode(n)
+		return !fits
+	})
+	if n == 0 {
+		return nil, true, fmt.Errorf("snapshot exceeds %d bytes even without containers", limit)
 	}
-	return nil, true, fmt.Errorf("snapshot exceeds %d bytes even without containers", limit)
+	body, _ = encode(n - 1)
+	return body, true, nil
 }

@@ -37,7 +37,6 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 		token:      strings.TrimSpace(getenv("MERIDIAN_TOKEN")),
 		dockerHost: getenv("DOCKER_HOST"),
 		interval:   defaultInterval,
-		live:       true,
 	}
 
 	if raw := strings.TrimSpace(getenv("MERIDIAN_URL")); raw != "" {
@@ -64,27 +63,16 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 		cfg.interval = d
 	}
 
-	if raw := strings.TrimSpace(getenv("MERIDIAN_LIVE")); raw != "" {
-		live, err := strconv.ParseBool(raw)
-		if err != nil {
-			return cfg, fmt.Errorf("MERIDIAN_LIVE: %q is not a boolean (use 0/false to turn the live line off)", raw)
-		}
-		cfg.live = live
-	}
-
-	if raw := strings.TrimSpace(getenv("MERIDIAN_LOGS")); raw != "" {
-		logs, err := strconv.ParseBool(raw)
-		if err != nil {
-			return cfg, fmt.Errorf("MERIDIAN_LOGS: %q is not a boolean (use 1/true to tail container logs)", raw)
-		}
-		cfg.logs = logs
-	}
-
-	labels, err := parseLabels(getenv("MERIDIAN_LABELS"))
-	if err != nil {
+	var err error
+	if cfg.live, err = parseSwitch("MERIDIAN_LIVE", getenv, true); err != nil {
 		return cfg, err
 	}
-	cfg.labels = labels
+	if cfg.logs, err = parseSwitch("MERIDIAN_LOGS", getenv, false); err != nil {
+		return cfg, err
+	}
+	if cfg.labels, err = parseLabels(getenv("MERIDIAN_LABELS")); err != nil {
+		return cfg, err
+	}
 
 	cfg.machineID = strings.TrimSpace(getenv("MERIDIAN_MACHINE_ID"))
 	if cfg.machineID == "" {
@@ -133,6 +121,19 @@ func parseInterval(raw string) (time.Duration, error) {
 		return 0, fmt.Errorf("MERIDIAN_INTERVAL must be at least 1s, got %s", d)
 	}
 	return d, nil
+}
+
+// parseSwitch reads the on/off variable name, which is def when unset.
+func parseSwitch(name string, getenv func(string) string, def bool) (bool, error) {
+	raw := strings.TrimSpace(getenv(name))
+	if raw == "" {
+		return def, nil
+	}
+	on, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("%s: %q is not a boolean (use 1/true or 0/false)", name, raw)
+	}
+	return on, nil
 }
 
 // parseLabels parses "region=sgp,provider=ovh".

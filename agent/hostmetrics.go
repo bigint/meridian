@@ -31,16 +31,15 @@ type hostFrame struct {
 // CPU is a rate, so it remembers the previous /proc/stat reading. It is used
 // by one goroutine.
 type hostMetrics struct {
-	proc     string
-	diskPath string
-	statfs   func(path string) (total, used uint64, err error)
+	proc   string
+	statfs func(path string) (total, used uint64, err error)
 
 	prev    cpuTimes
 	hasPrev bool
 }
 
 func newHostMetrics() *hostMetrics {
-	return &hostMetrics{proc: hostProc, diskPath: hostDiskPath, statfs: statfsUsage}
+	return &hostMetrics{proc: hostProc, statfs: statfsUsage}
 }
 
 // cpuTimes is the aggregate "cpu" line of /proc/stat in clock ticks.
@@ -79,7 +78,7 @@ func (h *hostMetrics) sample() (hostFrame, bool) {
 		busyShare := float64(cur.busy-prev.busy) / float64(cur.total-prev.total)
 		f.CPUCores = roundTo(busyShare*float64(cores), 3)
 	}
-	if total, used, err := h.statfs(h.diskPath); err == nil {
+	if total, used, err := h.statfs(hostDiskPath); err == nil {
 		f.DiskTotal, f.DiskUsed = &total, &used
 	}
 	return f, true

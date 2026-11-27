@@ -139,14 +139,16 @@ func (s *sampler) reconcile(w *liveWindow) {
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	failed, firstErr := 0, error(nil)
+	var failed int
+	var firstErr error
 	for id, st := range w.streams {
 		_, wanted := want[id]
 		if wanted && !st.done.Load() {
 			continue
 		}
 		if err := st.failure(); err != nil && wanted {
-			if failed++; firstErr == nil {
+			failed++
+			if firstErr == nil {
 				firstErr = err
 			}
 		}

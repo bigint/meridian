@@ -39,12 +39,8 @@ func (a *agent) run(ctx context.Context) {
 			failures = 0
 		}
 
-		timer := time.NewTimer(a.delayAfter(err, failures))
-		select {
-		case <-ctx.Done():
-			timer.Stop()
+		if sleepCtx(ctx, a.delayAfter(err, failures)) != nil {
 			return
-		case <-timer.C:
 		}
 	}
 }
@@ -186,4 +182,16 @@ func doubled(d, ceiling time.Duration, n int) time.Duration {
 // jittered scales d by a factor in [0.8, 1.2) from r in [0, 1).
 func jittered(d time.Duration, r float64) time.Duration {
 	return time.Duration(float64(d) * (0.8 + 0.4*r))
+}
+
+// sleepCtx waits for d, or returns ctx's error if it ends first.
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
 }

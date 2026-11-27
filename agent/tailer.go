@@ -117,11 +117,9 @@ func (t *tailer) handle(ctx context.Context, req tailRequest) {
 	if req.seconds <= 0 {
 		return
 	}
-	for id, f := range t.followers {
-		if f.done.Load() { // ended on its own; a new tail starts it afresh
-			delete(t.followers, id)
-		}
-	}
+	// A follower that ended or lapsed must not count against the cap, and a
+	// new tail starts it afresh.
+	t.sweep()
 
 	if f, ok := t.followers[req.container]; ok {
 		f.lease.watch(req.seconds)
@@ -137,7 +135,15 @@ func (t *tailer) handle(ctx context.Context, req tailRequest) {
 		return
 	}
 	fctx, cancel := context.WithCancel(ctx)
-	f := &follower{t: t, id: req.container, backlog: req.backlog, ctx: fctx, cancel: cancel, ready: make(chan struct{}), lease: lease{now: t.now}}
+	f := &follower{
+		t:       t,
+		id:      req.container,
+		backlog: req.backlog,
+		ctx:     fctx,
+		cancel:  cancel,
+		lease:   lease{now: t.now},
+		ready:   make(chan struct{}),
+	}
 	f.lease.watch(req.seconds)
 	t.followers[req.container] = f
 	t.wg.Go(f.run)
@@ -171,7 +177,7 @@ func (t *tailer) sendJSON(v any) {
 }
 
 // newBatcher batches on the wall clock, not t.now: batches pace what goes
-// on the wire, while t.now only measures leases and tests move it by hand.
+// on the wire, while t.now measures leases and tests move it by hand.
 func (t *tailer) newBatcher(id string, emit func(logBatch)) *batcher {
 	b := newBatcher(id, time.Now, emit)
 	b.every = t.batchEvery
@@ -253,10 +259,9 @@ func (f *follower) run() {
 			b.finish()
 			return
 		}
-		select { // a pause, so a stream that keeps closing cannot spin
-		case <-f.ctx.Done():
+		// A pause, so a stream that keeps closing cannot spin.
+		if sleepCtx(f.ctx, t.reopenAfter) != nil {
 			return
-		case <-time.After(t.reopenAfter):
 		}
 		// Docker's since includes lines stamped exactly then: skip the last one.
 		if body, err = t.docker.logs(f.ctx, f.id, true, 0, from.Add(time.Nanosecond)); err != nil {
@@ -370,10 +375,8 @@ func (f *follower) pump(body io.Reader, since time.Time, b *batcher) (last time.
 // returns false if ctx ended first.
 func (f *follower) waitTurn(b *batcher) bool {
 	for b.held() {
-		select {
-		case <-f.ctx.Done():
+		if sleepCtx(f.ctx, b.wait()) != nil {
 			return false
-		case <-time.After(b.wait()):
 		}
 	}
 	b.flushDue()
@@ -407,10 +410,8 @@ func (f *follower) fetchBacklog(n int) {
 	})
 	readLogs(body, f.tty, func(l logLine) bool {
 		for b.held() {
-			select {
-			case <-ctx.Done():
+			if sleepCtx(ctx, b.wait()) != nil {
 				return false
-			case <-time.After(b.wait()):
 			}
 		}
 		b.add(l, true)
@@ -438,15 +439,7 @@ func (p *pacer) wait(ctx context.Context) bool {
 	}
 	p.next = at.Add(p.gap)
 	p.mu.Unlock()
-
-	timer := time.NewTimer(time.Until(at))
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return false
-	case <-timer.C:
-		return true
-	}
+	return sleepCtx(ctx, time.Until(at)) == nil
 }
 
 // short is a container id as the docker CLI shows it, for log lines.

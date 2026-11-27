@@ -33,61 +33,68 @@ func newDockerClient(host string) (*dockerClient, error) {
 	if host == "" {
 		host = "unix:///var/run/docker.sock"
 	}
+	var transport *http.Transport
+	base := "http://docker"
 	switch {
 	case strings.HasPrefix(host, "unix://"):
 		path := strings.TrimPrefix(host, "unix://")
-		transport := &http.Transport{
+		transport = &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				var d net.Dialer
 				return d.DialContext(ctx, "unix", path)
 			},
-			ResponseHeaderTimeout: dockerTimeout,
 		}
-		return &dockerClient{
-			http:   &http.Client{Transport: transport, Timeout: dockerTimeout},
-			stream: &http.Client{Transport: transport},
-			base:   "http://docker",
-		}, nil
 	case strings.HasPrefix(host, "tcp://"), strings.HasPrefix(host, "http://"):
 		u, err := url.Parse(host)
 		if err != nil || u.Host == "" {
 			return nil, fmt.Errorf("cannot parse %q", host)
 		}
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.ResponseHeaderTimeout = dockerTimeout
+		transport = http.DefaultTransport.(*http.Transport).Clone()
 		// Never through HTTP_PROXY: inspect responses carry every container's
 		// environment, and the socket proxy is a neighbour, not the internet.
 		transport.Proxy = nil
-		return &dockerClient{
-			http:   &http.Client{Transport: transport, Timeout: dockerTimeout},
-			stream: &http.Client{Transport: transport},
-			base:   "http://" + u.Host,
-		}, nil
+		base = "http://" + u.Host
 	default:
 		return nil, fmt.Errorf("unsupported scheme in %q (want unix:// or tcp://)", host)
 	}
+	transport.ResponseHeaderTimeout = dockerTimeout
+	return &dockerClient{
+		http:   &http.Client{Transport: transport, Timeout: dockerTimeout},
+		stream: &http.Client{Transport: transport},
+		base:   base,
+	}, nil
 }
 
-func (c *dockerClient) get(ctx context.Context, path string, v any) error {
+// open sends GET path with client and returns the response, whose body the
+// caller closes. Any status but 200 is an error: errNotFound for a 404.
+func (c *dockerClient) open(ctx context.Context, client *http.Client, path string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET %s: %w", path, err)
+	}
+	if resp.StatusCode == http.StatusOK {
+		return resp, nil
+	}
+	io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("GET %s: %w", path, errNotFound)
+	}
+	return nil, fmt.Errorf("GET %s: unexpected status %s", path, resp.Status)
+}
+
+// get decodes the JSON answer to GET path into v.
+func (c *dockerClient) get(ctx context.Context, path string, v any) error {
+	resp, err := c.open(ctx, c.http, path)
 	if err != nil {
 		return err
 	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("GET %s: %w", path, err)
-	}
 	defer resp.Body.Close()
-	body := io.LimitReader(resp.Body, maxDockerResponse)
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		io.Copy(io.Discard, body)
-		return fmt.Errorf("GET %s: %w", path, errNotFound)
-	case resp.StatusCode != http.StatusOK:
-		io.Copy(io.Discard, body)
-		return fmt.Errorf("GET %s: unexpected status %s", path, resp.Status)
-	}
-	if err := json.NewDecoder(body).Decode(v); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxDockerResponse)).Decode(v); err != nil {
 		return fmt.Errorf("GET %s: decode: %w", path, err)
 	}
 	return nil
@@ -99,7 +106,6 @@ func (c *dockerClient) get(ctx context.Context, path string, v any) error {
 type listedContainer struct {
 	ID     string            `json:"Id"`
 	Names  []string          `json:"Names"`
-	Image  string            `json:"Image"`
 	Labels map[string]string `json:"Labels"`
 	State  string            `json:"State"`
 }

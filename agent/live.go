@@ -25,11 +25,7 @@ func (a *agent) startLive(ctx context.Context) <-chan struct{} {
 	go func() {
 		defer close(done)
 		defer recoverPanic(a.log, "live")
-		l, err := newLine(a.cfg, a.log, a.rand)
-		if err != nil {
-			a.log.Error("live stats disabled", "error", err)
-			return
-		}
+		l := newLine(a.cfg, a.log, a.rand)
 		s := newSampler(a.docker, newHostMetrics(), l.send, a.log, time.Now)
 		tl := newTailer(a.docker, l.send, a.log, time.Now, a.cfg.logs, ownContainerID(os.ReadFile, os.Hostname))
 		var wg sync.WaitGroup

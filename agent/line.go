@@ -17,6 +17,13 @@ const (
 	cablePath     = "/cable"
 	cableProtocol = "actioncable-v1-json"
 	cableChannel  = "AgentChannel"
+
+	// ActionCable pings every 3s, so 10s of silence means the line is dead.
+	lineReadTimeout    = 10 * time.Second
+	lineConfirmTimeout = 15 * time.Second // open, but never confirmed
+	lineBackoffBase    = 5 * time.Second  // first retry delay, doubled per failure
+	lineBackoffMax     = time.Minute
+	refusedBackoff     = maxBackoff // after errRefused
 )
 
 var (
@@ -26,23 +33,6 @@ var (
 	errRejected       = errors.New("subscription rejected")
 	errConfirmTimeout = errors.New("subscription was not confirmed in time")
 )
-
-type lineTimings struct {
-	readTimeout    time.Duration // silence from the server that means a dead line
-	confirmTimeout time.Duration // open, but never confirmed
-	backoffBase    time.Duration // first retry delay, doubled per failure
-	backoffMax     time.Duration
-	refusedBackoff time.Duration // after errRefused
-}
-
-// ActionCable pings every 3s, so 10s of silence means the line is dead.
-var defaultLineTimings = lineTimings{
-	readTimeout:    10 * time.Second,
-	confirmTimeout: 15 * time.Second,
-	backoffBase:    5 * time.Second,
-	backoffMax:     time.Minute,
-	refusedBackoff: maxBackoff,
-}
 
 // line is the agent's one outbound WebSocket into Meridian's ActionCable.
 // run owns the session lifecycle, send puts a frame on the wire while the
@@ -57,45 +47,43 @@ type line struct {
 	client     *http.Client
 	log        *slog.Logger
 	rand       func() float64
-	timings    lineTimings
-	wait       func(ctx context.Context, d time.Duration) error // between sessions; tests replace it
-	watches    chan int                                         // seconds from watch messages
-	tails      chan tailRequest                                 // tail messages
+
+	// Tests shorten the timeouts and replace wait.
+	readTimeout    time.Duration                                    // silence from the server that means a dead line
+	confirmTimeout time.Duration                                    // how long a subscription may go unconfirmed
+	wait           func(ctx context.Context, d time.Duration) error // the pause between sessions
+
+	watches chan int         // seconds from watch messages
+	tails   chan tailRequest // tail messages
 
 	mu sync.Mutex
 	ws *wsConn // set only while subscribed: frames may be sent
 }
 
-func newLine(cfg config, log *slog.Logger, rnd func() float64) (*line, error) {
-	u, err := url.Parse(cfg.url)
-	if err != nil || u.Host == "" {
-		return nil, fmt.Errorf("cannot derive the websocket address from %q", cfg.url)
-	}
-	identifier, err := json.Marshal(struct {
+func newLine(cfg config, log *slog.Logger, rnd func() float64) *line {
+	// Neither can fail: loadConfig has checked the URL, and the identifier
+	// is all strings.
+	u, _ := url.Parse(cfg.url)
+	identifier, _ := json.Marshal(struct {
 		Channel   string `json:"channel"`
 		MachineID string `json:"machine_id"`
 	}{cableChannel, cfg.machineID})
-	if err != nil {
-		return nil, err
-	}
-	subscribe, err := json.Marshal(cableCommand{Command: "subscribe", Identifier: string(identifier)})
-	if err != nil {
-		return nil, err
-	}
+	subscribe, _ := json.Marshal(cableCommand{Command: "subscribe", Identifier: string(identifier)})
 	return &line{
-		endpoint:   cfg.url + cablePath,
-		origin:     u.Scheme + "://" + u.Host,
-		token:      cfg.token,
-		identifier: string(identifier),
-		subscribe:  subscribe,
-		client:     newLineClient(),
-		log:        log,
-		rand:       rnd,
-		timings:    defaultLineTimings,
-		wait:       sleepCtx,
-		watches:    make(chan int, 8),
-		tails:      make(chan tailRequest, 32),
-	}, nil
+		endpoint:       cfg.url + cablePath,
+		origin:         u.Scheme + "://" + u.Host,
+		token:          cfg.token,
+		identifier:     string(identifier),
+		subscribe:      subscribe,
+		client:         newLineClient(),
+		log:            log,
+		rand:           rnd,
+		readTimeout:    lineReadTimeout,
+		confirmTimeout: lineConfirmTimeout,
+		wait:           sleepCtx,
+		watches:        make(chan int, 8),
+		tails:          make(chan tailRequest, 32),
+	}
 }
 
 // newLineClient has no overall Timeout, which would cut the stream off.
@@ -143,14 +131,14 @@ func (l *line) run(ctx context.Context) {
 		var delay time.Duration
 		if errors.Is(err, errRefused) {
 			failures = 0
-			delay = jittered(l.timings.refusedBackoff, l.rand())
+			delay = jittered(refusedBackoff, l.rand())
 			l.log.Error("meridian refused the live line; is the agent token valid?", "error", err, "retry_in", delay.Round(time.Second).String())
 		} else {
 			if confirmed { // a clean session resets the backoff
 				failures = 0
 			}
 			failures++
-			delay = retryDelay(l.timings.backoffBase, l.timings.backoffMax, failures, l.rand())
+			delay = retryDelay(failures, l.rand())
 			l.log.Warn("live line down", "error", err, "retry_in", delay.Round(time.Millisecond).String())
 		}
 		if l.wait(ctx, delay) != nil {
@@ -172,7 +160,7 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 	header.Set("Authorization", "Bearer "+l.token)
 	header.Set("Origin", l.origin)
 	header.Set("User-Agent", "meridian-agent/"+version)
-	ws, err := dialWS(ctx, l.client, l.endpoint, header, cableProtocol, l.timings.readTimeout)
+	ws, err := dialWS(ctx, l.client, l.endpoint, header, cableProtocol, l.readTimeout)
 	if err != nil {
 		var he *handshakeError
 		if errors.As(err, &he) && (he.status == http.StatusUnauthorized || he.status == http.StatusForbidden) {
@@ -182,7 +170,7 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 	}
 
 	stopCtxWatch := context.AfterFunc(ctx, ws.shutdown)
-	confirmDog := newWatchdog(l.timings.confirmTimeout, ws.close)
+	confirmDog := newWatchdog(l.confirmTimeout, ws.close)
 	defer func() {
 		stopCtxWatch()
 		confirmDog.stop()
@@ -232,8 +220,7 @@ func (l *line) session(ctx context.Context) (confirmed bool, err error) {
 // deliver hands a {"type":"watch","seconds":n} message to the sampler and a
 // {"type":"tail","container":id,"seconds":n,"backlog":n} message to the
 // tailer. Neither waits: when its owner is busy the message is dropped, and
-// the next renewal does the job. Everything else on the channel is ignored,
-// for forward compatibility.
+// the next renewal does the job. Messages of any other type are ignored.
 func (l *line) deliver(m cableMessage) {
 	var msg struct {
 		Type      string `json:"type"`
@@ -287,19 +274,8 @@ func (l *line) setLive(ws *wsConn) {
 	l.ws = ws
 }
 
-// retryDelay is base doubled per failure past the first, capped at ceiling,
-// then jittered by ±20%.
-func retryDelay(base, ceiling time.Duration, failures int, r float64) time.Duration {
-	return jittered(doubled(base, ceiling, failures-1), r)
-}
-
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	t := time.NewTimer(d)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-t.C:
-		return nil
-	}
+// retryDelay is lineBackoffBase doubled per failure past the first, capped at
+// lineBackoffMax, then jittered by ±20%.
+func retryDelay(failures int, r float64) time.Duration {
+	return jittered(doubled(lineBackoffBase, lineBackoffMax, failures-1), r)
 }

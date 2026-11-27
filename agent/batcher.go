@@ -86,8 +86,11 @@ func (b *batcher) touch(now time.Time) {
 // flushDue sends the batch once it is every old, or once it is full and the
 // last batch went out every ago.
 func (b *batcher) flushDue() {
+	if len(b.lines) == 0 && b.dropped == 0 {
+		return
+	}
 	now := b.now()
-	if (len(b.lines) > 0 || b.dropped > 0) && (now.Sub(b.opened) >= b.every || b.full() && now.Sub(b.sent) >= b.every) {
+	if now.Sub(b.opened) >= b.every || (b.full() && now.Sub(b.sent) >= b.every) {
 		b.flush(false)
 	}
 }
@@ -123,6 +126,7 @@ func (b *batcher) flush(ended bool) {
 	if batch.Lines == nil {
 		batch.Lines = []logLine{}
 	}
-	b.lines, b.size, b.dropped, b.opened, b.sent = nil, 0, 0, time.Time{}, b.now()
+	b.lines, b.size, b.dropped = nil, 0, 0
+	b.opened, b.sent = time.Time{}, b.now()
 	b.emit(batch)
 }

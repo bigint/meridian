@@ -1,31 +1,83 @@
 #!/usr/bin/env bash
 # A local fleet for Meridian: Docker-in-Docker servers, a registry and a
-# GitHub Actions runner, running real bigint sites. See lab/README.md.
+# GitHub Actions runner, deploying real bigint sites. See lab/README.md.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LAB="$ROOT/lab"
 SECRETS="$LAB/.secrets"
-SERVERS=(aps2-az1-node-01 aps2-az1-node-02 apse1-az1-node-01 use1-az1-node-01 euc1-az1-node-01 apse2-az1-node-01)
-# Named like AWS availability zones; the locations are pretend, for the map.
-place() {
-  case "$1" in
-    apse1-az1-node-01) echo "region=ap-southeast-1,city=Singapore,lat=1.35,lng=103.82" ;;
-    euc1-az1-node-01) echo "region=eu-central-1,city=Frankfurt,lat=50.11,lng=8.68" ;;
-    use1-az1-node-01) echo "region=us-east-1,city=New York,lat=40.71,lng=-74.01" ;;
-    aps2-az1-node-01) echo "region=ap-south-2,city=Bangalore,lat=12.97,lng=77.59" ;;
-    apse2-az1-node-01) echo "region=ap-southeast-2,city=Sydney,lat=-33.87,lng=151.21" ;;
-    aps2-az1-node-02) echo "region=ap-south-2,city=Bangalore,lat=12.98,lng=77.6" ;;
-  esac
-}
+REGISTRY=localhost:5555
+
+# The servers (the same names as in lab/compose.yml), named like AWS
+# availability zones. Their places are pretend, for the map:
+# name, region, lat, lng, city.
+FLEET="\
+aps2-az1-node-01  ap-south-2      12.97   77.59   Bangalore
+aps2-az1-node-02  ap-south-2      12.98   77.6    Bangalore
+apse1-az1-node-01 ap-southeast-1  1.35    103.82  Singapore
+use1-az1-node-01  us-east-1       40.71   -74.01  New York
+euc1-az1-node-01  eu-central-1    50.11   8.68    Frankfurt
+apse2-az1-node-01 ap-southeast-2  -33.87  151.21  Sydney"
+SERVERS=()
+while read -r name _; do SERVERS+=("$name"); done <<< "$FLEET"
+
 # The real sites: files-only images at ghcr.io/bigint/<site>, one tag per commit.
 SITES=(yoginth-com asiafibernet-com nailbykyro-com asiagigafibernet-com occasions pckumar-in)
-compose() { docker compose -f "$LAB/compose.yml" "$@"; }
 
-# A site's published versions (full commit SHAs), oldest first, as GHCR lists them.
+# The infra repository's secrets, and the files in lab/.secrets that hold them.
+REPO_SECRETS="\
+KAMAL_REGISTRY_PASSWORD registry_password
+KAMAL_SSH_PRIVATE_KEY id_ed25519
+UMAMI_POSTGRES_PASSWORD umami_postgres_password
+UMAMI_REPLICATION_PASSWORD umami_replication_password
+UMAMI_APP_SECRET umami_app_secret
+CLOUDFLARE_TUNNEL_TOKEN cloudflare_tunnel_token"
+
+usage() {
+  cat <<'EOF'
+usage: bin/lab COMMAND
+
+  up owner/infra-repo             Start the registry and servers, and register and start the runner
+  push SITE|all [VERSION]         Push a site's version (a commit SHA prefix, the newest if left out)
+  push umami VERSION              Push an Umami release tag
+  versions SITE                   List a site's versions, oldest first
+  agents                          Run the agent on every server, each with a fresh token
+  secrets owner/infra-repo        Set the repository secrets the repository lacks
+  kamal owner/infra-repo ARGS...  Run Kamal on the lab network, against a fresh clone
+  ssh [SERVER]                    Open a shell on a server (apse1-az1-node-01)
+  status                          List the lab's containers, then what runs on each server
+  down                            Stop the lab and empty its servers and registry
+EOF
+}
+
+die() { echo "bin/lab: $*" >&2; exit 1; }
+compose() { docker compose -f "$LAB/compose.yml" "$@"; }
+registry_login() { docker login "$REGISTRY" -u lab --password-stdin < "$SECRETS/registry_password" >/dev/null; }
+
+# Writes a random hex secret of BYTES bytes to lab/.secrets/NAME, unless it has one.
+random_secret() { [ -s "$SECRETS/$1" ] || openssl rand -hex "$2" > "$SECRETS/$1"; }
+
+ensure_secrets() {
+  mkdir -p "$SECRETS"
+  chmod 700 "$SECRETS"
+  if [ ! -s "$SECRETS/id_ed25519" ]; then
+    rm -f "$SECRETS/id_ed25519" "$SECRETS/id_ed25519.pub"
+    ssh-keygen -q -t ed25519 -N "" -C meridian-lab -f "$SECRETS/id_ed25519"
+  fi
+  cp "$SECRETS/id_ed25519.pub" "$SECRETS/authorized_keys"
+  # A new registry password needs a new htpasswd to match it.
+  [ -s "$SECRETS/registry_password" ] || { random_secret registry_password 16; rm -f "$SECRETS/htpasswd"; }
+  [ -s "$SECRETS/htpasswd" ] ||
+    docker run --rm httpd:2.4-alpine htpasswd -Bbn lab "$(cat "$SECRETS/registry_password")" > "$SECRETS/htpasswd"
+  random_secret umami_postgres_password 24
+  random_secret umami_replication_password 24
+  random_secret umami_app_secret 32
+}
+
+# A site's published versions (full commit SHAs), in the order GHCR lists them.
 versions() {
   local token
-  token="$(curl -fsS "https://ghcr.io/token?scope=repository:bigint/$1:pull" | jq -r .token)"
+  token="$(curl -fsS "https://ghcr.io/token?scope=repository:bigint/$1:pull" | jq -r .token)" || return
   curl -fsS -H "Authorization: Bearer $token" "https://ghcr.io/v2/bigint/$1/tags/list?n=1000" \
     | jq -r '.tags[] | select(test("^[0-9a-f]{40}$"))'
 }
@@ -33,44 +85,31 @@ versions() {
 # Wraps ghcr.io/bigint/SITE at VERSION (a SHA prefix; the newest if empty) in
 # lab/site and pushes it as localhost:5555/bigint/SITE:<7-character SHA>.
 push_site() {
-  local site="$1" want="${2:-}" sha
-  sha="$(versions "$site" | grep "^$want" | tail -n 1 || true)"
-  [ -n "$sha" ] || { echo "$site: no version ${want:-at all} on ghcr.io/bigint/$site" >&2; return 1; }
+  local site="$1" want="${2:-}" all sha image
+  [[ $want =~ ^[0-9a-f]*$ ]] || die "$site: VERSION is a commit SHA prefix, not $want"
+  all="$(versions "$site")" || die "$site: can't list the versions on ghcr.io/bigint/$site"
+  sha="$(grep "^$want" <<< "$all" | tail -n 1)" || true
+  [ -n "$sha" ] || die "$site: no version ${want:-at all} on ghcr.io/bigint/$site"
+  image="$REGISTRY/bigint/$site:${sha:0:7}"
   docker build -q --build-arg SITE="$site" --build-arg SITE_IMAGE="ghcr.io/bigint/$site:$sha" \
-    -t "localhost:5555/bigint/$site:${sha:0:7}" "$LAB/site" >/dev/null
-  docker push -q "localhost:5555/bigint/$site:${sha:0:7}" >/dev/null
+    -t "$image" "$LAB/site" >/dev/null
+  docker push -q "$image" >/dev/null
   echo "$site: pushed ${sha:0:7}"
 }
 
 # Umami at a release tag such as 3.5.0: ghcr.io/umami-software/umami labelled
 # for Kamal and pushed as localhost:5555/umami-software/umami:VERSION.
 push_umami() {
-  local version="${1:?usage: bin/lab push umami VERSION (a release tag, e.g. 3.5.0)}"
-  docker build -q --build-arg IMAGE="ghcr.io/umami-software/umami:$version" \
-    -t "localhost:5555/umami-software/umami:$version" "$LAB/umami" >/dev/null
-  docker push -q "localhost:5555/umami-software/umami:$version" >/dev/null
+  local version="$1" image="$REGISTRY/umami-software/umami:$1"
+  docker build -q --build-arg IMAGE="ghcr.io/umami-software/umami:$version" -t "$image" "$LAB/umami" >/dev/null
+  docker push -q "$image" >/dev/null
   echo "umami: pushed $version"
-}
-
-ensure_secrets() {
-  mkdir -p "$SECRETS" && chmod 700 "$SECRETS"
-  [ -f "$SECRETS/id_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -C meridian-lab -f "$SECRETS/id_ed25519"
-  cp "$SECRETS/id_ed25519.pub" "$SECRETS/authorized_keys"
-  [ -f "$SECRETS/registry_password" ] || (openssl rand -hex 16 > "$SECRETS/registry_password")
-  [ -s "$SECRETS/htpasswd" ] || docker run --rm httpd:2.4-alpine htpasswd -Bbn lab "$(cat "$SECRETS/registry_password")" > "$SECRETS/htpasswd"
-  # Umami: its database password, the replica's replication password and its app secret.
-  [ -s "$SECRETS/umami_postgres_password" ] || (openssl rand -hex 24 > "$SECRETS/umami_postgres_password")
-  [ -s "$SECRETS/umami_replication_password" ] || (openssl rand -hex 24 > "$SECRETS/umami_replication_password")
-  [ -s "$SECRETS/umami_app_secret" ] || (openssl rand -hex 32 > "$SECRETS/umami_app_secret")
-}
-
-registry_login() {
-  docker login localhost:5555 -u lab --password-stdin < "$SECRETS/registry_password" >/dev/null
 }
 
 case "${1:-}" in
   up)
-    repo="${2:?usage: bin/lab up owner/infra-repo}"
+    [ $# -eq 2 ] || die "usage: bin/lab up owner/infra-repo"
+    repo="$2"
     ensure_secrets
     compose up -d --build registry "${SERVERS[@]}"
     echo "Registering the runner on $repo…"
@@ -80,85 +119,95 @@ case "${1:-}" in
     ;;
 
   push)
-    site="${2:?usage: bin/lab push SITE|all [VERSION] | umami VERSION}"
+    [ $# -ge 2 ] || die "usage: bin/lab push SITE|all [VERSION] | push umami VERSION"
+    [ "$2" != umami ] || [ $# -eq 3 ] || die "usage: bin/lab push umami VERSION (a release tag, such as 3.5.0)"
     registry_login
-    if [ "$site" = all ]; then
-      for site in "${SITES[@]}"; do push_site "$site"; done
-    else
-      case "$site" in
-        umami) push_umami "${3:-}" ;;
-        *) push_site "$site" "${3:-}" ;;
-      esac
-    fi
+    case "$2" in
+      all) for site in "${SITES[@]}"; do push_site "$site"; done ;;
+      umami) push_umami "$3" ;;
+      *) push_site "$2" "${3:-}" ;;
+    esac
     ;;
 
   versions)
-    site="${2:?usage: bin/lab versions SITE}"
-    versions "$site" | cut -c1-7
+    [ $# -eq 2 ] || die "usage: bin/lab versions SITE"
+    versions "$2" | cut -c1-7
     ;;
 
   agents)
     url="${MERIDIAN_URL:-http://host.docker.internal:3000}"
+    image="$REGISTRY/meridian-agent:lab"
     registry_login
-    docker build -q --build-arg VERSION=lab -t localhost:5555/meridian-agent:lab "$ROOT/agent" >/dev/null
-    docker push -q localhost:5555/meridian-agent:lab >/dev/null
-    for server in "${SERVERS[@]}"; do
-      token="$(cd "$ROOT" && bin/rails runner "print AgentToken.where(label: '$server', revoked_at: nil).destroy_all && AgentToken.create!(label: '$server').token" 2>/dev/null)"
-      docker exec -i "meridian-lab-$server-1" sh -c '
-        docker login registry:5000 -u lab --password-stdin >/dev/null &&
-        docker rm -f meridian-agent >/dev/null 2>&1;
-        host_ip="$(getent hosts host.docker.internal | cut -d" " -f1)";
-        docker run -d --pull always --name meridian-agent --restart unless-stopped --user 0 \
-          ${host_ip:+--add-host host.docker.internal:$host_ip} \
-          -v /var/run/docker.sock:/var/run/docker.sock:ro \
-          -v /etc/machine-id:/host/etc/machine-id:ro -v /etc/hostname:/host/etc/hostname:ro -v /proc:/host/proc:ro \
-          -e MERIDIAN_URL='"$url"' -e MERIDIAN_TOKEN='"$token"' -e MERIDIAN_INTERVAL=5s -e MERIDIAN_LOGS=1 \
-          -e "MERIDIAN_LABELS=provider=kiri,'"$(place "$server")"'" \
-          registry:5000/meridian-agent:lab >/dev/null' < "$SECRETS/registry_password"
+    docker build -q --build-arg VERSION=lab -t "$image" "$ROOT/agent" >/dev/null
+    docker push -q "$image" >/dev/null
+    # One new token per server, labelled with its name. Older ones with that label go.
+    tokens="$(cd "$ROOT" && bin/rails runner '
+      ARGV.each do |label|
+        AgentToken.where(label:).destroy_all
+        puts "#{label} #{AgentToken.create!(label:).token}"
+      end' "${SERVERS[@]}")"
+    while read -r server region lat lng city; do
+      token="$(awk -v server="$server" '$1 == server { print $2 }' <<< "$tokens")"
+      [ -n "$token" ] || die "$server: bin/rails runner made no token"
+      # The values reach docker run through the environment, not spliced into the script.
+      docker exec -i \
+        -e MERIDIAN_URL="$url" -e MERIDIAN_TOKEN="$token" \
+        -e MERIDIAN_LABELS="provider=lab,region=$region,city=$city,lat=$lat,lng=$lng" \
+        "meridian-lab-$server-1" sh -euc '
+          docker login registry:5000 -u lab --password-stdin >/dev/null
+          docker rm -f meridian-agent >/dev/null 2>&1 || true
+          host_ip="$(getent hosts host.docker.internal | cut -d" " -f1)"
+          docker run -d --pull always --name meridian-agent --restart unless-stopped --user 0 \
+            ${host_ip:+--add-host host.docker.internal:$host_ip} \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /etc/machine-id:/host/etc/machine-id:ro -v /etc/hostname:/host/etc/hostname:ro -v /proc:/host/proc:ro \
+            -e MERIDIAN_URL -e MERIDIAN_TOKEN -e MERIDIAN_LABELS -e MERIDIAN_INTERVAL=5s -e MERIDIAN_LOGS=1 \
+            registry:5000/meridian-agent:lab >/dev/null' < "$SECRETS/registry_password"
       echo "$server: agent running"
-    done
+    done <<< "$FLEET"
     ;;
 
   secrets)
-    # The repository secrets the infra repo's .kamal/secrets reads. Sets only
-    # those the repository lacks, so it never replaces one set elsewhere.
-    repo="${2:?usage: bin/lab secrets owner/infra-repo}"
+    # Sets only the secrets the repository lacks, so it never replaces one set elsewhere.
+    [ $# -eq 2 ] || die "usage: bin/lab secrets owner/infra-repo"
+    repo="$2"
     ensure_secrets
     have="$(gh secret list --repo "$repo" --json name --jq '.[].name')"
     while read -r name file; do
-      if grep -qx "$name" <<< "$have"; then echo "$name: already set"
-      else gh secret set "$name" --repo "$repo" < "$SECRETS/$file" && echo "$name: set"; fi
-    done <<'EOF'
-KAMAL_REGISTRY_PASSWORD registry_password
-KAMAL_SSH_PRIVATE_KEY id_ed25519
-UMAMI_POSTGRES_PASSWORD umami_postgres_password
-UMAMI_REPLICATION_PASSWORD umami_replication_password
-UMAMI_APP_SECRET umami_app_secret
-EOF
+      if grep -qx "$name" <<< "$have"; then
+        echo "$name: already set"
+      elif [ ! -s "$SECRETS/$file" ]; then
+        echo "$name: skipped, lab/.secrets/$file is missing"
+      else
+        gh secret set "$name" --repo "$repo" < "$SECRETS/$file"
+        echo "$name: set"
+      fi
+    done <<< "$REPO_SECRETS"
     ;;
 
   kamal)
-    # Kamal against a fresh clone of the infra repo, from inside the lab network,
-    # for what the deploy workflow doesn't do (kamal accessory boot, app exec…).
-    repo="${2:?usage: bin/lab kamal owner/infra-repo KAMAL_ARGS...}"
+    # For what the deploy workflow doesn't do, such as kamal accessory boot or app exec.
+    [ $# -ge 2 ] || die "usage: bin/lab kamal owner/infra-repo KAMAL_ARGS..."
+    repo="$2"
     shift 2
     ensure_secrets
     clone="$(mktemp -d)"
     trap 'rm -rf "$clone"' EXIT
     gh repo clone "$repo" "$clone" -- -q --depth 1
-    docker run --rm -i --network meridian-lab --entrypoint kamal -w /infra -v "$clone:/infra" \
-      -v "$SECRETS/id_ed25519:/root/.ssh/id_ed25519:ro" \
-      -e KAMAL_REGISTRY_PASSWORD="$(cat "$SECRETS/registry_password")" \
-      -e UMAMI_POSTGRES_PASSWORD="$(cat "$SECRETS/umami_postgres_password")" \
-      -e UMAMI_REPLICATION_PASSWORD="$(cat "$SECRETS/umami_replication_password")" \
-      -e UMAMI_APP_SECRET="$(cat "$SECRETS/umami_app_secret")" \
-      -e CLOUDFLARE_TUNNEL_TOKEN="$(cat "$SECRETS/cloudflare_tunnel_token" 2>/dev/null)" \
-      meridian-lab-runner "$@"
+    args=(--rm -i --network meridian-lab --entrypoint kamal -w /infra -v "$clone:/infra"
+      -v "$SECRETS/id_ed25519:/root/.ssh/id_ed25519:ro")
+    if [ -t 0 ] && [ -t 1 ]; then args+=(-t); fi
+    # Passed by name, so the values stay out of the process list.
+    while read -r name file; do
+      [ -s "$SECRETS/$file" ] || continue
+      export "$name=$(cat "$SECRETS/$file")"
+      args+=(-e "$name")
+    done <<< "$REPO_SECRETS"
+    docker run "${args[@]}" meridian-lab-runner "$@"
     ;;
 
   ssh)
-    server="${2:-apse1-az1-node-01}"
-    docker exec -it "meridian-lab-$server-1" sh
+    docker exec -it "meridian-lab-${2:-apse1-az1-node-01}-1" bash
     ;;
 
   status)
@@ -170,11 +219,16 @@ EOF
     ;;
 
   down)
-    compose --profile runner down
+    # -v drops the servers' and registry's anonymous volumes, which would otherwise pile up.
+    compose --profile runner down -v
+    ;;
+
+  help | -h | --help)
+    usage
     ;;
 
   *)
-    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | push umami VERSION | versions SITE | agents | secrets owner/repo | kamal owner/repo ARGS... | ssh [server] | status | down" >&2
+    usage >&2
     exit 1
     ;;
 esac

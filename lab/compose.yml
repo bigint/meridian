@@ -21,6 +21,7 @@ services:
     networks: [ lab ]
     restart: unless-stopped
 
+  # The same servers as FLEET in bin/lab.
   apse1-az1-node-01: { <<: *server, hostname: apse1-az1-node-01 }
   euc1-az1-node-01: { <<: *server, hostname: euc1-az1-node-01 }
   use1-az1-node-01: { <<: *server, hostname: use1-az1-node-01 }

@@ -26,9 +26,9 @@ flowchart TB
 - **`registry`**: a private image registry. It is `registry:5000` inside the lab and `localhost:5555` from your machine, with the user `lab` and a generated password.
 - **`runner`**: a GitHub Actions self-hosted runner, registered on your test infra repository with the labels `self-hosted` and `meridian-lab`. It has Kamal `2.12.0` and sits on the lab network, so the Meridian deploy workflow can run `kamal deploy` against the servers.
 
-The locations are pretend, for the map. `bin/lab agents` reports them as agent labels.
+The places are pretend, for the map. `bin/lab agents` reports them as the agent labels `region`, `city`, `lat` and `lng`, with `provider=lab`. They are set in `FLEET` at the top of `bin/lab`.
 
-| Server | Region | City | Latitude, longitude |
+| Server | `region` | `city` | `lat`, `lng` |
 | --- | --- | --- | --- |
 | `aps2-az1-node-01` | `ap-south-2` | Bangalore | `12.97`, `77.59` |
 | `aps2-az1-node-02` | `ap-south-2` | Bangalore | `12.98`, `77.6` |
@@ -77,13 +77,15 @@ bin/lab up owner/infra-repo
 ```
 
 This generates the lab's secrets, builds and starts the registry and the six servers, then registers the runner on `owner/infra-repo` and starts it.
+
 ### 3. Give the infra repository its secrets
 
 ```bash
 bin/lab secrets owner/infra-repo
 ```
 
-This sets `KAMAL_REGISTRY_PASSWORD`, `KAMAL_SSH_PRIVATE_KEY`, `UMAMI_POSTGRES_PASSWORD`, `UMAMI_REPLICATION_PASSWORD` and `UMAMI_APP_SECRET` as repository secrets. It sets only the ones the repository lacks, so it never replaces a secret set elsewhere. Set `CLOUDFLARE_TUNNEL_TOKEN` yourself if you run the tunnel.
+This sets `KAMAL_REGISTRY_PASSWORD`, `KAMAL_SSH_PRIVATE_KEY`, `UMAMI_POSTGRES_PASSWORD`, `UMAMI_REPLICATION_PASSWORD` and `UMAMI_APP_SECRET` as repository secrets, and `CLOUDFLARE_TUNNEL_TOKEN` if `lab/.secrets/cloudflare_tunnel_token` holds one. It sets only the ones the repository lacks, so it never replaces a secret set elsewhere.
+
 ### 4. Send the deploy workflow to the lab runner
 
 The deploy workflow runs on `ubuntu-latest` unless the repository variable `MERIDIAN_RUNS_ON` names another runner. GitHub's runners can't reach the lab, so point it at the lab runner's label:
@@ -91,6 +93,7 @@ The deploy workflow runs on `ubuntu-latest` unless the repository variable `MERI
 ```bash
 gh variable set MERIDIAN_RUNS_ON --body meridian-lab --repo owner/infra-repo
 ```
+
 ### 5. Push images to the lab registry
 
 ```bash
@@ -100,21 +103,25 @@ bin/lab push occasions 6c45ebf
 ```
 
 `push all` pushes the newest version of every site. `versions` lists a site's versions, oldest first. Push an older one to have something to deploy or roll back to.
+
 ### 6. Add the project in Meridian
 
 Add `owner/infra-repo` on **Projects**, then press **Add CI workflow** on its page if the repository has no `.github/workflows/meridian-deploy.yml` yet. See [Projects](../docs/guides/projects.mdx).
+
 ### 7. Start the agents
 
 ```bash
 bin/lab agents
 ```
 
-This builds `meridian-agent` from `agent/`, pushes it to the lab registry, and runs it on every server. Each server gets a new per-server token labelled with its name, and an older token with that label is deleted. The agents report every 5 seconds, tail logs (`MERIDIAN_LOGS=1`), and carry the place labels from the table above plus `provider=kiri`. They reach Meridian at `http://host.docker.internal:3000`; set `MERIDIAN_URL` to change that.
+This builds `meridian-agent` from `agent/`, pushes it to the lab registry, and runs it on every server. Each server gets a new per-server token labelled with its name, and an older token with that label is deleted. The agents report every 5 seconds, tail logs (`MERIDIAN_LOGS=1`), and carry the labels from the table above plus `provider=lab`. They reach Meridian at `http://host.docker.internal:3000`; set `MERIDIAN_URL` to change that.
 
 The board fills in within a few seconds.
+
 ### 8. Deploy
 
 Open an app's page, pick a version and press **Deploy**. Meridian commits the version file, the runner picks up the workflow, and Kamal deploys to the lab servers. See [Deploy and roll back](../docs/guides/deploy.mdx).
+
 ### Boot the Umami databases
 
 Kamal's accessories aren't started by the deploy workflow. Boot the databases once, primary first, with Kamal run from inside the lab:
@@ -139,9 +146,10 @@ Then log in to Umami as `admin` with the password `umami`, and change the passwo
 | `bin/lab kamal owner/infra-repo ARGS…` | Runs Kamal in the runner image on the lab network, against a fresh shallow clone of the repository. Use it for what the workflow doesn't do, such as `accessory boot` or `app exec`. |
 | `bin/lab ssh [server]` | Opens a shell on a server, `apse1-az1-node-01` by default. |
 | `bin/lab status` | Lists the lab's containers, then what runs on each server. |
-| `bin/lab down` | Stops and removes the lab's containers. |
+| `bin/lab down` | Stops and removes the lab's containers and their volumes. |
+| `bin/lab help` | Lists the commands. |
 
-`bin/lab down` removes the server containers, so the next `bin/lab up` starts with empty servers and new machine IDs. Run `bin/lab agents` again afterwards.
+`bin/lab down` removes the servers and the registry with everything in them, so the next `bin/lab up` starts with empty servers, new machine IDs and an empty registry. Run `bin/lab push` and `bin/lab agents` again afterwards. The secrets in `lab/.secrets/` stay.
 
 ## Secrets
 
@@ -152,9 +160,9 @@ Then log in to Umami as `admin` with the password `umami`, and change the passwo
 | `id_ed25519`, `id_ed25519.pub`, `authorized_keys` | The SSH key Kamal uses to reach the servers |
 | `registry_password`, `htpasswd` | The registry user `lab`'s password |
 | `umami_postgres_password`, `umami_replication_password`, `umami_app_secret` | Umami's database, replication and app secrets |
-| `cloudflare_tunnel_token` | Not generated. Put the tunnel's token here for `bin/lab kamal` to pass on. |
+| `cloudflare_tunnel_token` | Not generated. Put the tunnel's token here for `bin/lab secrets` and `bin/lab kamal` to pass on. |
 
-Each file is made only if it is missing, so running a command again keeps the secrets you have.
+Each file is made only if it is missing, so running a command again keeps the secrets you have. A new `registry_password` gets a new `htpasswd` to match.
 
 ## How the lab differs from production
 

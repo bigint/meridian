@@ -1,8 +1,13 @@
 # Meridian's documentation site, https://meridian.yoginth.com.
 #
-# Not deployed yet. The site needs a Dockerfile in docs/ that builds it and
-# serves it on port 80 with /up answering 200; it lands once the build is
-# chosen (see contributing/development.md). Then, from docs/:
+# docs/Dockerfile builds the site and serves it on port 8080 with /up answering
+# 200. The Release workflow publishes ghcr.io/bigint/meridian-docs with every
+# version tag, beside the app and agent images.
+#
+# To run it from a Meridian, copy this file into that Meridian's infra
+# repository, set the host below, and deploy a release tag: Meridian's CI
+# workflow pulls the published image (--skip-push). To deploy from this
+# repository by hand instead, from docs/:
 #
 #   kamal setup
 service: meridian-docs
@@ -15,7 +20,7 @@ servers:
 proxy:
   host: meridian.yoginth.com
   ssl: true
-  app_port: 80
+  app_port: 8080
   healthcheck:
     path: /up
 
@@ -25,5 +30,10 @@ registry:
   password:
     - KAMAL_REGISTRY_PASSWORD
 
+# Kamal runs from docs/, but the image is built from the repository root,
+# since the Changelog page comes from CHANGELOG.md. The Dockerfile path is
+# relative to docs/.
 builder:
   arch: amd64
+  context: ..
+  dockerfile: Dockerfile

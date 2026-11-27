@@ -1,0 +1,13 @@
+# The docs image is built from the repository root (docker build -f
+# docs/Dockerfile .), so this file, not the root .dockerignore, decides what
+# it sees: only what the site is built from.
+*
+!CHANGELOG.md
+!script/docs_changelog.rb
+!docs/
+
+# Not part of the site: Kamal's files, and the changelog page the build writes.
+docs/.kamal
+docs/config
+docs/changelog.mdx
+docs/Dockerfile*

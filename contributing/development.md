@@ -81,7 +81,7 @@ bin/docs changelog    # write docs/changelog.mdx from CHANGELOG.md (bin/docs doe
 
 The CI workflow's `docs` job runs `bin/docs check` on Node 22. It checks only and publishes nothing.
 
-> **Note:** How the site is built for production is not decided yet. `mint export` makes a static build, but it needs a Mintlify Enterprise plan. `docs/config/deploy.yml` holds a Kamal config for `meridian.yoginth.com` that waits on a `Dockerfile` in `docs/` which serves the site on port 80 with `/up` answering `200`.
+The site ships as a container. `docs/Dockerfile` runs `mint export`, which writes the site as static files, and serves them with nginx on port `8080`, with `/up` for kamal-proxy. Build it from the repository root, because the Changelog page comes from `CHANGELOG.md`: `docker build -f docs/Dockerfile -t meridian-docs .`. The Release workflow publishes `ghcr.io/bigint/meridian-docs` with every version tag. `docs/config/deploy.yml` deploys it to `meridian.yoginth.com`. Keep `MINT_VERSION` in the Dockerfile the same as in `bin/docs`.
 
 ## Other tools
 

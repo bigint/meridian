@@ -1,0 +1,39 @@
+require "test_helper"
+
+class TrafficTest < ActionDispatch::IntegrationTest
+  setup do
+    @app = App.create!(project: projects(:infra), service: "web", destination: "production", config_path: "deploy/web.production.yml", kind: "rails")
+    @web_1, @web_2 = server_named("web-1.example.com"), server_named("web-2.example.com")
+    place(@web_1, WEB, app: @app, version: "1a2b3c4d5e6f7a8b", name: "web-web-production-1a2b3c4d5e6f7a8b")
+    place(@web_2, WORKER, app: @app)
+    @proxy_1 = place(@web_1, "c" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+    @proxy_2 = place(@web_2, "d" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+  end
+
+  test "an app's traffic reads kamal-proxy on each of its servers, without writing to Activity" do
+    sign_in_as users(:ada)
+
+    assert_no_difference -> { Event.count } do
+      get app_traffic_path(@app)
+    end
+
+    assert_response :success
+    channel = JSON.parse(css_select(".logs").first["data-logs-channel-value"])
+    assert_equal({ "channel" => "TrafficChannel", "app_id" => @app.id }, channel.except("grant"))
+    assert LiveLogs.granted?(channel["grant"], users(:ada), "traffic", @app.id)
+    assert_select ".logs__chip", text: "web-1"
+    assert_select ".logs__chip", text: "web-2"
+    targets = JSON.parse(css_select(".logs").first["data-logs-targets-value"])
+    assert_equal "web-web-production-1a2b3c4d5e6f", targets[WEB.first(12)]
+  end
+
+  test "an app whose servers report no kamal-proxy says so" do
+    Placement.where(kind: "proxy").delete_all
+    sign_in_as users(:ada)
+
+    get app_traffic_path(@app)
+
+    assert_select ".logs", count: 0
+    assert_select ".empty__title", text: /No kamal-proxy reported/
+  end
+end

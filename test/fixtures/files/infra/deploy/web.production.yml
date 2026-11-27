@@ -1,0 +1,13 @@
+servers:
+  web:
+    - web-1.example.com
+    - web-2.example.com
+  job:
+    hosts:
+      - jobs-1.example.com
+    cmd: bin/jobs
+
+proxy:
+  hosts:
+    - shop.example.com
+  app_port: 3000

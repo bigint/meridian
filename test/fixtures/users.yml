@@ -1,0 +1,4 @@
+ada:
+  name: Ada Lovelace
+  email_address: ada@example.com
+  password_digest: <%= BCrypt::Password.create("correct horse battery", cost: 4) %>

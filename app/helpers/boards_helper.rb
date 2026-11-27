@@ -55,12 +55,6 @@ module BoardsHelper
     end
   end
 
-  # Every placement of an app, as board cells.
-  def app_cells(app)
-    group = Board.new(app_id: app.id, group: "none").groups.first
-    group ? group.columns.map { group.cell(app, it) }.compact : []
-  end
-
   # One line that answers "is this app running what Git says?"
   def app_status(app, cells)
     return tag.span("Not assigned to any server yet.", class: "txt-muted") if cells.empty?

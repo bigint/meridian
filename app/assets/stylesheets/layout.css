@@ -185,7 +185,6 @@
   .page-header__title { font-size: var(--text-l); font-weight: 700; letter-spacing: -0.02em; }
   .page-header__meta { color: var(--color-ink-muted); }
   .page-header__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-s); margin-inline-start: auto; }
-  .page-header .tabs { margin-block-end: -1px; }
 
   .section { display: flex; flex-direction: column; gap: 0.625rem; }
   .section__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-s); }
@@ -204,8 +203,6 @@
     border: 1px solid var(--color-line); border-radius: var(--radius-large); background: var(--color-surface);
     @media (min-width: 64rem) { position: sticky; inset-block-start: 4rem; max-block-size: calc(100svh - 5rem); overflow-y: auto; }
   }
-  .panel__kicker { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; color: var(--color-ink-muted); }
-  .panel__title { font-size: var(--text-l); font-weight: 700; letter-spacing: -0.02em; }
 
   /* Sign in and first run */
   .auth { display: grid; place-items: center; min-block-size: 100svh; padding-inline: var(--space-m); background: var(--color-surface); }

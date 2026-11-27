@@ -99,10 +99,6 @@ class GitHost::GitHub
     request { client.create_contents(repo, path, message, content, **options).commit.sha }
   end
 
-  def delete_file(path, sha:, message:)
-    request { client.delete_contents(repo, path, message, sha, branch: project.default_branch) }
-  end
-
   def parent_sha(sha)
     request { client.commit(repo, sha).parents.first&.sha }
   end

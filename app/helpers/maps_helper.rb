@@ -11,10 +11,12 @@ module MapsHelper
     [ "site", site.state, ("deploying" if map.deploying?(site)) ].compact.join(" ")
   end
 
-  # Several servers: how many. One: its state's symbol, or ↗ while a deploy goes out.
-  def site_text(map, site)
-    return site.servers.size.to_s if site.servers.size > 1
-    map.deploying?(site) && site.state == "in_sync" ? "↗" : Drift::SYMBOLS[site.state]
+  # Several servers: how many. One: its state's icon, or an arrow while a
+  # deploy goes out.
+  def site_mark(map, site)
+    return tag.text(site.servers.size, class: "symbol", dy: "0.35em") if site.servers.size > 1
+    state = map.deploying?(site) && site.state == "in_sync" ? :deploying : site.state
+    state_icon(state, class: "symbol", x: -3.5, y: -3.5, width: 7, height: 7)
   end
 
   def site_title(map, site)

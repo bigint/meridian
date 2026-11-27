@@ -75,7 +75,7 @@
       <% end %>
     <% else %>
       <%= render "boards/matrix", board: @board %>
-      <p class="txt-small txt-muted">Each cell is the version a server runs. Green matches Git, ≠ is a different version, ✕ is missing, and dashed means the agent is silent or there is nothing to compare yet.</p>
+      <p class="txt-small txt-muted">Each cell is the version a server runs. Green matches Git, <%= state_icon "drifted", class: "icon-inline" %> is a different version, <%= state_icon "missing", class: "icon-inline" %> is missing, and dashed means the agent is silent or there is nothing to compare yet.</p>
     <% end %>
 
     <%= pagination label: "Page #{@board.page} of #{@board.pages}",

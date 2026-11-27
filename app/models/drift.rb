@@ -2,7 +2,6 @@
 module Drift
   STATES = %w[ in_sync drifted missing stray stale unknown ].freeze
 
-  SYMBOLS = { "in_sync" => "✓", "drifted" => "≠", "missing" => "✕", "stray" => "?", "stale" => "…", "unknown" => "–" }.freeze
   LABELS = { "in_sync" => "In sync", "drifted" => "Drifted", "missing" => "Missing", "stray" => "Stray", "stale" => "Stale", "unknown" => "Unknown" }.freeze
   MEANINGS = {
     "in_sync" => "Running exactly the version Git says.",

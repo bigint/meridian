@@ -14,19 +14,19 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_select ".cell .sr-only", text: "In sync:"
   end
 
-  test "a drifted cell shows the version it runs; missing and unknown show a symbol" do
+  test "a drifted cell shows its icon and the version it runs; missing and unknown show an icon" do
     render html: version_cell(cell("drifted", versions: [ "v41" ])) + version_cell(cell("missing", versions: [])) + version_cell(cell("unknown", versions: []))
-    assert_select "[data-state=drifted]", text: /≠v41/
-    assert_select "[data-state=missing]", text: /#{Drift::SYMBOLS["missing"]}/
-    assert_select "[data-state=unknown]", text: /#{Drift::SYMBOLS["unknown"]}/
-    assert_select "[data-state=unknown]", text: /\?/, count: 0
+    assert_select "[data-state=drifted] svg[data-icon=drifted][aria-hidden]"
+    assert_select "[data-state=drifted] .cell__version", text: "v41"
+    assert_select "[data-state=missing] svg[data-icon=missing]"
+    assert_select "[data-state=unknown] svg[data-icon=unknown]"
   end
 
-  test "every drift state is a symbol and a word, never colour alone" do
+  test "every drift state is an icon and a word, never colour alone" do
     render html: safe_join(Drift::STATES.map { state_badge(it) })
     Drift::STATES.each do |state|
       assert_select ".badge[data-state=#{state}]", text: /#{Regexp.escape(Drift::LABELS[state])}/
-      assert_select ".badge[data-state=#{state}] [aria-hidden]", text: Drift::SYMBOLS[state]
+      assert_select ".badge[data-state=#{state}] svg[data-icon=#{state}][aria-hidden]"
     end
   end
 
@@ -39,6 +39,8 @@ class ApplicationHelperTest < ActionView::TestCase
     render html: chip("Drifted", 2, state: "drifted", href: "/?state=drifted", current: true) + chip("All", 3)
     assert_select "a.chip[href='/?state=drifted'][aria-current=true]", text: /Drifted\s*2/
     assert_select "span.chip:not([aria-current])", text: /All\s*3/
+    assert_select "a.chip svg[data-icon=drifted]"
+    assert_select "span.chip svg", count: 0
   end
 
   test "avatars use stable initials and are hidden from screen readers" do
@@ -46,7 +48,7 @@ class ApplicationHelperTest < ActionView::TestCase
     tones = css_select(".avatar[data-tone]").map { it["data-tone"] }
     assert_equal [ "AL", "AL" ], css_select(".avatar[data-tone]").map(&:text)
     assert_equal 1, tones.uniq.size
-    assert_select ".avatar[data-state=missing][aria-hidden]", text: Drift::SYMBOLS["missing"]
+    assert_select ".avatar[data-state=missing][aria-hidden] svg[data-icon=missing]"
   end
 
   test "a segmented control marks the current view" do

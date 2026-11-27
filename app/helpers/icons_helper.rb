@@ -9,7 +9,10 @@ module IconsHelper
     info: "info", warn: "triangle-alert", bad: "circle-x",
     system: "monitor", light: "sun", dark: "moon",
     cpu: "cpu", memory: "memory-stick", load: "gauge", disk: "hard-drive", download: "arrow-down", upload: "arrow-up",
-    git_host: "folder-git-2", kamal: "ship", logs: "scroll-text", traffic: "arrow-left-right"
+    git_host: "folder-git-2", kamal: "ship", logs: "scroll-text", traffic: "arrow-left-right",
+    # Drift states (Drift::STATES), and a deploy going out.
+    in_sync: "check", drifted: "git-compare-arrows", missing: "x", stray: "question-mark", stale: "radio-off", unknown: "minus",
+    deploying: "arrow-up-right"
   }.freeze
 
   # Meridian's own mark: a globe with one meridian drawn on it.
@@ -26,5 +29,11 @@ module IconsHelper
     shapes = name == :logo ? LOGO : SHAPES[name]
     tag.svg(shapes.html_safe, viewBox: "0 0 24 24", width: 16, height: 16, fill: "none", stroke: "currentColor", "stroke-width": 1.75,
       "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true, **options)
+  end
+
+  # A drift state's icon. Always shown beside the state's name, or with the
+  # name for screen readers: never the icon alone.
+  def state_icon(state, **options)
+    icon(state.to_sym, data: { icon: state }, **options)
   end
 end

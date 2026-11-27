@@ -36,7 +36,8 @@
     &:is(a):hover { background: var(--color-surface); }
     &[aria-current="true"] { border-color: var(--color-accent); background: var(--color-accent-soft); }
   }
-  .chip__symbol { font-weight: 700; }
+  .chip__icon { display: contents; }
+  .chip svg, .badge svg { inline-size: 0.875rem; block-size: 0.875rem; stroke-width: 2.25; }
   .chip__count { font-family: var(--font-mono); color: var(--color-ink-muted); }
   .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
   .chips__label { margin-inline-end: var(--space-xs); font-size: var(--text-s); color: var(--color-ink-muted); }
@@ -45,8 +46,10 @@
   /* One app on one server: the version it runs, tinted by drift state, with
      a distinct border per state and the state's name for screen readers. */
   .cell {
-    display: inline-grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
     min-inline-size: 2.75rem;
     max-inline-size: 6rem;
     block-size: 1.5rem;
@@ -58,8 +61,8 @@
     font-size: 0.65625rem;
     font-weight: 500;
     white-space: nowrap;
-    text-overflow: ellipsis;
 
+    svg { inline-size: 0.75rem; block-size: 0.75rem; stroke-width: 2.5; }
     &[data-state="in_sync"] { border-color: var(--color-ok-line); background: var(--color-ok-soft); color: var(--color-ok); }
     &[data-state="drifted"] { border: 1.5px solid var(--color-warn-line); background: var(--color-warn-soft); color: var(--color-warn); }
     &[data-state="missing"] { border: 1.5px solid var(--color-bad-line); background: var(--color-bad-soft); color: var(--color-bad); }
@@ -67,9 +70,10 @@
     &[data-state="stale"] { border-style: dashed; border-color: var(--color-ink-faint); background: var(--color-raised); color: var(--color-ink-muted); }
     &[data-state="unknown"] { border-style: dashed; border-color: var(--color-ink-faint); background: var(--color-canvas); color: var(--color-ink-muted); }
   }
+  .cell__version { overflow: hidden; text-overflow: ellipsis; }
   .cells { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 
-  /* Initials, or a drift symbol when the avatar stands for a problem. */
+  /* Initials, or a drift state's icon when the avatar stands for a problem. */
   .avatar {
     display: inline-grid;
     place-items: center;
@@ -87,5 +91,5 @@
     &[data-tone="4"], &[data-state="stale"] { background: var(--color-mute-soft); color: var(--color-mute); }
     &[data-state="missing"] { background: var(--color-bad-soft); color: var(--color-bad); }
   }
-  .avatar--small { inline-size: 1.5rem; block-size: 1.5rem; font-size: 0.625rem; }
+  .avatar--small { inline-size: 1.5rem; block-size: 1.5rem; font-size: 0.625rem; svg { inline-size: 0.875rem; block-size: 0.875rem; } }
 }

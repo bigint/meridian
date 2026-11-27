@@ -7,7 +7,7 @@
 <% cells = @board.cells.sort_by { it.app.name } %>
 
 <% status = capture do %>
-  <% if @server.stale? %><%= badge "… Silent", data: { state: "stale" } %>
+  <% if @server.stale? %><%= badge state_icon("stale") + "Silent", data: { state: "stale" } %>
   <% elsif !@server.reporting? %><%= badge "No agent yet" %>
   <% else %><%= badge "Reporting", tone: :ok %><% end %>
   <%= place(@server) %>

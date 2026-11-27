@@ -22,7 +22,8 @@
 
   .world__sites .site {
     circle { fill: var(--color-mute); stroke: var(--color-canvas); stroke-width: 1.5; }
-    .symbol { fill: var(--color-canvas); font-size: 7px; font-weight: 800; text-anchor: middle; }
+    text.symbol { fill: var(--color-canvas); font-size: 7px; font-weight: 800; text-anchor: middle; }
+    svg.symbol { color: var(--color-canvas); stroke-width: 3.5; }
     &.in_sync circle { fill: var(--color-ok); }
     &.drifted circle { fill: var(--color-warn); }
     &.missing circle { fill: var(--color-bad); }

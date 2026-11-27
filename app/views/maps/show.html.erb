@@ -21,8 +21,8 @@
   <% end %>
   <% if problems.any? || deploying.positive? %><span class="chips__label">Places</span><% end %>
   <% problems.each do |state, list| %><%= chip Drift::LABELS[state], list.size, state: state %><% end %>
-  <% if deploying.positive? %><%= chip "Deploying", deploying, symbol: "↗", tone: "txt-info" %><% end %>
-  <% if problems.empty? && deploying.zero? && sites.any? %><%= chip "Every place matches Git", nil, symbol: "✓", tone: "txt-ok" %><% end %>
+  <% if deploying.positive? %><%= chip "Deploying", deploying, icon: :deploying, tone: "txt-info" %><% end %>
+  <% if problems.empty? && deploying.zero? && sites.any? %><%= chip "Every place matches Git", nil, icon: :in_sync, tone: "txt-ok" %><% end %>
 </div>
 
 <%= render "boards/filters", url: map_path, filters: @map.filters, projects: @projects, group: false,
@@ -51,7 +51,7 @@
               <th scope="row"><%= link_to site.name, place_path(site) %></th>
               <td class="mono txt-small nowrap"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
               <td><div class="cells"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= version_cell cell %><% end %></div></td>
-              <td class="nowrap"><%= site.stale? ? badge("… Silent") : "reporting" %></td>
+              <td class="nowrap"><%= site.stale? ? badge(state_icon("stale") + "Silent") : "reporting" %></td>
             </tr>
           <% end %>
           <% if rows.none? %><tr><td colspan="4" class="table__empty">No server has a location yet.</td></tr><% end %>

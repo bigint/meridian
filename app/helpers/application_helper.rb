@@ -70,21 +70,21 @@ module ApplicationHelper
     tag.span text, class: [ "badge", ("badge--#{tone}" if tone), ("badge--mono" if mono), html.delete(:class) ], **html
   end
 
-  # A drift state as a symbol and a word: never colour alone.
+  # A drift state as an icon and a word: never colour alone.
   def state_badge(state)
     return tag.span("–", class: "txt-faint", data: { tooltip: "Nothing here" }) unless state
     tag.span class: "badge", data: { state: state } do
-      safe_join([ tag.span(Drift::SYMBOLS[state], aria: { hidden: true }), Drift::LABELS[state] ], " ")
+      state_icon(state) + Drift::LABELS[state]
     end
   end
 
   CHIP_TONES = { "in_sync" => "txt-ok", "drifted" => "txt-warn", "missing" => "txt-bad", "stray" => "txt-info", "stale" => "txt-muted", "unknown" => "txt-muted" }.freeze
 
-  # A count with its meaning; with href, a filter you toggle.
-  def chip(label, count, state: nil, symbol: nil, tone: nil, href: nil, current: false)
-    symbol ||= Drift::SYMBOLS[state] if state
+  # A count with its meaning; with href, a filter you toggle. The icon is
+  # the state's unless another is named.
+  def chip(label, count, state: nil, icon: state, tone: nil, href: nil, current: false)
     body = safe_join([
-      (tag.span(symbol, class: [ "chip__symbol", tone || CHIP_TONES[state] ], aria: { hidden: true }) if symbol),
+      (tag.span(state_icon(icon), class: [ "chip__icon", tone || CHIP_TONES[state] ]) if icon),
       tag.span(label),
       (tag.span(count, class: "chip__count") if count)
     ].compact)
@@ -95,9 +95,9 @@ module ApplicationHelper
   def version_cell(cell)
     running = cell.versions.join(", ")
     text = case cell.state
-    when "missing", "unknown" then Drift::SYMBOLS[cell.state]
-    when "drifted" then "≠#{cell.versions.first&.first(10)}"
-    else cell.version&.first(10) || "–"
+    when "missing", "unknown" then state_icon(cell.state)
+    when "drifted" then state_icon(cell.state) + tag.span(cell.versions.first&.first(10), class: "cell__version")
+    else tag.span(cell.version&.first(10) || "–", class: "cell__version")
     end
     title = "#{cell.app.name} on #{cell.server.name}: #{Drift::LABELS[cell.state]}#{", running #{running}" if running.present?}"
     tag.span class: "cell", data: { cell: true, state: cell.state, tooltip: title } do
@@ -106,9 +106,9 @@ module ApplicationHelper
   end
 
   # Initials on a tint that stays the same for the same name, or a drift
-  # state's symbol when the avatar stands for a problem.
+  # state's icon when the avatar stands for a problem.
   def avatar(name = nil, state: nil, small: false)
-    text = state ? Drift::SYMBOLS[state] : initials(name.to_s)
+    text = state ? state_icon(state) : initials(name.to_s)
     data = state ? { state: state } : { tone: Zlib.crc32(name.to_s) % 5 }
     tag.span text, class: [ "avatar", ("avatar--small" if small) ], data: data, aria: { hidden: true }
   end

@@ -33,7 +33,7 @@
                 aria: { label: site_title(map, site) } do %>
             <g transform="translate(<%= site.x %> <%= site.y %>)">
               <circle r="<%= map.radius(site) %>"/>
-              <text class="symbol" dy="0.35em"><%= site_text(map, site) %></text>
+              <%= site_mark(map, site) %>
             </g>
           <% end %>
         <% end %>

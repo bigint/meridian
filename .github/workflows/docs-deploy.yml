@@ -1,0 +1,99 @@
+# Publishes the docs site, https://meridian.yoginth.com, whenever main changes what it is built
+# from. It builds docs/Dockerfile, pushes ghcr.io/bigint/meridian-docs:<commit>, and commits that
+# commit to kamal/meridian-docs.version in bigint/infra, whose Meridian deploy workflow rolls it out
+# with Kamal. The same steps as bigint/infra's shared site-deploy.yml, written out here because a
+# public repository can't call a private repository's workflow.
+#
+# Only bigint/meridian runs it: it needs INFRA_DEPLOY_KEY, a write deploy key on bigint/infra.
+# Release builds still publish the docs image for each tag; this only adds one per docs change.
+name: Docs deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - docs/**
+      - CHANGELOG.md
+      - script/docs_changelog.rb
+      - .github/workflows/docs-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docs-production
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/bigint/meridian-docs
+  VERSION_FILE: kamal/meridian-docs.version
+  # What the docs image is built from, as in docs/Dockerfile.dockerignore.
+  DOCS_PATHS: docs CHANGELOG.md script/docs_changelog.rb
+
+jobs:
+  deploy:
+    if: github.repository == 'bigint/meridian' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The servers are amd64, so one platform is enough here.
+      - name: Build and push the docs image
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docs/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=docs
+          cache-to: type=gha,mode=max,scope=docs
+
+      - name: Commit the version to bigint/infra
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          INFRA_DEPLOY_KEY: ${{ secrets.INFRA_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          # A later commit on main that changed the docs deploys itself; one that didn't leaves
+          # this commit's docs current, so it still goes out.
+          git fetch -q origin main
+          if ! git diff --quiet "$GITHUB_SHA" origin/main -- $DOCS_PATHS; then
+            echo "Skipping $GITHUB_SHA: main has newer docs"
+            exit 0
+          fi
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ && "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$INFRA_DEPLOY_KEY" > ~/.ssh/infra && chmod 0600 ~/.ssh/infra
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/infra -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          git clone -q --depth 1 git@github.com:bigint/infra.git "$RUNNER_TEMP/infra"
+          cd "$RUNNER_TEMP/infra"
+          [[ -f "$VERSION_FILE" ]] || { echo "::error::$VERSION_FILE is not in bigint/infra"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            echo "$GITHUB_SHA" > "$VERSION_FILE"
+            if git diff --quiet; then echo "Already at $GITHUB_SHA"; exit 0; fi
+            git commit -qam "deploy(meridian-docs): ${GITHUB_SHA::7}" -m "Image $IMAGE:$GITHUB_SHA ($IMAGE_DIGEST) from $GITHUB_REPOSITORY@$GITHUB_SHA"
+            if git push -q origin HEAD:main; then echo "Pushed $VERSION_FILE -> $GITHUB_SHA"; exit 0; fi
+            git fetch -q --depth 1 origin main && git reset -q --hard origin/main
+            sleep $((attempt * 3))
+          done
+          echo "Could not push $VERSION_FILE" >&2
+          exit 1

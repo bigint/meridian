@@ -41,7 +41,7 @@ jobs:
           -e SECRET_KEY_BASE=ci -e MERIDIAN_URL=http://localhost
           meridian:ci bin/rails runner script/smoke_parse.rb
 
-  # The docs site in docs/: checks only, nothing is published.
+  # The docs site in docs/: checks only. Docs deploy (docs-deploy.yml) publishes it.
   docs:
     runs-on: ubuntu-latest
     steps:

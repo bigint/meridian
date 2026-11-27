@@ -49,7 +49,7 @@ gem "rouge", "~> 5.1"
 # Jobs dashboard for admins
 gem "mission_control-jobs"
 
-group :development do
+group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
@@ -61,7 +61,14 @@ group :development do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+end
 
+group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+end
+
+group :test do
+  # Serves fixture files as the GitHub API, so tests run the real Octokit code
+  gem "webmock"
 end

@@ -9,6 +9,9 @@ development:
   database: cache
   <<: *default
 
+test:
+  <<: *default
+
 production:
   database: cache
   <<: *default

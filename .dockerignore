@@ -53,6 +53,7 @@
 # Not needed in the app image.
 /agent/
 /docs/
+/test/
 /vendor/bundle/
 /.claude/
 /lab/

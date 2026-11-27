@@ -175,6 +175,10 @@ The [CI workflow](/reference/glossary#ci-workflow), `.github/workflows/meridian-
 
 The workflow passes every other repository secret to the Kamal step as an environment variable with the same name. So `.kamal/secrets` can read it as `$NAME`.
 
+<ResponseField name="CI" type="string">
+  CI systems set this. When it is present, the Rails test environment loads the whole app before tests run. That catches load errors that lazy loading would hide.
+</ResponseField>
+
 ## Tasks and development
 
 <ResponseField name="BUNDLE_GEMFILE" type="string">

@@ -98,7 +98,7 @@ In the board's grid a cell shows the version it runs. A missing cell shows `✕`
 
 ```mermaid
 sequenceDiagram
-  actor D as Deployer
+  actor D as You
   participant M as Meridian
   participant G as GitHub
   participant CI as CI
@@ -117,7 +117,7 @@ sequenceDiagram
 - **Deploy** is a contents-API commit to the app's version file, `<config>.version` or `<config>.<destination>.version`. It passes the file's current blob SHA, so a concurrent change fails instead of being overwritten. The message is `deploy(<service>[-<destination>]): <version>`, then a `Meridian-Actor: Name <email>` trailer.
 - **Roll back** reverts the newest release only. Meridian checks with Git that the release is still the newest commit to the version file, then writes the content the file had at that commit's parent. The message is `rollback(<service>[-<destination>]): <previous version>`, with `This reverts commit <sha>.` in the body and the same trailer.
 - **Redeploy** changes no file. It dispatches the deploy workflow (`workflow_dispatch`) with the version the version file holds at that moment.
-- **New apps, tunnel connector changes and the CI workflow** arrive as pull requests on a `meridian/<slug>-<hex>` branch. A project setting lets admins commit them straight to the default branch instead.
+- **New apps, tunnel connector changes and the CI workflow** arrive as pull requests on a `meridian/<slug>-<hex>` branch. A project setting commits them straight to the default branch instead.
 - **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored). Runs arrive through the 30-second poll, which hands each to `Project#track_workflow_run`. A run is matched to apps by its `head_sha`; a dispatched run is matched by its run name, `<command> <config> <destination>`. A `Deploy` moves through `pending`, `queued`, `in_progress` and `completed`.
 - **Per-server progress** comes from the agents, not from CI. Kamal deploys every host in one CI job, so a server is done when its agent reports the target version running there.
 
@@ -142,7 +142,7 @@ These are the tables in `db/schema.rb`.
 | Model | What it is |
 | --- | --- |
 | `Account` | The single row that holds settings: workspace name and where Meridian runs. |
-| `User` | Email and password (Rails 8 authentication). Role is `viewer`, `deployer` or `admin`. |
+| `User` | The one account: name, email and password (Rails 8 authentication). It can do everything. |
 | `Session` | One signed-in browser. |
 | `Project` | One infra repository. It holds the GitHub installation, branch, config globs, the last synced SHA and parse errors. |
 | `App` | One Kamal config and destination. It holds the service, config path, kind, hostnames, roles, accessories, secret names and source repository. |

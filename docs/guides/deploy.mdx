@@ -46,7 +46,7 @@ sequenceDiagram
   </Step>
 </Steps>
 
-The board's side panel has the same form. Click an app's name in the grid to open it.
+To get to the app page from the board, click the app's name in the grid.
 
 <Frame>
   <img className="block dark:hidden" src="/screenshots/app.png" alt="An app page with its servers, releases, and the Ship a version form" />
@@ -103,7 +103,7 @@ A version is a Docker image tag. It starts with a letter, a digit or `_`. After 
 
 <Steps>
   <Step title="Find the button">
-    On the app page, **Redeploy** is under **Ship a version**. The board's side panel has it too. It shows only when the app has a version file and at least one release.
+    On the app page, **Redeploy** is under **Ship a version**. It shows only when the app has a version file and at least one release.
   </Step>
   <Step title="Confirm">
     Confirm `Run the deploy workflow again for the version in config/deploy.version? Use this after rotating a secret.`. Meridian says `Asked CI to deploy v1.4.2 again.`
@@ -120,7 +120,7 @@ A version is a Docker image tag. It starts with a letter, a digit or `_`. After 
 
 <Steps>
   <Step title="Find the newest release">
-    On the app page, the newest entry under **Releases** has the `newest` badge and a **Roll back** button. The board's side panel has **Roll back** too. It shows only when the app has a version file and more than one release.
+    On the app page, the newest entry under **Releases** has the `newest` badge and a **Roll back** button. It shows only when the app has a version file and more than one release.
   </Step>
   <Step title="Confirm">
     Confirm `Revert 3f2a9c1 so the version file goes back to its previous value? CI deploys the result.`. Meridian says `Committed a revert to v1.4.1. CI will deploy it.`

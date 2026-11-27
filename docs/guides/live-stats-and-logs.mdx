@@ -136,9 +136,7 @@ The agent keeps one WebSocket open to Meridian's `/cable`. It connects out to Me
 
 ## Nothing is stored
 
-Meridian passes stats and log lines on to the open pages and keeps them nowhere else. They go through the cable database, which keeps each message for about a minute. Leave the page, and the lines are gone.
-
-Meridian does store the fact that you looked. Each time you open a logs page, Activity records `logs.viewed`, with who, and which container or app. See [Activity](/guides/activity).
+Meridian passes stats and log lines on to the open pages and keeps them nowhere else. They go through the cable database, which keeps each message for about a minute. Leave the page, and the lines are gone. Activity doesn't record that you opened logs either.
 
 ## Related
 

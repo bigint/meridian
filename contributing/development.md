@@ -27,7 +27,7 @@ bin/dev
 ```
 
 `bin/dev` runs `bin/rails server` on port `3000`. Solid Queue runs inside Puma, so there is no second process to start.
-### 3. Create the first admin
+### 3. Create your account
 
 Open `http://localhost:3000`. Meridian sends you to `/first_run`, which asks for a setup code. The code is in the server's log as `Meridian setup code: …`, or you can print it:
 

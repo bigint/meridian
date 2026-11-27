@@ -17,7 +17,7 @@ The board, the map, and the app and server pages update themselves. When an agen
 
 The board, at `/`, answers one question: does every server run what Git says? The header counts the apps and servers. It says **all matching Git** when every cell is in sync.
 
-<Screenshot name="board" alt="The board: Getting started, Needs attention, and the grid of every app on every server, with the inspector open on the right" />
+<Screenshot name="board" alt="The board: Getting started, Needs attention, and the grid of every app on every server" />
 
 **New app** is at the top right. On a new install, **Getting started** lists three steps and ticks each one off:
 
@@ -51,11 +51,9 @@ Above the grid:
 - **Filters** narrow the grid by **App**, **Project**, **Region**, **Provider** and **Role**, and set **Group by**.
 - **What do these mean?** explains each state.
 
-The grid shows 25 rows a page. The filters, the page and the open app are all in the URL, such as `/?state=drifted&region=sgp`. So you can share a view as a link. See [board and map](/guides/board-and-map).
+The grid shows 25 rows a page. The filters and the page are in the URL, such as `/?state=drifted&region=sgp`. So you can share a view as a link. See [board and map](/guides/board-and-map).
 
-### The inspector
-
-Click an app's name in the grid to open the inspector on the right. It shows the app's servers and its last three releases, with a line such as **2 of 3 servers run v12**. Type a version in **Ship a version** and press **Deploy**, or press **Redeploy** or **Roll back**. **Open app page** opens the full page. See [deploy and roll back](/guides/deploy).
+Click an app's name to open its page, where you deploy, redeploy and roll back. Click a server's name to open its page. See [deploy and roll back](/guides/deploy).
 
 ## Search
 
@@ -69,9 +67,9 @@ It shows the eight best matches. Names that start with what you typed come first
 
 The map, at `/map`, puts every server that has a location on a world map. Servers within 60 km of each other share one dot, called a place. Each dot takes the colour of the worst state there. A line joins two places that run the same app, and gets thicker the more apps they share.
 
-<Screenshot name="map" alt="The world map: places as coloured dots, lines between places that share apps, and the selected place's servers on the right" />
+<Screenshot name="map" alt="The world map: places as coloured dots, and lines between places that share apps" />
 
-Click a place to see its servers, what each one runs, and the other places that share its apps. **Places** lists every place, worst first. The chips and **Filters** work as on the board.
+Click a place to open it: its server's page when it has one server, or else the board filtered to its region. **Places** lists every place, worst first, with what runs there. The chips and **Filters** work as on the board.
 
 A server needs a location to appear. Its agent can send `lat` and `lng` labels, or you can set one on the server's page. The map lists the servers that have none. See [board and map](/guides/board-and-map).
 

@@ -114,7 +114,7 @@ This builds `meridian-agent` from `agent/`, pushes it to the lab registry, and r
 The board fills in within a few seconds.
 ### 8. Deploy
 
-Pick a version on an app's page or in the board's inspector and press **Deploy**. Meridian commits the version file, the runner picks up the workflow, and Kamal deploys to the lab servers. See [Deploy and roll back](../docs/guides/deploy.mdx).
+Open an app's page, pick a version and press **Deploy**. Meridian commits the version file, the runner picks up the workflow, and Kamal deploys to the lab servers. See [Deploy and roll back](../docs/guides/deploy.mdx).
 ### Boot the Umami databases
 
 Kamal's accessories aren't started by the deploy workflow. Boot the databases once, primary first, with Kamal run from inside the lab:

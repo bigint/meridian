@@ -85,7 +85,7 @@ Git holds your configs and their history. Meridian's database holds your account
   <Accordion title="Logs are opt-in and never stored">
     An agent sends no logs unless it runs with `MERIDIAN_LOGS=1`, and then only for Kamal's containers, checked on the server.
 
-    Each viewing is an event in Activity, recorded before anything streams. Each channel streams only what the page recorded. Lines pass through the Solid Cable database, which keeps messages for one minute, and are written nowhere else.
+    The page you open hands its channel a signed grant, bound to you, for exactly the containers it shows, and the channel streams nothing else. Lines pass through the Solid Cable database, which keeps messages for one minute, and are written nowhere else.
   </Accordion>
   <Accordion title="Access ends at once">
     - Revoking an agent token closes its open connections. Meridian also checks each agent connection's token again every 60 seconds.

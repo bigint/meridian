@@ -38,7 +38,7 @@ An app has no version file until its first deploy through Meridian, or until you
 
 A release's version is what the file held after its commit. The newest release is what Git says should run, and [drift](/concepts/drift) compares every server with it. Any commit to the file counts, whoever made it: a deploy from Meridian, a merged pull request, or a commit you push by hand.
 
-Each release shows its version, the first line of its commit message, its author, its short commit ID and its age. The board's inspector shows the last three, and the app's page the last 20.
+Each release shows its version, the first line of its commit message, its author, its short commit ID and its age. The app's page shows the last 20.
 
 ### Without a version file
 
@@ -46,7 +46,7 @@ With no version file, each commit to the app's config is a release instead. For 
 
 ## Deploy, roll back and redeploy
 
-All three act on the version file. They are on the app's page and in the board's inspector. [Deploy and roll back](/guides/deploy) has the steps.
+All three act on the version file. They are on the app's page. [Deploy and roll back](/guides/deploy) has the steps.
 
 - **Deploy** commits a new version to the file, on the default branch. Meridian refuses a version the file already holds, because a commit that changes nothing never starts the workflow.
 - **Roll back** undoes the newest release with a new commit. The file gets back the value it held before. The button appears once an app has at least two releases. To go back further, deploy the older version.

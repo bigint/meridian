@@ -1,7 +1,7 @@
 ---
 title: "Read the board and the map"
 sidebarTitle: "Board and map"
-description: "See which servers don't run what Git says, filter the apps × servers grid, open an app in the side panel, search, and see your servers on a world map."
+description: "See which servers don't run what Git says, filter the apps × servers grid, search, and see your servers on a world map."
 icon: "layout-grid"
 ---
 
@@ -14,8 +14,8 @@ The board tells you whether every server runs what Git says it should. Each cell
 The board is Meridian's home page, `/`. Its header counts the apps and servers it shows. It says `all matching Git` when every cell is in sync.
 
 <Frame>
-  <img className="block dark:hidden" src="/screenshots/board.png" alt="The board: Needs attention above the apps × servers grid, with the inspector on the right" />
-  <img className="hidden dark:block" src="/screenshots/board-dark.png" alt="The board: Needs attention above the apps × servers grid, with the inspector on the right" />
+  <img className="block dark:hidden" src="/screenshots/board.png" alt="The board: Needs attention above the apps × servers grid" />
+  <img className="hidden dark:block" src="/screenshots/board-dark.png" alt="The board: Needs attention above the apps × servers grid" />
 </Frame>
 
 On a new install, **Getting started** lists three steps: **Connect your infra repository**, **Put the agent on your servers**, and **Deploy something**. It ticks each one off as it happens, and goes away once all three are done.
@@ -59,6 +59,8 @@ A dashed cell means the agent is quiet or Meridian can't tell. Hover a cell to s
 
 See [Drift](/concepts/drift) for how Meridian decides.
 
+Click an app's name to open its page, where you deploy, redeploy and roll back. Click a server's name to open its page. See [Deploy](/guides/deploy).
+
 ### Filter by state
 
 The chips above the grid count cells per state: **All**, then each state that has any. Click one to show only cells in that state. Click it again to clear it. The counts ignore the state filter, so you can move from one state to another.
@@ -97,20 +99,6 @@ Every filter lives in the URL, so a link opens the board as you left it.
 | `region`, `provider`, `role` | a label value | `/?region=sgp&role=web` |
 | `group` | `region`, `provider`, `role` or `none`. Leave it out for automatic. | `/?group=provider` |
 | `page` | a page number | `/?page=2` |
-| `inspect` | an app's ID, for the side panel | `/?inspect=14` |
-
-## The inspector
-
-Click an app's name in the grid to open it in the side panel, the inspector. If you haven't picked one in **Apps × servers**, it shows the first app that needs attention, or else the first row.
-
-The panel shows:
-
-- The app's kind and project, and one status line. Examples: `✓ Running v1.4.2 everywhere`, `2 of 3 servers run v1.4.2`, or `No version file yet, so Meridian can't compare versions.`. When agents are quiet, it adds a note such as `· 2 agents quiet, last report may be old`.
-- **Ship a version**: type a tag and click **Deploy**. See [Deploy](/guides/deploy).
-- **Servers**: each server's cell, with its `city` or `region` label.
-- **Recent releases**: the last three, with version, message, author, commit and age.
-- **Redeploy** and **Roll back**, when the app has a version file. **Redeploy** needs one release, and **Roll back** needs two.
-- **Open app page**.
 
 ## Search
 
@@ -134,15 +122,15 @@ It shows the best eight. Names that start with what you typed come first, then s
 **Map** puts every server with a location on a world map. Servers within 60 km of each other are one place, about one metro area. Each place is a dot that grows with its number of servers.
 
 <Frame>
-  <img className="block dark:hidden" src="/screenshots/map.png" alt="The map: places as dots, lines between places that share apps, and the place panel" />
-  <img className="hidden dark:block" src="/screenshots/map-dark.png" alt="The map: places as dots, lines between places that share apps, and the place panel" />
+  <img className="block dark:hidden" src="/screenshots/map.png" alt="The map: places as dots, with lines between places that share apps" />
+  <img className="hidden dark:block" src="/screenshots/map-dark.png" alt="The map: places as dots, with lines between places that share apps" />
 </Frame>
 
 A place takes the worst state of its cells. On the map you also see:
 
 - **Lines** between places that run the same app. A line is thicker when the places share more apps. Stray cells don't count.
 - **Flows** for Meridian's own traffic: agents reporting in, and deploys going out to places being deployed. They need a location for Meridian itself. Set it in **Settings**, under **Where Meridian runs**.
-- **Names** for Meridian, for places that need attention or are being deployed, and for the place you picked. Hover any other dot to see its name.
+- **Names** for Meridian, and for places that need attention or are being deployed. Hover any other dot to see its name.
 
 <Accordion title="How a place gets its name and state">
   A place is named after its servers' most common `city` label. Without one, it uses their most common `region` label, else its first server's name. Its state is the worst of its cells, in the order missing, drifted, stray, stale, unknown, in sync. A place with no cells is in sync if any of its servers reports, and unknown if none does.
@@ -158,11 +146,9 @@ The chips above the map count apps, places and deploys:
 
 **Filters** has **App**, **Project**, **Region**, **Provider** and **Role**, as on the board.
 
-### The place panel and table
+### Open a place and the Places table
 
-Click a dot, or a name in **Places**, to open the place in the side panel. The URL gets `place=<key>`. If you haven't picked one, the panel shows the place that needs attention first, or else the biggest.
-
-The panel shows the place's state, region and coordinates. It lists each server with its cells and agent status. **Shares apps with** lists the other places that run the same apps. **Open on the board** opens the board filtered to the place's region. **Open server** shows when the place has one server.
+Click a dot, or a name in **Places**, to open the place. A place with one server opens that server's page. A place with more opens the board filtered to its `region` label, or the whole board when its servers have none.
 
 The **Places** table lists every place, problems first, with its region, its cells, and whether its agents report. Servers without a location are counted under the table.
 
@@ -171,7 +157,7 @@ The **Places** table lists every place, problems first, with its region, its cel
 Use either:
 
 - **Agent labels.** Add `lat` and `lng`, in decimal degrees, to `MERIDIAN_LABELS`, such as `MERIDIAN_LABELS=region=sgp,city=Singapore,lat=1.35,lng=103.82`.
-- **The server page.** Set **Latitude** and **Longitude** under **Location on the map** and clicks **Save location**.
+- **The server page.** Set **Latitude** and **Longitude** under **Location on the map** and click **Save location**.
 
 If the agent reports `lat` and `lng`, its next report replaces the location set on the server page. See [Labels and map location](/guides/agent#labels-and-map-location).
 

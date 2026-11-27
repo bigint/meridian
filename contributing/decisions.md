@@ -34,6 +34,8 @@ The agent sends `/etc/machine-id` (or `MERIDIAN_MACHINE_ID`). Before any agent r
 
 ## 8. A preview overlay sits next to its base config
 
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
+
 It is `<config base>.pr-<n>.yml`, because Kamal resolves destination files as siblings of `-c`.
 
 ## 9. kamal-proxy routes are read from the state file in its volume
@@ -80,9 +82,13 @@ Rotating a secret doesn't change any file, so there is nothing to commit. Meridi
 
 ## 19. Preview overlays are direct commits, not pull requests
 
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
+
 They live only as long as their pull request, and a pull request per preview would bury the real changes.
 
 ## 20. Preview runs are matched by run name
+
+> **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
 
 The workflow names dispatched runs `<command> <config> <destination>`, because GitHub doesn't report a run's inputs.
 
@@ -110,9 +116,13 @@ The main places stay visible, and the search box finds any app, server or projec
 
 ## 25. The Inspector layout, picked from three mockups
 
+> **Note:** The board's side panel was reversed by [46](#46-the-board-and-the-map-have-no-side-panel).
+
 Console (dark and dense), Paper (light and calm) and Inspector were drawn side by side before any code changed. Inspector won: a grid where every cell shows the version actually running, and a side panel for the app you click. The panel is a Turbo Frame, so selecting an app swaps only the panel, and the URL (`?inspect=`) keeps the choice across refreshes. Navigation became an icon rail with a top bar for search, which gives the grid the width it needs. The board now groups servers by region whenever they span more than one region, not only above 30 servers.
 
 ## 26. Map dots are SVG links that Turbo visits through a small Stimulus controller
+
+> **Note:** The place panel was reversed by [46](#46-the-board-and-the-map-have-no-side-panel). Dots are still SVG links visited this way.
 
 Turbo reads `link.href` as a string, but inside an `<svg>` it is an `SVGAnimatedString`, so Turbo threw on every click and the browser fell back to a full reload. `svg_link_controller.js` handles the click and calls `Turbo.visit`. Picking a place is a whole-page visit, not a frame, because the ring, the names and the table highlight move with the panel.
 
@@ -137,6 +147,8 @@ A page needs numbers within a second of opening, and a 15-second snapshot can't 
 Streaming Docker stats from every container on 500 servers to Meridian all the time would cost dockerd and SQLite for numbers nobody reads. A page subscribes, Meridian sends the agent "stream for 30 seconds" (relative, so host clocks don't matter) and renews it every 10 seconds while the page is open, throttled to one lease message per server per 5 seconds however many people watch. The page itself performs a renew every 10 seconds, and the server renews the agent's lease only for a page heard from in the last 75 seconds (a hidden tab's timers can slow to once a minute), because ActionCable never times out a silent socket. So a closed, asleep or cut-off page stops the agent on its own. Frames are relayed, never stored. History is a separate, later decision.
 
 ## 32. Live logs ride the same line, opt-in, Kamal-only, for deployers
+
+> **Note:** The deployer-only rule was reversed by [45](#45-meridian-is-single-user), and recording each viewing by [47](#47-activity-records-changes-not-page-views).
 
 Logs can hold secrets, which the agent otherwise never sends, so three locks apply. The agent tails nothing without `MERIDIAN_LOGS=1`. It checks every container it is asked for against Kamal's labels itself, not trusting Meridian. Only users who can deploy may open logs, and each viewing is an `Event`.
 
@@ -196,8 +208,20 @@ A preview runs the app's image, and `kamal deploy --skip-push` checks that the i
 
 ## 43. Previews are out of the first release
 
-Pull request previews were removed to keep the first release small. Meridian has no Previews page or settings, handles no `pull_request` webhook, and its CI workflow only runs `kamal deploy`. A `<config>.pr-<n>.yml` is a destination like any other. This supersedes [21](#21-a-preview-inherits-the-destination-file-of-its-app) and [39](#39-previews-skip-pull-requests-from-forks) to [42](#42-a-preview-keeps-its-apps-service).
+Pull request previews were removed to keep the first release small. Meridian has no Previews page or settings, handles no `pull_request` webhook, and its CI workflow only runs `kamal deploy`. A `<config>.pr-<n>.yml` is a destination like any other. This supersedes [8](#8-a-preview-overlay-sits-next-to-its-base-config), [19](#19-preview-overlays-are-direct-commits-not-pull-requests) to [21](#21-a-preview-inherits-the-destination-file-of-its-app), and [39](#39-previews-skip-pull-requests-from-forks) to [42](#42-a-preview-keeps-its-apps-service).
 
 ## 44. Meridian polls GitHub instead of taking webhooks
 
 Meridian learns of pushes and workflow runs only by polling: every 30 seconds it reads each project's branch head and its deploy workflow's recent runs. ETags make an unchanged repository cost no rate limit. Webhooks only made updates arrive up to 30 seconds sooner, and in exchange Meridian needed an address GitHub could reach, a webhook secret, a signed endpoint and a second code path into the same sync. Meridian on a private network or behind a tunnel now needs nothing from GitHub's side.
+
+## 45. Meridian is single-user
+
+The one account made at first run can do everything, and every button shows. The viewer, deployer and admin roles, **Settings → People** and the `user.created` and `user.removed` events are gone. Meridian runs one person's fleet, so roles only hid buttons from the person who set it up. Git still names whoever acted, in each commit's `Meridian-Actor:` trailer.
+
+## 46. The board and the map have no side panel
+
+An app's name on the board opens the app's page, and a place on the map opens its server, or the board filtered to its region when it has several. The inspector and the place panel repeated what those pages show, and gave the grid and the map less width. The app's page is the one place to deploy, redeploy and roll back. This reverses the board's panel in [25](#25-the-inspector-layout-picked-from-three-mockups) and the place panel in [26](#26-map-dots-are-svg-links-that-turbo-visits-through-a-small-stimulus-controller).
+
+## 47. Activity records changes, not page views
+
+Opening logs or traffic no longer adds `logs.viewed` or `traffic.viewed`. A page view is a read, and those rows buried the deploys and settings changes Activity is for. The upgrade deletes the old ones. Streams still need a signed grant from the page that shows them, so a channel streams nothing a page didn't hand out. This reverses the recorded viewing in [32](#32-live-logs-ride-the-same-line-opt-in-kamal-only-for-deployers).

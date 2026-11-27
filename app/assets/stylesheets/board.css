@@ -21,7 +21,6 @@
     }
 
     tbody tr:hover, tbody tr:hover .matrix__name { background: var(--color-surface); }
-    tr[aria-selected="true"], tr[aria-selected="true"] .matrix__name { background: var(--color-accent-soft); }
   }
 
   .attention-sentence strong { font-weight: 600; }

@@ -1,6 +1,6 @@
 <%# The board as one table. Apps × servers puts each region's servers under
     a shared heading; servers × apps groups the rows by region instead.
-    locals: board, selected (an app id). App names open the board's side panel. %>
+    locals: board. App names open the app page. %>
 <% grouped = board.group_by.present? %>
 <div class="table-wrap">
   <table class="matrix" data-board-grid>
@@ -28,9 +28,9 @@
       </thead>
       <tbody>
         <% board.page_rows.each do |app| %>
-          <tr aria-selected="<%= app.id == selected %>">
+          <tr>
             <th scope="row" class="matrix__name">
-              <%= link_to app.name, board_path(request.query_parameters.merge(inspect: app.id)), data: { turbo_frame: "inspector", turbo_action: "advance" } %>
+              <%= link_to app.name, app %>
             </th>
             <td class="matrix__git"><%= board.release_for(app)&.first(12) || "–" %></td>
             <% board.groups.each do |group| %>

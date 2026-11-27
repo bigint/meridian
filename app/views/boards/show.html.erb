@@ -27,67 +27,55 @@
   <% end %>
 <% end %>
 
-<div class="split">
-  <div class="split__main">
-    <% if items.any? %>
-      <%= titled_section "Needs attention", count: items.size, id: "attention" do %>
-        <ul class="rows"><%= render partial: "boards/attention_item", collection: items.first(4), as: :item %></ul>
-        <% if items.size > 4 %>
-          <%= disclosure "#{pluralize(items.size - 4, "more thing")} need attention" do %>
-            <ul class="rows"><%= render partial: "boards/attention_item", collection: items.drop(4), as: :item %></ul>
-          <% end %>
+<div class="stack-l">
+  <% if items.any? %>
+    <%= titled_section "Needs attention", count: items.size, id: "attention" do %>
+      <ul class="rows"><%= render partial: "boards/attention_item", collection: items.first(4), as: :item %></ul>
+      <% if items.size > 4 %>
+        <%= disclosure "#{pluralize(items.size - 4, "more thing")} need attention" do %>
+          <ul class="rows"><%= render partial: "boards/attention_item", collection: items.drop(4), as: :item %></ul>
         <% end %>
       <% end %>
     <% end %>
+  <% end %>
 
-    <% arrange = segmented("Arrange the grid", [
-         [ "Apps × servers", current_path_with(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
-         [ "Servers × apps", current_path_with(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
-    <%= titled_section "Every app on every server", id: "everything", actions: arrange do %>
-      <div class="chips" data-summary aria-label="Filter by state">
-        <%= chip "All", @board.summary.values.sum, current: @board.state.nil?, href: current_path_with(state: nil, page: nil, anchor: "everything") %>
-        <% Drift::STATES.each do |state| %>
-          <% next if @board.summary.fetch(state, 0).zero? && @board.state != state %>
-          <%= chip Drift::LABELS[state], @board.summary.fetch(state, 0), state: state, current: @board.state == state,
-                href: current_path_with(state: (@board.state == state ? nil : state), page: nil, anchor: "everything") %>
-        <% end %>
-      </div>
-
-      <div class="flex flex-wrap gap-l">
-        <%= render "boards/filters", board: @board, projects: @projects %>
-        <%= disclosure "What do these mean?" do %>
-          <dl class="facts">
-            <% Drift::STATES.each do |state| %><dt><%= state_badge state %></dt><dd><%= Drift::MEANINGS[state] %></dd><% end %>
-          </dl>
-        <% end %>
-      </div>
-
-      <% if @board.groups.empty? %>
-        <%= empty_state(Project.none? ? "Nothing to show yet" : "Nothing matches these filters", icon_name: :board) do %>
-          <% if Project.none? %>
-            <%= link_to "Connect your infra repository", new_project_path, class: "btn btn--primary" %>
-          <% else %>
-            <%= link_to "Clear filters", board_path(view: @board.view), class: "btn" %>
-          <% end %>
-        <% end %>
-      <% else %>
-        <%= render "boards/matrix", board: @board, selected: @inspected&.id %>
-        <p class="txt-small txt-muted">Each cell is the version a server runs: green is what Git says, ≠ drifted, ✕ missing, dashed means its agent is quiet or Meridian can't tell. Click an app to inspect it.</p>
+  <% arrange = segmented("Arrange the grid", [
+       [ "Apps × servers", current_path_with(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
+       [ "Servers × apps", current_path_with(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
+  <%= titled_section "Every app on every server", id: "everything", actions: arrange do %>
+    <div class="chips" data-summary aria-label="Filter by state">
+      <%= chip "All", @board.summary.values.sum, current: @board.state.nil?, href: current_path_with(state: nil, page: nil, anchor: "everything") %>
+      <% Drift::STATES.each do |state| %>
+        <% next if @board.summary.fetch(state, 0).zero? && @board.state != state %>
+        <%= chip Drift::LABELS[state], @board.summary.fetch(state, 0), state: state, current: @board.state == state,
+              href: current_path_with(state: (@board.state == state ? nil : state), page: nil, anchor: "everything") %>
       <% end %>
+    </div>
 
-      <%= pagination label: "Page #{@board.page} of #{@board.pages}",
-            previous_url: (current_path_with(page: @board.page - 1, anchor: "everything") if @board.page > 1),
-            next_url: (current_path_with(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages) %>
+    <div class="flex flex-wrap gap-l">
+      <%= render "boards/filters", board: @board, projects: @projects %>
+      <%= disclosure "What do these mean?" do %>
+        <dl class="facts">
+          <% Drift::STATES.each do |state| %><dt><%= state_badge state %></dt><dd><%= Drift::MEANINGS[state] %></dd><% end %>
+        </dl>
+      <% end %>
+    </div>
+
+    <% if @board.groups.empty? %>
+      <%= empty_state(Project.none? ? "Nothing to show yet" : "Nothing matches these filters", icon_name: :board) do %>
+        <% if Project.none? %>
+          <%= link_to "Connect your infra repository", new_project_path, class: "btn btn--primary" %>
+        <% else %>
+          <%= link_to "Clear filters", board_path(view: @board.view), class: "btn" %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <%= render "boards/matrix", board: @board %>
+      <p class="txt-small txt-muted">Each cell is the version a server runs: green is what Git says, ≠ drifted, ✕ missing, dashed means its agent is quiet or Meridian can't tell. Click an app to open it.</p>
     <% end %>
-  </div>
 
-  <aside class="split__aside" aria-label="Selected app">
-    <turbo-frame id="inspector" target="_top" class="panel">
-      <% if @inspected %>
-        <%= render "boards/inspector", app: @inspected %>
-      <% else %>
-        <p class="txt-muted">Pick an app in the grid to see its servers and releases, and to deploy it.</p>
-      <% end %>
-    </turbo-frame>
-  </aside>
+    <%= pagination label: "Page #{@board.page} of #{@board.pages}",
+          previous_url: (current_path_with(page: @board.page - 1, anchor: "everything") if @board.page > 1),
+          next_url: (current_path_with(page: @board.page + 1, anchor: "everything") if @board.page < @board.pages) %>
+  <% end %>
 </div>

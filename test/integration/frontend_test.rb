@@ -38,20 +38,12 @@ class FrontendTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a secret says when it was last set through Meridian" do
-    SecretName.create!(project: @project, name: "API_KEY", last_set_at: 1.day.ago)
-
-    get secrets_path
-
-    assert_select "tr", text: /API_KEY.*1 day ago/m
-  end
-
   test "search results say which query they answer, as it was typed" do
     get jump_path(q: " blog ")
     assert_select "turbo-frame#jump_results ul.results[data-query=?]", " blog "
 
     get jump_path(q: "nothing-like-this")
-    assert_select "turbo-frame#jump_results p.results__none[data-query=?]", "nothing-like-this"
+    assert_select "turbo-frame#jump_results p.results__none[data-query=?]", "nothing-like-this", text: /Nothing called “nothing-like-this”/
   end
 
   test "the too-old-browser page is styled under the CSP it is served with" do

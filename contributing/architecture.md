@@ -118,7 +118,7 @@ sequenceDiagram
 - **Roll back** reverts the newest release only. Meridian checks with Git that the release is still the newest commit to the version file, then writes the content the file had at that commit's parent. The message is `rollback(<service>[-<destination>]): <previous version>`, with `This reverts commit <sha>.` in the body and the same trailer.
 - **Redeploy** changes no file. It dispatches the deploy workflow (`workflow_dispatch`) with the version the version file holds at that moment.
 - **New apps, tunnel connector changes and the CI workflow** arrive as pull requests on a `meridian/<slug>-<hex>` branch. A project setting commits them straight to the default branch instead.
-- **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored). Runs arrive through the 30-second poll, which hands each to `Project#track_workflow_run`. A run is matched to apps by its `head_sha`; a dispatched run is matched by its run name, `<command> <config> <destination>`. A `Deploy` moves through `pending`, `queued`, `in_progress` and `completed`.
+- **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored). Runs arrive through the 30-second poll, which hands each to `Project#track_workflow_run`. A run is matched to apps by its `head_sha`; a dispatched run is matched by its run name, `deploy <config> <destination>`. A `Deploy` moves through `pending`, `queued`, `in_progress` and `completed`.
 - **Per-server progress** comes from the agents, not from CI. Kamal deploys every host in one CI job, so a server is done when its agent reports the target version running there.
 
 ## Jobs
@@ -133,7 +133,7 @@ Solid Queue runs inside Puma unless `SOLID_QUEUE_IN_PUMA` is `false`. Recurring 
 | `BoardRefreshJob` | The end of a throttled second | Sends the trailing board refresh. |
 | `SilentAgentsJob` | Every minute | Refreshes the regions of servers whose agents went quiet. |
 
-Finished Solid Queue jobs are cleared every hour at minute 12.
+Solid Queue deletes each job as it finishes (`preserve_finished_jobs` is off in `config/application.rb`); failed jobs are kept.
 
 ## Domain model
 
@@ -141,7 +141,7 @@ These are the tables in `db/schema.rb`.
 
 | Model | What it is |
 | --- | --- |
-| `Account` | The single row that holds settings: workspace name and where Meridian runs. |
+| `Account` | The single row that holds settings: where Meridian runs. |
 | `User` | The one account: name, email and password (Rails 8 authentication). It can do everything. |
 | `Session` | One signed-in browser. |
 | `Project` | One infra repository. It holds the GitHub installation, branch, config globs, the last synced SHA and parse errors. |

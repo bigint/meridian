@@ -92,4 +92,19 @@ class ApplicationHelperTest < ActionView::TestCase
     render html: labels_list({ "region" => "eu", "role" => "web" }, except: Server::PLACE_LABELS)
     assert_select ".badge--mono", count: 1, text: "role=web"
   end
+
+  test "a docs link opens that page of the docs site" do
+    render html: docs_link("The agent", "/guides/agent")
+    assert_select "a.link[href=?]", "https://meridian.yoginth.com/guides/agent", text: "The agent"
+  end
+
+  test "a proposal is a commit or a pull request" do
+    commit = Project::Changes::Proposal.new(url: "https://github.com/example/infra/commit/abc", number: nil, direct: true)
+    pull = Project::Changes::Proposal.new(url: "https://github.com/example/infra/pull/5", number: 5, direct: false)
+
+    assert_equal [ "committed", "ready for review" ], [ proposal_state(commit), proposal_state(pull) ]
+    render html: proposal_link(commit) + proposal_link(pull)
+    assert_select "a.btn--primary[href=?]", commit.url, text: "View commit"
+    assert_select "a.btn--primary[href=?]", pull.url, text: "Open pull request #5"
+  end
 end

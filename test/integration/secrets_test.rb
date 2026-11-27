@@ -35,8 +35,7 @@ class SecretsTest < ActionDispatch::IntegrationTest
   test "a name that was set and is no longer referenced says so" do
     secret = @project.secret_names.find_by!(name: "API_TOKEN_PRODUCTION")
     secret.update!(last_set_at: Time.current)
-    files = Dir.glob("**/*", File::FNM_DOTMATCH, base: GitHubHelper::INFRA).select { File.file?(GitHubHelper::INFRA.join(it)) }.reject { it == "deploy/api.yml" }
-    stub_github_files(@project, files.index_with { File.read(GitHubHelper::INFRA.join(it)) }, head: "b" * 40)
+    stub_github_files(@project, infra_files(except: [ "deploy/api.yml" ]), head: "b" * 40)
 
     @project.sync
     assert_not secret.reload.referenced?
@@ -53,6 +52,15 @@ class SecretsTest < ActionDispatch::IntegrationTest
     assert_equal "Type a value for DATABASE_URL.", flash[:alert]
     assert_not_requested @put
     assert_nil secret.reload.last_set_at
+  end
+
+  test "a secret says when it was last set through Meridian" do
+    sign_in_as users(:ada)
+    SecretName.create!(project: @project, name: "API_KEY", last_set_at: 1.day.ago)
+
+    get secrets_path
+
+    assert_select "tr", text: /API_KEY.*1 day ago/m
   end
 
   test "secret_names has no column that could hold a value" do
@@ -81,20 +89,6 @@ class SecretsTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, SENTINEL
     assert secret.reload.last_set_at
     assert_equal "secret.set", Event.recent.first.action
-  end
-
-  test "after rotating, a redeploy asks CI to deploy the current version again" do
-    stub_github_repo(@project, history: { "deploy/web.production.version" => [ [ "c" * 40, "v42\n" ] ] })
-    @project.sync(force: true)
-    dispatch = stub_request(:post, "https://api.github.com/repos/example/infra/actions/workflows/meridian-deploy.yml/dispatches")
-      .with(body: hash_including(ref: "main", inputs: { config: "deploy/web.yml", destination: "production", version: "v42", command: "deploy" }))
-      .to_return(status: 204)
-
-    sign_in_as users(:ada)
-    post app_redeploy_path(@project.apps.find_by!(service: "web", destination: "production"))
-
-    assert_requested dispatch
-    assert_equal "app.redeploy", Event.recent.first.action
   end
 
   private

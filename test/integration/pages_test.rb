@@ -65,18 +65,7 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select ".copyable code", text: "kamal accessory boot db -c deploy/umami.yml"
   end
 
-  test "an accessories-only config's page offers no deploy" do
-    app = @project.apps.find_by!(service: "blog")
-    app.update!(kind: App::ACCESSORIES)
-
-    get app_path(app)
-
-    assert_select "form[action=?]", app_deploys_path(app), count: 0
-    assert_select "form[action=?]", app_redeploy_path(app), count: 0
-    assert_select "code", text: "kamal accessory boot all -c deploy/blog.yml"
-  end
-
-  test "an app's page offers a deploy until its config holds only accessories" do
+  test "an app's page offers a deploy until its config holds only accessories, then how to boot them" do
     app = @project.apps.find_by!(service: "blog")
     get app_path(app)
     assert_select "form[action=?]", app_deploys_path(app), count: 1
@@ -86,6 +75,7 @@ class PagesTest < ActionDispatch::IntegrationTest
     [ app_deploys_path(app), app_redeploy_path(app), app_rollbacks_path(app) ].each do |path|
       assert_select "form[action^=?]", path, count: 0
     end
+    assert_select ".copyable code", text: "kamal accessory boot all -c deploy/blog.yml"
   end
 
   test "a deploy says who asked for it, and one nobody asked for came from Git" do
@@ -108,8 +98,8 @@ class PagesTest < ActionDispatch::IntegrationTest
 
     get app_path(app)
     assert_select "td [data-cell][data-state=drifted]", 1
-    assert_select ".page-header", text: /0 of 1 server run v2/
-    assert_select ".page-header", text: /everywhere/, count: 0
+    assert_select "[data-app-status]", text: /0 of 1 server run v2/
+    assert_select "[data-app-status]", text: /everywhere/, count: 0
   end
 
   test "a server page lists every app on the server, past one board page" do
@@ -123,10 +113,8 @@ class PagesTest < ActionDispatch::IntegrationTest
   test "the apps page reads every app's newest release in one query" do
     20.times { |i| @project.apps.create!(service: "app-#{i}", config_path: "deploy/app-#{i}.yml").releases.create!(version: "v#{i}", commit_sha: i.to_s * 40, committed_at: 1.hour.ago) }
 
-    queries = []
-    ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] if payload[:sql].include?('"releases".*') }, "sql.active_record") { get apps_path }
+    assert_queries_match(/"releases"\.\*/, count: 1) { get apps_path }
     assert_select "table tbody code", text: "v19"
-    assert_equal 1, queries.size, queries.join("\n")
   end
 
   test "the board says everything matches Git only when every cell was compared" do
@@ -152,7 +140,6 @@ class PagesTest < ActionDispatch::IntegrationTest
   end
 
   test "New app shows a missing repository under its field, not only at the top" do
-    sign_in_as users(:ada)
     post apps_path, params: { app_draft: { project_id: 0, service: "shop", source_repo: "acme/shop", kind: "web", hostname: "shop.example.com" } }
     assert_response :unprocessable_entity
     assert_select ".field:has(#app_draft_project_id) .field__error", text: /can.t be blank/

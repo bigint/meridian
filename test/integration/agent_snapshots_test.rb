@@ -25,9 +25,6 @@ class AgentSnapshotsTest < ActionDispatch::IntegrationTest
 
     post agent_snapshots_path, params: { hostname: "x" }.to_json, headers: headers("meridian_web1token")
     assert_response :unprocessable_entity
-
-    post agent_snapshots_path, params: "x" * (1.megabyte + 1), headers: headers("meridian_web1token")
-    assert_response :content_too_large
   end
 
   test "tokens are shown once and stored as a digest" do

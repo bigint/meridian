@@ -51,6 +51,7 @@ class Tunnel
 
   def state = connectors.map(&:state).max_by { STATES.index(it) } || :unknown
   def missing = connectors.select { it.state == :missing }
+  def running_count = connectors.count { it.state == :running }
 
   def coverage = @coverage ||= Tunnel.coverage(@apps, connector_hosts, @servers)
   # Meridian can't see Cloudflare's routes, so an app missing from a

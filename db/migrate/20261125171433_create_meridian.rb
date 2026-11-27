@@ -15,7 +15,6 @@ class CreateMeridian < ActiveRecord::Migration[8.1]
     end
 
     create_table :accounts do |t|
-      t.string :name, null: false, default: "Meridian"
       t.string :location_name
       t.float :latitude
       t.float :longitude

@@ -5,7 +5,7 @@ class DriftTest < ActiveSupport::TestCase
     @live = Server.new(last_seen_at: Time.current)
   end
 
-  test "states" do
+  test "each state, from what Git assigns and what the agent reports" do
     assert_equal "in_sync", Drift.state(assigned: true, versions: [ "v2" ], release: "v2", server: @live)
     assert_equal "drifted", Drift.state(assigned: true, versions: [ "v1" ], release: "v2", server: @live)
     assert_equal "drifted", Drift.state(assigned: true, versions: [ "v1", "v2" ], release: "v2", server: @live)

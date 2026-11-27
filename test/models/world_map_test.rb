@@ -5,10 +5,10 @@ class WorldMapTest < ActiveSupport::TestCase
     stub_github_repo(projects(:infra))
     projects(:infra).sync
     @now = Time.current
-    place "web-1.example.com", 1.35, 103.82
-    place "web-2.example.com", 1.36, 103.83
-    place "api-1.example.com", 50.11, 8.68
-    place "jobs-1.example.com", 40.71, -74.01
+    locate "web-1.example.com", 1.35, 103.82
+    locate "web-2.example.com", 1.36, 103.83
+    locate "api-1.example.com", 50.11, 8.68
+    locate "jobs-1.example.com", 40.71, -74.01
   end
 
   test "projects latitude and longitude onto the map" do
@@ -50,15 +50,6 @@ class WorldMapTest < ActiveSupport::TestCase
     assert_equal 2, flows.count { it.kind == "deploy" }, "api is on Singapore and Frankfurt"
   end
 
-  test "agents can report their location as labels" do
-    token = AgentToken.create!(label: "x")
-    payload = { "machine_id" => "m1", "hostname" => "staging-1", "labels" => { "lat" => "48.85", "lng" => "2.35" }, "containers" => [] }
-    Snapshot.new(payload, token: token).ingest
-
-    server = Server.find_by!(name: "staging-1.example.com")
-    assert_equal [ 48.85, 2.35 ], [ server.latitude, server.longitude ]
-  end
-
   test "places are named by city, then region" do
     Server.find_by!(name: "web-1.example.com").update!(labels: { "region" => "ap-southeast-1", "city" => "Singapore" })
     Server.find_by!(name: "api-1.example.com").update!(labels: { "region" => "eu-central-1" })
@@ -85,23 +76,46 @@ class WorldMapTest < ActiveSupport::TestCase
 
   test "only places that need attention are named; the rest wait for a hover" do
     Server.find_by!(name: "jobs-1.example.com").update!(last_seen_at: 2.hours.ago)
+    Server.create!(name: "spare-1.example.com", hostname: "spare-1.example.com", latitude: 35.68, longitude: 139.69, last_seen_at: @now)
     map = WorldMap.new
-    by_server = ->(name) { map.sites.find { it.servers.map(&:name).include?(name) } }
-    new_york, singapore, frankfurt = by_server["jobs-1.example.com"], by_server["web-1.example.com"], by_server["api-1.example.com"]
+    new_york, singapore, frankfurt, tokyo = %w[ jobs-1 web-1 api-1 spare-1 ].map { |name| site(map, "#{name}.example.com") }
 
-    assert_equal "stale", new_york.state
+    assert_equal [ "stale", "missing", "missing", "in_sync" ], [ new_york, singapore, frankfurt, tokyo ].map(&:state)
     keys = map.named_keys
     assert_includes keys, new_york.key, "a quiet place is always named"
     assert_includes keys, singapore.key, "a place missing an app is named"
-    assert_not_includes keys, frankfurt.key unless frankfurt.state.in?(Drift::ATTENTION_RANK.keys)
+    assert_includes keys, frankfurt.key
+    assert_not_includes keys, tokyo.key, "a place that matches Git waits for a hover"
     assert_equal keys.size, map.labels(keys).size
-    assert_equal "missing", singapore.state
+  end
+
+  test "places list those that need attention first, worst first, then by name" do
+    Server.find_by!(name: "jobs-1.example.com").update!(last_seen_at: 2.hours.ago)
+    Server.create!(name: "spare-1.example.com", hostname: "spare-1.example.com", latitude: 35.68, longitude: 139.69, last_seen_at: @now)
+
+    assert_equal %w[ api-1 web-2 jobs-1 spare-1 ], WorldMap.new.places.map(&:name)
+  end
+
+  test "a place being deployed to comes before others in the same state" do
+    projects(:infra).apps.find_by!(service: "blog").deploys.create!(version: "b2", commit_sha: "f" * 40)
+
+    assert_equal %w[ web-2 api-1 jobs-1 ], WorldMap.new.places.map(&:name), "blog runs in Singapore only"
+  end
+
+  test "problems are the places that need attention, by state, worst first" do
+    Server.find_by!(name: "jobs-1.example.com").update!(last_seen_at: 2.hours.ago)
+    problems = WorldMap.new.problems
+
+    assert_equal %w[ missing stale ], problems.keys
+    assert_equal [ %w[ api-1 web-2 ], %w[ jobs-1 ] ], problems.values.map { it.map(&:name).sort }
   end
 
   private
     def overlap?(a, b) = a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
 
-    def place(name, lat, lng)
+    def site(map, server_name) = map.sites.find { it.servers.map(&:name).include?(server_name) }
+
+    def locate(name, lat, lng)
       Server.find_by!(name: name).update!(latitude: lat, longitude: lng, last_seen_at: @now)
     end
 end

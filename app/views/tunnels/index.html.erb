@@ -1,10 +1,5 @@
 <% content_for :title, "Tunnels" %>
-<% problems = @tunnels.count(&:problems?) %>
-<% summary = if @tunnels.none? then "No Cloudflare Tunnel yet."
-             elsif problems.zero? then "#{pluralize(@tunnels.size, "Cloudflare Tunnel")}. Every connector is running."
-             else "#{pluralize(@tunnels.size, "Cloudflare Tunnel")}. #{problems} #{problems == 1 ? "needs" : "need"} attention."
-             end %>
-<%= page_header "Tunnels", meta: summary do %>
+<%= page_header "Tunnels", meta: tunnels_summary(@tunnels) do %>
   <%= link_to tunnels_setup_path, class: "btn btn--primary" do %><%= icon :plus %> Set up a tunnel<% end %>
 <% end %>
 
@@ -31,7 +26,7 @@
     <div class="card__meta">
       <span>Token <code><%= tunnel.secret_name %></code>
         <%= tunnel.token_set? ? badge("set", tone: :ok, data: { tooltip: "Set from Meridian #{time_ago_in_words(tunnel.secret.last_set_at)} ago" }) : badge("not set here", data: { tooltip: "Meridian hasn't set this secret. It may be set on GitHub directly." }) %></span>
-      <span><%= tunnel.connectors.count { it.state == :running } %> of <%= tunnel.connectors.size %> connectors running</span>
+      <span><%= tunnel.running_count %> of <%= tunnel.connectors.size %> connectors running</span>
       <span>Serves <%= pluralize(tunnel.served.size, "app") %></span>
     </div>
     <div class="card__body">

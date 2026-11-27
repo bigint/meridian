@@ -37,6 +37,9 @@ class JumpTest < ActionDispatch::IntegrationTest
     Event.record("agent_token.created", summary: "Created a token")
     get events_path(action_name: "agent_token")
     assert_select ".row__title", text: "Created a token"
+    get events_path(action_name: "agent%")
+    assert_select ".row__title", text: "Created a token", count: 0
+    assert_select ".empty__title", text: "No action starts with agent%"
   end
 
   test "the best match survives the limit, however many names sort before it" do
@@ -45,20 +48,5 @@ class JumpTest < ActionDispatch::IntegrationTest
 
     get jump_path(q: "db-1")
     assert_equal "db-1", css_select("#jump_results a span.truncate").first.text
-  end
-
-  test "says so when nothing matches" do
-    get jump_path(q: "zzz")
-    assert_select "#jump_results", text: /Nothing called “zzz”/
-  end
-
-  test "every page carries the search box and the main places" do
-    get root_path
-    assert_select "#topbar form[action=?] input[type=search][name=q]", jump_path
-    assert_select "#sidebar nav[aria-label=Main] a", 5
-    assert_select "#sidebar nav[aria-label=Main] a[aria-current=page]", text: /Board/
-    assert_select "#sidebar nav[aria-label=Manage] a", text: /Secrets/
-    assert_select "#sidebar nav[aria-label=System] a", text: /Settings/
-    assert_select "[data-controller~=shortcuts]", 0
   end
 end

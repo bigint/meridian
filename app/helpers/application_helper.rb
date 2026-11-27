@@ -19,7 +19,7 @@ module ApplicationHelper
       safe_join([
         icon(icon_name),
         tag.span(name, class: "sidebar__label"),
-        (tag.span(count, class: "sidebar__count", aria: { label: "#{pluralize(count, "thing")} need attention" }) if count.to_i.positive?)
+        (tag.span(count, class: "sidebar__count", aria: { label: "#{pluralize(count, "thing")} #{count.to_i == 1 ? "needs" : "need"} attention" }) if count.to_i.positive?)
       ].compact)
     end
   end
@@ -191,6 +191,14 @@ module ApplicationHelper
   def current_path_with(anchor: nil, **changes)
     query = request.query_parameters.merge(changes.stringify_keys).compact_blank
     [ request.path, ("?#{query.to_query}" if query.any?), ("##{anchor}" if anchor) ].join
+  end
+
+  # Where a proposed change to the infra repository stands.
+  def proposal_state(proposal) = proposal.direct ? "committed" : "ready for review"
+
+  # The commit or pull request a proposed change became.
+  def proposal_link(proposal)
+    link_to (proposal.direct ? "View commit" : "Open pull request ##{proposal.number}"), proposal.url, class: "btn btn--primary"
   end
 
   # Errors for a form, above its fields.

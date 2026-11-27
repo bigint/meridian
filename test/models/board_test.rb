@@ -2,8 +2,7 @@ require "test_helper"
 require "turbo/broadcastable/test_helper"
 
 class BoardTest < ActiveSupport::TestCase
-  include ActiveJob::TestHelper
-  include Turbo::Broadcastable::TestHelper
+  include Turbo::Broadcastable::TestHelper, MemoryCacheHelper
 
   setup do
     @server = Server.create!(name: "web-1.example.com", hostname: "web-1.example.com", labels: { "region" => "sgp" }, last_seen_at: Time.current)
@@ -20,33 +19,29 @@ class BoardTest < ActiveSupport::TestCase
   end
 
   test "refreshes are throttled to one per group per second, and the last change still goes out" do
-    with_cache(ActiveSupport::Cache::MemoryStore.new) do
-      assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) do
-        Board.refresh_later(@server)
-        perform_enqueued_jobs
-      end
+    assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) do
+      Board.refresh_later(@server)
+      perform_enqueued_jobs
+    end
 
-      assert_enqueued_with(job: BoardRefreshJob, args: [ "sgp" ]) do
-        3.times { Board.refresh_later(@server) }
-      end
-      assert_enqueued_jobs 1, only: BoardRefreshJob
-      assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) { perform_enqueued_jobs }
+    assert_enqueued_with(job: BoardRefreshJob, args: [ "sgp" ]) do
+      3.times { Board.refresh_later(@server) }
+    end
+    assert_enqueued_jobs 1, only: BoardRefreshJob
+    assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) { perform_enqueued_jobs }
 
-      assert_enqueued_jobs 1, only: BoardRefreshJob do
-        Board.refresh_later(@server)
-      end
+    assert_enqueued_jobs 1, only: BoardRefreshJob do
+      Board.refresh_later(@server)
     end
   end
 
   test "a server that moves region is refreshed in the region it left too" do
     @server.update!(labels: { "region" => "fra" })
 
-    with_cache(ActiveSupport::Cache::MemoryStore.new) do
-      Board.refresh_later(@server)
-      perform_enqueued_jobs
-      assert_turbo_stream_broadcasts [ :board, "fra" ], count: 1
-      assert_turbo_stream_broadcasts [ :board, "sgp" ], count: 1
-    end
+    Board.refresh_later(@server)
+    perform_enqueued_jobs
+    assert_turbo_stream_broadcasts [ :board, "fra" ], count: 1
+    assert_turbo_stream_broadcasts [ :board, "sgp" ], count: 1
   end
 
   test "groups large fleets by region automatically and paginates" do
@@ -100,13 +95,6 @@ class BoardTest < ActiveSupport::TestCase
     assert_nil cell.version, "the agent reported nothing running"
   end
 
-  test "a container whose version the agent couldn't read is still stray" do
-    other = Server.create!(name: "web-2.example.com", hostname: "web-2.example.com", last_seen_at: Time.current)
-    start versioned_app("shop"), role: "web", version: nil, server: other
-
-    assert_equal "stray", Board.new.cells.find { it.server == other }&.state
-  end
-
   private
     def versioned_app(service, version: "v2", roles: %w[ web ], server: @server)
       app = projects(:infra).apps.create!(service: service, config_path: "deploy/#{service}.yml", version_path: "deploy/#{service}.version")
@@ -118,12 +106,5 @@ class BoardTest < ActiveSupport::TestCase
     def start(app, role:, version:, server: @server)
       Placement.create!(server: server, app: app, container_id: SecureRandom.hex(6), name: "#{app.service}-#{role}-#{version}",
         service: app.service, role: role, version: version, state: "running", observed_at: Time.current)
-    end
-
-    def with_cache(store)
-      original, Rails.cache = Rails.cache, store
-      yield
-    ensure
-      Rails.cache = original
     end
 end

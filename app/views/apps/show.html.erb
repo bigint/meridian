@@ -6,21 +6,16 @@
 <% group = @board.groups.first %>
 <% cells = group ? group.columns.map { group.cell(@app, it) } : [] %>
 
-<header class="page-header">
-  <div class="page-header__row">
-    <h1 class="page-header__title"><%= @app.name %></h1>
-    <div class="page-header__actions">
-      <%= link_to app_traffic_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :traffic %>Traffic<% end %>
-      <%= link_to app_log_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>Logs<% end %>
-    </div>
-  </div>
-  <div class="flex flex-wrap items-center gap-s txt-muted">
-    <%= badge @app.kind %>
-    <span>in <%= link_to @app.project.name, @app.project, class: "link" %></span>
-    <% @app.hostnames.each do |host| %><%= link_to host, "https://#{host}", class: "link mono txt-small" %><% end %>
-  </div>
-  <div><%= app_status @app, cells %></div>
-</header>
+<% meta = capture do %>
+  <%= badge @app.kind %>
+  <span>in <%= link_to @app.project.name, @app.project, class: "link" %></span>
+  <% @app.hostnames.each do |host| %><%= link_to host, "https://#{host}", class: "link mono txt-small" %><% end %>
+<% end %>
+<%= page_header @app.name, meta: meta do %>
+  <%= link_to app_traffic_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :traffic %>Traffic<% end %>
+  <%= link_to app_log_path(@app), class: "btn btn--small", data: { turbo_prefetch: false } do %><%= icon :logs %>Logs<% end %>
+<% end %>
+<p data-app-status><%= app_status @app, cells %></p>
 
 <div class="split">
   <div class="split__main">
@@ -115,9 +110,9 @@
   <aside class="split__aside" aria-label="Deploy">
     <div class="panel">
       <% if @app.deployable? %>
-        <%= render "apps/deploys", app: @app %>
+        <%= render "apps/deploys", app: @app, releases: @releases %>
       <% else %>
-        <p class="txt-muted">This config only runs accessories, so it is never deployed. Start them with <code><%= @app.accessory_command("boot", "all") %></code>.</p>
+        <p class="txt-muted">This config only runs accessories, so it is never deployed. Start them with <%= copyable @app.accessory_command("boot", "all") %></p>
       <% end %>
     </div>
   </aside>

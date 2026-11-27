@@ -11,6 +11,7 @@ require_relative "test_helpers/memory_cache_helper"
 require_relative "test_helpers/env_helper"
 require_relative "test_helpers/logs_helper"
 require_relative "test_helpers/fleet_helper"
+require_relative "test_helpers/tunnel_helper"
 require_relative "test_helpers/kamal_parse_cache"
 
 WebMock.disable_net_connect!(allow_localhost: true)

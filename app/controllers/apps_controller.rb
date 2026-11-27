@@ -1,4 +1,6 @@
 class AppsController < ApplicationController
+  before_action :set_projects, only: %i[ new create ]
+
   def index
     @apps = App.includes(:project).ordered
     @apps = @apps.search(params[:q]) if params[:q].present?
@@ -6,7 +8,7 @@ class AppsController < ApplicationController
   end
 
   def new
-    @draft = AppDraft.new(project_id: params[:project_id] || Project.ordered.first&.id)
+    @draft = AppDraft.new(project_id: params[:project_id] || @projects.first&.id)
   end
 
   def create
@@ -27,4 +29,9 @@ class AppsController < ApplicationController
     @releases = @app.releases.limit(App::Releases::HISTORY)
     @accessories = Accessory.for(@app)
   end
+
+  private
+    def set_projects
+      @projects = Project.ordered
+    end
 end

@@ -8,11 +8,10 @@ class TrafficTest < ActionDispatch::IntegrationTest
     place(@web_2, WORKER, app: @app)
     @proxy_1 = place(@web_1, "c" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
     @proxy_2 = place(@web_2, "d" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+    sign_in_as users(:ada)
   end
 
   test "an app's traffic reads kamal-proxy on each of its servers, without writing to Activity" do
-    sign_in_as users(:ada)
-
     assert_no_difference -> { Event.count } do
       get app_traffic_path(@app)
     end
@@ -29,7 +28,6 @@ class TrafficTest < ActionDispatch::IntegrationTest
 
   test "an app whose servers report no kamal-proxy says so" do
     Placement.where(kind: "proxy").delete_all
-    sign_in_as users(:ada)
 
     get app_traffic_path(@app)
 

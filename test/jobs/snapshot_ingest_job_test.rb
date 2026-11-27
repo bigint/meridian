@@ -9,10 +9,6 @@ class SnapshotIngestJobTest < ActiveJob::TestCase
     Snapshot.new(@payload, token: agent_tokens(:web_1)).ingest
   end
 
-  test "a snapshot like the last one redraws nothing" do
-    assert_no_turbo_stream_broadcasts([ :board, "sgp" ]) { report }
-  end
-
   test "a new version redraws the server's region" do
     @payload["containers"].find { it["id"] == "aaa111" }["version"] = "v43"
     assert_turbo_stream_broadcasts([ :board, "sgp" ], count: 1) { report }

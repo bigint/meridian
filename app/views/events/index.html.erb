@@ -9,7 +9,7 @@
 <% end %>
 
 <% if @events.empty? %>
-  <%= empty_state "Nothing has happened yet", icon_name: :activity %>
+  <%= empty_state(params[:action_name].present? ? "No action starts with #{params[:action_name]}" : "Nothing has happened yet", icon_name: :activity) %>
 <% end %>
 
 <div class="stack-l">

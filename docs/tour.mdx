@@ -112,11 +112,11 @@ The app's page, at `/apps/<id>`, has everything about one app. The header shows 
 
 ## Servers
 
-**Servers**, at `/servers`, lists every machine that Git names or an agent reports from. Each row shows the server, its hostname, place, labels, agent version and when it was last seen. A quiet server is marked **silent**. **Search servers** filters by name or hostname. **Only silent agents** shows only quiet servers.
+**Servers**, at `/servers`, lists every machine that Git names or an agent reports from. Each row shows the server, its hostname, place, labels, agent version and when it was last seen. A quiet server is marked **Silent**, and one no agent has reported from says **No agent yet**. **Search servers** filters by name or hostname. **Only silent agents** shows only quiet servers.
 
 ## Server page
 
-A server's page, at `/servers/<id>`, shows one machine. The header says **Reporting**, **No agent yet**, or **stale** with **agent silent**.
+A server's page, at `/servers/<id>`, shows one machine. The header says **Reporting**, **No agent yet**, or **… Silent**.
 
 <Screenshot name="server" alt="A server's page: live host tiles, the apps on it, and every container with live CPU, memory and network" />
 
@@ -180,7 +180,6 @@ Type a value under **Set or rotate**. Meridian encrypts it into the repository's
 
 **Settings**, at `/settings`, has two cards saved together with **Save**:
 
-- **Workspace** sets the **Name** of this Meridian.
 - **Where Meridian runs** sets a **Place**, **Latitude** and **Longitude**. The map draws Meridian there, with agent reports flowing in and deploys flowing out.
 
 Beside them, **Connections** shows how Meridian reaches GitHub and the Kamal version it reads configs with. These come from Meridian's environment, so you can't change them here.

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Tunnel::SetupTest < ActiveSupport::TestCase
+  include TunnelHelper
+
   setup do
     @project = projects(:infra)
     @a, @b = %w[ a b ].map { Server.create!(name: "#{it}.example.com", hostname: "#{it}.example.com", last_seen_at: 1.second.ago) }
@@ -57,7 +59,7 @@ class Tunnel::SetupTest < ActiveSupport::TestCase
     assert_not setup.in_config?
 
     @project.secret_names.create!(name: "CLOUDFLARE_TUNNEL_TOKEN", last_set_at: 1.minute.ago)
-    make_app("edge", kind: App::ACCESSORIES, accessories: [ { "name" => "cloudflared-a", "service" => "edge-cloudflared-a", "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ "a.example.com" ], "secrets" => [ "CLOUDFLARE_TUNNEL_TOKEN" ] } ])
+    make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("cloudflared-a", "a.example.com") ])
     @a.placements.create!(container_id: "c1", name: "edge-cloudflared-a", kind: "accessory", service: "edge-cloudflared-a", state: "running", observed_at: Time.current)
 
     setup = Tunnel::Setup.for(@project)
@@ -66,12 +68,4 @@ class Tunnel::SetupTest < ActiveSupport::TestCase
     assert setup.running?
     assert_equal [ "a.example.com" ], setup.hosts
   end
-
-  private
-    def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
-      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames, accessories: accessories,
-        roles: [ { "name" => "web", "hosts" => on.map(&:hostname), "proxy" => true } ])
-      on.each { app.assignments.create!(server: it, role: "web") }
-      app
-    end
 end

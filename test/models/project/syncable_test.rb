@@ -220,8 +220,7 @@ class Project::SyncableTest < ActiveSupport::TestCase
 
   test "apps removed from Git are removed" do
     @project.sync
-    files = Dir.glob("**/*", File::FNM_DOTMATCH, base: GitHubHelper::INFRA).select { File.file?(GitHubHelper::INFRA.join(it)) }.reject { it == "deploy/blog.yml" }
-    stub_github_files(@project, files.index_with { File.read(GitHubHelper::INFRA.join(it)) }, head: "d" * 40)
+    stub_github_files(@project, infra_files(except: [ "deploy/blog.yml" ]), head: "d" * 40)
 
     @project.sync
     assert_nil @project.apps.find_by(service: "blog")
@@ -279,9 +278,4 @@ class Project::SyncableTest < ActiveSupport::TestCase
     assert_not_empty during
     assert_equal [ outside ], during.uniq
   end
-
-  private
-    def infra_files
-      Dir.glob("**/*", File::FNM_DOTMATCH, base: GitHubHelper::INFRA).select { File.file?(GitHubHelper::INFRA.join(it)) }.index_with { File.read(GitHubHelper::INFRA.join(it)) }
-    end
 end

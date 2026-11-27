@@ -2,8 +2,8 @@ require "test_helper"
 require Rails.root.join("script/docs_changelog").to_s
 
 # Keeps the docs site in step with the code: every page is in the navigation,
-# every environment variable the code reads is documented, and CHANGELOG.md
-# renders as the Changelog page.
+# every link into it from the app is a page, every environment variable the
+# code reads is documented, and CHANGELOG.md renders as the Changelog page.
 class DocsTest < ActiveSupport::TestCase
   DOCS = Rails.root.join("docs")
   ENVIRONMENT_PAGE = DOCS.join("reference/environment.mdx")
@@ -14,6 +14,10 @@ class DocsTest < ActiveSupport::TestCase
   GITHUB_SETTING = /\bsetting\(:\w+, "([A-Z][A-Z0-9_]*)"\)/
   # The agent reads its config through the getenv it is handed (os.Getenv).
   AGENT_ENV_READ = /\b(?:os\.Getenv|os\.LookupEnv|getenv)\("([A-Z][A-Z0-9_]*)"\)/
+
+  # docs_link "Text", "/path" in a view or helper, and a URL on the docs site.
+  DOCS_LINK = /\bdocs_link[ (]\s*"[^"]*",\s*"(\/[^"#]*)/
+  DOCS_URL = %r{https://meridian\.yoginth\.com(/[\w/-]*)?}
 
   # Read by the framework's own boot and test setup, not settings to document.
   UNDOCUMENTED = {
@@ -32,6 +36,13 @@ class DocsTest < ActiveSupport::TestCase
 
     assert_empty listed - files, "docs.json lists pages with no .mdx file"
     assert_empty files - listed, "These .mdx files aren't in docs.json's navigation"
+  end
+
+  test "every link into the docs site from the app, its config and its templates is a page" do
+    listed = navigation_pages(JSON.parse(DOCS.join("docs.json").read))
+    missing = docs_paths.reject { listed.include?(it.delete_prefix("/").presence || "index") }
+
+    assert_empty missing, "These docs links point at no page in docs.json"
   end
 
   test "every environment variable the app and the agent read is on the Environment page" do
@@ -82,6 +93,16 @@ class DocsTest < ActiveSupport::TestCase
       when Array then node.each { navigation_pages(it, pages) }
       end
       pages
+    end
+
+    # docs_link paths in app/, and meridian.yoginth.com URLs in app/, config/
+    # and templates/, without their anchors.
+    def docs_paths
+      Dir.glob("{app,config,templates}/**/*", base: Rails.root).select { Rails.root.join(it).file? }.flat_map do |path|
+        code = Rails.root.join(path).binread.force_encoding("UTF-8").scrub
+        links = path.start_with?("app/") ? code.scan(DOCS_LINK).flatten : []
+        links + code.scan(DOCS_URL).flatten.map { it || "/" }
+      end.uniq.sort
     end
 
     def environment_names

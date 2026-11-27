@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TunnelTest < ActiveSupport::TestCase
+  include TunnelHelper
+
   setup do
     @project = projects(:infra)
     @counter = 0
@@ -33,9 +35,9 @@ class TunnelTest < ActiveSupport::TestCase
     running, stopped, missing, quiet = %w[ a b c d ].map { server("#{it}.example.com", last_seen_at: 5.seconds.ago) }
     quiet.update!(last_seen_at: 1.hour.ago)
     make_app("edge", accessories: %w[ a b c d e ].map { connector("cloudflared-#{it}", "#{it}.example.com") })
-    place(running, "edge-cloudflared-a", "running")
-    place(stopped, "edge-cloudflared-b", "exited")
-    place(quiet, "edge-cloudflared-d", "running")
+    place_connector(running, "edge-cloudflared-a", "running")
+    place_connector(stopped, "edge-cloudflared-b", "exited")
+    place_connector(quiet, "edge-cloudflared-d", "running")
 
     states = Tunnel.all.sole.connectors.to_h { [ it.host, it.state ] }
 
@@ -81,8 +83,8 @@ class TunnelTest < ActiveSupport::TestCase
     a = server("a.example.com", last_seen_at: 1.second.ago)
     make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com"), connector("cloudflared-b", "b.example.com") ])
     make_app("blog", hostnames: [ "blog.example.com" ], on: [ a ])
-    place(a, "edge-cloudflared-a", "running")
-    place(server("b.example.com", last_seen_at: 1.second.ago), "edge-cloudflared-b", "running")
+    place_connector(a, "edge-cloudflared-a", "running")
+    place_connector(server("b.example.com", last_seen_at: 1.second.ago), "edge-cloudflared-b", "running")
 
     tunnel = Tunnel.all.sole
     assert tunnel.gaps.any?
@@ -107,38 +109,19 @@ class TunnelTest < ActiveSupport::TestCase
 
   test "queries stay constant however many tunnels there are" do
     make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com") ])
-    few = count_queries { Tunnel.all.each(&:coverage) }
+    assert_queries_count(7) { Tunnel.all.each(&:coverage) }
 
     5.times { |i| make_app("edge-#{i}", accessories: [ connector("cloudflared-#{i}", "s#{i}.example.com", secret: "T#{i}_TUNNEL_TOKEN") ]) }
 
-    assert_equal few, count_queries { Tunnel.all.each(&:coverage) }
+    assert_queries_count(7) { Tunnel.all.each(&:coverage) }
   end
 
   private
-    def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
-      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames,
-        roles: [ { "name" => "web", "hosts" => on.map(&:hostname), "proxy" => true } ],
-        accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
-      on.each { app.assignments.create!(server: it, role: "web") }
-      app
-    end
-
-    def connector(name, host, secret: "CLOUDFLARE_TUNNEL_TOKEN")
-      { "name" => name, "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ host ], "secrets" => [ secret ] }
-    end
-
     def server(name, hostname: name, last_seen_at:)
       Server.create!(name: name, hostname: hostname, last_seen_at: last_seen_at)
     end
 
-    def place(server, service, state)
+    def place_connector(server, service, state)
       server.placements.create!(container_id: "c#{@counter += 1}", name: service, kind: "accessory", service: service, state: state, observed_at: Time.current)
-    end
-
-    def count_queries(&block)
-      count = 0
-      counter = ->(*, payload) { count += 1 unless payload[:name] == "SCHEMA" }
-      ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
-      count
     end
 end

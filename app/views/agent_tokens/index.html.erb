@@ -11,7 +11,7 @@
 <div class="split">
   <%= titled_section "Install", class: "split__main" do %>
     <p class="txt-muted">Add the agent to a Kamal config that reaches every host, as two accessories. It only connects out to Meridian, and reads Docker through a proxy that allows nothing but reading containers: listing, inspecting, stats and logs. See <%= docs_link "The agent", "/guides/agent" %>.</p>
-    <%= render "shared/code_block", code: Templates.render("kamal/agent-accessories.yml", meridian_url: request.base_url), label: "config/deploy.yml" %>
+    <%= render "shared/code_block", code: Templates.render("kamal/agent-accessories.yml", meridian_url: request.base_url, agent_version: Rails.configuration.version == "dev" ? "latest" : Rails.configuration.version), label: "config/deploy.yml" %>
   <% end %>
 
   <div class="split__aside">
@@ -75,7 +75,7 @@
 <% end %>
 
 <%= titled_section "Silent agents", count: @silent.size do %>
-  <p class="txt-small txt-muted">Agents that haven't reported for three of their intervals, and at least <%= distance_of_time_in_words(Server::STALE_AFTER) %>.</p>
+  <p class="txt-small txt-muted">Agents that haven't reported for three of their intervals, and at least <%= Server::STALE_AFTER.to_i %> seconds.</p>
   <div class="table-wrap">
     <table class="table">
       <thead>

@@ -1,14 +1,18 @@
-<%= disclosure "Filters", open: board.filters.except(:view, :page, :state).any? do %>
-  <%= form_with url: board_path(anchor: "everything"), method: :get, class: "filters", data: { turbo_action: "replace" } do |form| %>
-    <%= form.hidden_field :view, value: board.view %>
-    <%= form.hidden_field :state, value: board.state if board.state %>
-    <div class="field"><%= form.label :app %><%= form.search_field :app, value: board.filters[:app], placeholder: "Service" %></div>
-    <div class="field"><%= form.label :project %><%= form.select :project, projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: board.filters[:project] } %></div>
+<%# The filters of the board and the map. locals: url, filters, projects,
+    hidden (values the form keeps, by name), group (whether Group by shows),
+    open (whether the disclosure starts open), clear_url (nil hides Clear) %>
+<%= disclosure "Filters", open: open do %>
+  <%= form_with url: url, method: :get, class: "filters", data: { turbo_action: "replace" } do |form| %>
+    <% hidden.compact_blank.each do |name, value| %><%= form.hidden_field name, value: value %><% end %>
+    <div class="field"><%= form.label :app %><%= form.search_field :app, value: filters[:app], placeholder: "Service" %></div>
+    <div class="field"><%= form.label :project %><%= form.select :project, projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: filters[:project] } %></div>
     <% Board::LABELS.each do |key| %>
-      <div class="field"><%= form.label key %><%= form.select key, Board.label_values(key), { include_blank: "All", selected: board.filters[key.to_sym] } %></div>
+      <div class="field"><%= form.label key %><%= form.select key, Board.label_values(key), { include_blank: "All", selected: filters[key.to_sym] } %></div>
     <% end %>
-    <div class="field"><%= form.label :group, "Group by" %><%= form.select :group, [ [ "Automatic", "" ], [ "Nothing", "none" ], *Board::LABELS.map { [ it.capitalize, it ] } ], { selected: board.filters[:group] } %></div>
+    <% if group %>
+      <div class="field"><%= form.label :group, "Group by" %><%= form.select :group, [ [ "Automatic", "" ], [ "Nothing", "none" ], *Board::LABELS.map { [ it.capitalize, it ] } ], { selected: filters[:group] } %></div>
+    <% end %>
     <%= form.submit "Apply", name: nil, class: "btn" %>
-    <% if board.filters.except(:view).any? %><%= link_to "Clear", board_path(view: board.view, anchor: "everything"), class: "btn btn--plain" %><% end %>
+    <% if clear_url %><%= link_to "Clear", clear_url, class: "btn btn--plain" %><% end %>
   <% end %>
 <% end %>

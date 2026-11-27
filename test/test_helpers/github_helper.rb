@@ -7,9 +7,13 @@ module GitHubHelper
   INFRA = Rails.root.join("test/fixtures/files/infra")
 
   def stub_github_repo(project, head: "a" * 40, history: {}, files: {}, runs: [])
-    tree = Dir.glob("**/*", File::FNM_DOTMATCH, base: INFRA).select { File.file?(INFRA.join(it)) }.index_with { File.read(INFRA.join(it)) }
-    stub_github_files(project, tree.merge(files), head: head, history: history)
+    stub_github_files(project, infra_files.merge(files), head: head, history: history)
     stub_github_runs(project, runs)
+  end
+
+  # The fixture infra repository's files by path, leaving out those in except.
+  def infra_files(except: [])
+    Dir.glob("**/*", File::FNM_DOTMATCH, base: INFRA).select { File.file?(INFRA.join(it)) }.excluding(except).index_with { File.read(INFRA.join(it)) }
   end
 
   # The repository's recent workflow runs, as GitHub lists them.

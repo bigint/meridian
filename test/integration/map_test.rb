@@ -43,6 +43,16 @@ class MapTest < ActionDispatch::IntegrationTest
     assert_equal %w[ web webhooks ], Board.new(app: "web").apps.values.map(&:service).uniq.sort, "the free-text filter still matches part of a name"
   end
 
+  test "the filters open when an app search is on, and keep the app chip picked" do
+    get map_path
+    assert_select "details.disclosure:not([open])", text: /Filters/
+
+    get map_path(app: "web", service: "web")
+    assert_select "details.disclosure[open]", text: /Filters/
+    assert_select "form.filters input[type=hidden][name=service][value=web]"
+    assert_select "form.filters select[name=group]", count: 0
+  end
+
   test "a server is placed by hand, and only on the globe" do
     server = Server.find_by!(name: "jobs-1.example.com")
     patch server_path(server), params: { server: { latitude: 40.71, longitude: -74.01 } }

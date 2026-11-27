@@ -5,6 +5,7 @@ module Project::Changes
 
   Proposal = Data.define(:url, :number, :direct)
   WORKFLOW_FILE = "meridian-deploy.yml"
+  WORKFLOW_PATH = ".github/workflows/#{WORKFLOW_FILE}"
 
   def propose(files:, title:, body:, actor:, slug:)
     if direct_commits?
@@ -23,7 +24,7 @@ module Project::Changes
 
   def propose_workflow(actor:)
     propose(
-      files: { ".github/workflows/#{WORKFLOW_FILE}" => workflow_template },
+      files: { WORKFLOW_PATH => workflow_template },
       title: "ci: deploy with Kamal when a version file changes",
       body: "Adds the workflow Meridian uses to ship deploys, rollbacks and redeploys. Every run is `kamal deploy` from this repository.\n\nBefore merging, add the `KAMAL_SSH_PRIVATE_KEY` and `KAMAL_REGISTRY_PASSWORD` repository secrets, plus any secrets your configs reference.",
       actor: actor, slug: "ci")

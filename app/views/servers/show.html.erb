@@ -7,7 +7,7 @@
 <% cells = @board.cells.sort_by { it.app.name } %>
 
 <% status = capture do %>
-  <% if @server.stale? %><%= state_badge "stale" %> agent silent
+  <% if @server.stale? %><%= badge "… Silent", data: { state: "stale" } %>
   <% elsif !@server.reporting? %><%= badge "No agent yet" %>
   <% else %><%= badge "Reporting", tone: :ok %><% end %>
   <%= place(@server) %>
@@ -110,7 +110,7 @@
               <dt>Hostname</dt>
               <dd><code><%= @server.hostname %></code></dd>
               <dt>Agent</dt>
-              <dd><%= @server.agent_version || "not installed" %></dd>
+              <dd><%= @server.agent_version || "No agent yet" %></dd>
               <dt>Last seen</dt>
               <dd><%= time_ago(@server.last_seen_at) %></dd>
               <dt>Location</dt>

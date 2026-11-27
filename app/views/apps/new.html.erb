@@ -10,7 +10,7 @@
       <div class="card__body">
         <div class="field">
           <%= form.label :project_id, "Infra repository" %>
-          <%= form.select :project_id, Project.ordered.map { [ "#{it.name} (#{it.repo_full_name})", it.id ] } %>
+          <%= form.select :project_id, @projects.map { [ "#{it.name} (#{it.repo_full_name})", it.id ] } %>
           <%= field_errors(form.object, :project) %>
         </div>
         <div class="field">
@@ -46,7 +46,7 @@
       <div class="card__body">
         <div class="field">
           <%= form.label :server_ids, "Servers" %>
-          <%= form.select :server_ids, Server.ordered.group_by { it.label("region") || "unlabelled" }.sort.map { |region, servers| [ region, servers.map { [ it.name, it.id ] } ] }, {}, multiple: true, size: 10, grouped: true %>
+          <%= form.select :server_ids, server_options_by_region, {}, multiple: true, size: 10, grouped: true %>
           <p class="field__hint">Hold ⌘ or Ctrl to choose several.</p>
           <%= field_errors(form.object, :server_ids) %>
         </div>

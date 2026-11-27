@@ -1,7 +1,7 @@
 <% content_for :title, "#{@draft.service} proposed" %>
-<%= page_header "#{@draft.service} is #{@proposal.direct ? "committed" : "ready for review"}",
+<%= page_header "#{@draft.service} is #{proposal_state(@proposal)}",
       meta: "It appears on the board once #{@proposal.direct ? "the project syncs" : "the pull request is merged"}." do %>
-  <%= link_to (@proposal.direct ? "View commit" : "Open pull request ##{@proposal.number}"), @proposal.url, class: "btn btn--primary" %>
+  <%= proposal_link @proposal %>
 <% end %>
 
 <div class="grid-2">

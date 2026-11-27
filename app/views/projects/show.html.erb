@@ -2,7 +2,7 @@
 <%= page_header @project.name, meta: link_to(@project.repo_full_name, @project.repo_url, class: "mono txt-small link") do %>
   <%= button_to "Sync now", project_sync_path(@project), method: :post, class: "btn" %>
   <%= button_to "Add CI workflow", project_workflow_path(@project), method: :post, class: "btn",
-        form: { data: { turbo_confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} .github/workflows/meridian-deploy.yml?" } } %>
+        form: { data: { turbo_confirm: "#{@project.direct_commits? ? "Commit" : "Open a pull request with"} #{Project::Changes::WORKFLOW_PATH}?" } } %>
   <%= link_to "Edit", edit_project_path(@project), class: "btn btn--plain" %>
 <% end %>
 

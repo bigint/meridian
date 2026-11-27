@@ -29,11 +29,12 @@
 
 <div class="stack-l">
   <% if items.any? %>
+    <% shown = 4 %>
     <%= titled_section "Needs attention", count: items.size, id: "attention" do %>
-      <ul class="rows"><%= render partial: "boards/attention_item", collection: items.first(4), as: :item %></ul>
-      <% if items.size > 4 %>
-        <%= disclosure "#{pluralize(items.size - 4, "more thing")} need attention" do %>
-          <ul class="rows"><%= render partial: "boards/attention_item", collection: items.drop(4), as: :item %></ul>
+      <ul class="rows"><%= render partial: "boards/attention_item", collection: items.first(shown), as: :item %></ul>
+      <% if (more = items.size - shown).positive? %>
+        <%= disclosure "#{pluralize(more, "more thing")} #{more == 1 ? "needs" : "need"} attention" do %>
+          <ul class="rows"><%= render partial: "boards/attention_item", collection: items.drop(shown), as: :item %></ul>
         <% end %>
       <% end %>
     <% end %>
@@ -43,7 +44,7 @@
        [ "Apps × servers", current_path_with(view: "apps", page: nil, anchor: "everything"), @board.view == "apps" ],
        [ "Servers × apps", current_path_with(view: "servers", page: nil, anchor: "everything"), @board.view == "servers" ] ]) %>
   <%= titled_section "Every app on every server", id: "everything", actions: arrange do %>
-    <div class="chips" data-summary aria-label="Filter by state">
+    <div class="chips" data-summary role="group" aria-label="Filter by state">
       <%= chip "All", @board.summary.values.sum, current: @board.state.nil?, href: current_path_with(state: nil, page: nil, anchor: "everything") %>
       <% Drift::STATES.each do |state| %>
         <% next if @board.summary.fetch(state, 0).zero? && @board.state != state %>
@@ -53,7 +54,10 @@
     </div>
 
     <div class="flex flex-wrap gap-l">
-      <%= render "boards/filters", board: @board, projects: @projects %>
+      <%= render "boards/filters", url: board_path(anchor: "everything"), filters: @board.filters, projects: @projects, group: true,
+            hidden: { view: @board.view, state: @board.state },
+            open: @board.filters.except(:view, :page, :state).any?,
+            clear_url: (board_path(view: @board.view, anchor: "everything") if @board.filters.except(:view).any?) %>
       <%= disclosure "What do these mean?" do %>
         <dl class="facts">
           <% Drift::STATES.each do |state| %><dt><%= state_badge state %></dt><dd><%= Drift::MEANINGS[state] %></dd><% end %>
@@ -64,7 +68,7 @@
     <% if @board.groups.empty? %>
       <%= empty_state(@projects.none? ? "Nothing to show yet" : "Nothing matches these filters", icon_name: :board) do %>
         <% if @projects.none? %>
-          <%= link_to "Connect your infra repository", new_project_path, class: "btn btn--primary" %>
+          <%= link_to "Connect your infra repository", new_project_path, class: "btn" %>
         <% else %>
           <%= link_to "Clear filters", board_path(view: @board.view), class: "btn" %>
         <% end %>

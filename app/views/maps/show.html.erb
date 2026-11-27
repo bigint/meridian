@@ -9,7 +9,7 @@
 
 <%= page_header "Map", meta: "#{pluralize(sites.sum { it.servers.size }, "server")} in #{pluralize(sites.size, "place")}#{" · Meridian runs in #{@map.hub_name}" if @map.hub}" %>
 
-<div class="chips">
+<div class="chips" role="group" aria-label="Apps and places">
   <% if services.size.between?(2, 8) %>
     <span class="chips__label">App</span>
     <%= chip "All", services.size, current: @map.filters[:service].blank?, href: current_path_with(service: nil) %>
@@ -25,18 +25,10 @@
   <% if problems.empty? && deploying.zero? && sites.any? %><%= chip "Every place matches Git", nil, symbol: "✓", tone: "txt-ok" %><% end %>
 </div>
 
-<%= disclosure "Filters", open: @map.filters.except(:app, :service).any? do %>
-  <%= form_with url: map_path, method: :get, class: "filters" do |form| %>
-    <%= form.hidden_field :service, value: @map.filters[:service] if @map.filters[:service] %>
-    <div class="field"><%= form.label :app %><%= form.search_field :app, value: @map.filters[:app], placeholder: "Service" %></div>
-    <div class="field"><%= form.label :project %><%= form.select :project, @projects.map { [ it.name, it.id ] }, { include_blank: "All", selected: @map.filters[:project] } %></div>
-    <% Board::LABELS.each do |key| %>
-      <div class="field"><%= form.label key %><%= form.select key, Board.label_values(key), { include_blank: "All", selected: @map.filters[key.to_sym] } %></div>
-    <% end %>
-    <%= form.submit "Apply", name: nil, class: "btn" %>
-    <% if @map.filters.any? %><%= link_to "Clear", map_path, class: "btn btn--plain" %><% end %>
-  <% end %>
-<% end %>
+<%= render "boards/filters", url: map_path, filters: @map.filters, projects: @projects, group: false,
+      hidden: { service: @map.filters[:service] },
+      open: @map.filters.except(:service).any?,
+      clear_url: (map_path if @map.filters.any?) %>
 
 <div class="stack-l">
   <%= render "maps/world", map: @map %>
@@ -59,7 +51,7 @@
               <th scope="row"><%= link_to site.name, place_path(site) %></th>
               <td class="mono txt-small nowrap"><%= site.servers.filter_map { it.label("region") }.uniq.join(", ").presence || "–" %></td>
               <td><div class="cells"><% site.cells.sort_by { [ it.app.name, it.server.name ] }.each do |cell| %><%= version_cell cell %><% end %></div></td>
-              <td class="nowrap"><%= site.stale? ? badge("… quiet") : "reporting" %></td>
+              <td class="nowrap"><%= site.stale? ? badge("… Silent") : "reporting" %></td>
             </tr>
           <% end %>
           <% if rows.none? %><tr><td colspan="4" class="table__empty">No server has a location yet.</td></tr><% end %>

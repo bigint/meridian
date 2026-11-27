@@ -3,7 +3,7 @@ require "test_helper"
 # Meridian polls GitHub: the scheduled sync also reads recent
 # workflow runs, so deploys made outside Meridian still show up and finish.
 class Project::WorkflowRunsTest < ActiveSupport::TestCase
-  include ActiveJob::TestHelper
+  include MemoryCacheHelper
 
   setup { @project = projects(:infra) }
 
@@ -30,16 +30,14 @@ class Project::WorkflowRunsTest < ActiveSupport::TestCase
   end
 
   test "an unchanged repository is asked with ETags, and GitHub's 304 answers are used from cache" do
-    with_cache do
-      stub_github_repo(@project, runs: [])
-      repo = "#{GitHubHelper::API}/repos/#{@project.repo_full_name}"
-      stub_request(:get, "#{repo}/branches/main").to_return_json(body: { commit: { sha: "a" * 40 } }, headers: { "ETag" => %("head-1") })
-      ProjectSyncJob.perform_now(@project)
+    stub_github_repo(@project, runs: [])
+    repo = "#{GitHubHelper::API}/repos/#{@project.repo_full_name}"
+    stub_request(:get, "#{repo}/branches/main").to_return_json(body: { commit: { sha: "a" * 40 } }, headers: { "ETag" => %("head-1") })
+    ProjectSyncJob.perform_now(@project)
 
-      not_modified = stub_request(:get, "#{repo}/branches/main").with(headers: { "If-None-Match" => %("head-1") }).to_return(status: 304)
-      assert_not @project.sync
-      assert_requested not_modified
-    end
+    not_modified = stub_request(:get, "#{repo}/branches/main").with(headers: { "If-None-Match" => %("head-1") }).to_return(status: 304)
+    assert_not @project.sync
+    assert_requested not_modified
   end
 
   private
@@ -47,12 +45,5 @@ class Project::WorkflowRunsTest < ActiveSupport::TestCase
       { id: id, path: ".github/workflows/meridian-deploy.yml", head_sha: "c" * 40, head_branch: head_branch, event: "push", status: status, conclusion: conclusion,
         display_title: "deploy(web): v42", html_url: "https://github.com/example/infra/actions/runs/#{id}",
         run_started_at: 5.minutes.ago.iso8601, updated_at: updated_at.iso8601 }
-    end
-
-    def with_cache
-      cache, Rails.cache = Rails.cache, ActiveSupport::Cache::MemoryStore.new
-      yield
-    ensure
-      Rails.cache = cache
     end
 end

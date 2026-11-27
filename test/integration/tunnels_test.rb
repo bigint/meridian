@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TunnelsTest < ActionDispatch::IntegrationTest
+  include TunnelHelper
+
   setup do
     sign_in_as users(:ada)
     @project = projects(:infra)
@@ -8,7 +10,7 @@ class TunnelsTest < ActionDispatch::IntegrationTest
   end
 
   test "shows the shared tunnel, its connectors and which apps it can serve" do
-    make_app("edge", kind: App::ACCESSORIES, accessories: %w[ a b ].map { connector(it) })
+    make_app("edge", kind: App::ACCESSORIES, accessories: %w[ a b ].map { connector("cloudflared-#{it}", "#{it}.example.com") })
     @a.placements.create!(container_id: "c1", name: "edge-cloudflared-a", kind: "accessory", service: "edge-cloudflared-a", state: "running", observed_at: Time.current)
     make_app("shop", hostnames: [ "shop.example.com" ], on: [ @a, @b ])
     make_app("blog", hostnames: [ "blog.example.com" ], on: [ @a ])
@@ -75,7 +77,6 @@ class TunnelsTest < ActionDispatch::IntegrationTest
       accessories: KamalConfig.parse({ "deploy/edge.yml" => source }, [ { "path" => "deploy/edge.yml", "destination" => nil } ]).sole["accessories"])
     stub_github_files(@project, { "deploy/edge.yml" => source })
     writes = stub_github_writes(@project)
-    sign_in_as users(:ada)
     hosts = %w[ aps2-az1-node-01 apse1-az1-node-01 euc1-az1-node-01 ]
 
     get tunnels_path
@@ -101,7 +102,6 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     @project.apps.create!(service: "edge", kind: App::ACCESSORIES, config_path: "deploy/edge.yml",
       accessories: KamalConfig.parse({ "deploy/edge.yml" => source }, [ { "path" => "deploy/edge.yml", "destination" => nil } ]).sole["accessories"])
     stub_github_files(@project, { "deploy/edge.yml" => source })
-    sign_in_as users(:ada)
 
     Dir.mktmpdir do |dir|
       marker = File.join(dir, "ran")
@@ -114,29 +114,10 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the sidebar links to the page" do
-    get tunnels_path
-    assert_select "nav[aria-label=Manage] a[href=?]", tunnels_path, text: "Tunnels"
-  end
-
-  private
-    def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
-      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames,
-        roles: [ { "name" => "web", "hosts" => on.map(&:hostname), "proxy" => true } ],
-        accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
-      on.each { app.assignments.create!(server: it, role: "web") }
-      app
-    end
-
-    def connector(server)
-      { "name" => "cloudflared-#{server}", "image" => "cloudflare/cloudflared:2026.11.2", "hosts" => [ "#{server}.example.com" ], "secrets" => [ "CLOUDFLARE_TUNNEL_TOKEN" ] }
-    end
-
   test "an array where a project id belongs is not an error" do
     get tunnels_path(project: [ @project.id ])
     assert_response :success
 
-    sign_in_as users(:ada)
     get edit_tunnels_connectors_path(project: [ @project.id ], secret: "CLOUDFLARE_TUNNEL_TOKEN")
     assert_response :not_found
   end

@@ -58,7 +58,7 @@ class SnapshotTest < ActiveSupport::TestCase
     assert_equal "missing", Board.new(server_id: server.id).cells.find { it.app.service == "web" }.state
   end
 
-  test "needs attention lists missing before drifted, in plain order" do
+  test "needs attention lists a missing app before a stray one" do
     ingest
     @payload["containers"].find { it["id"] == "aaa111" }["state"] = "exited"
     @payload["containers"] << { "id" => "eee", "name" => "api-web-v1", "service" => "api", "role" => "web", "destination" => "", "version" => "v1", "kind" => "app", "state" => "running" }
@@ -190,6 +190,15 @@ class SnapshotTest < ActiveSupport::TestCase
   test "the agent's interval is kept, and nonsense is ignored" do
     assert_equal 60, ingest(@payload.merge("interval_seconds" => 60)).interval_seconds
     assert_nil ingest(@payload.merge("interval_seconds" => "60")).interval_seconds
+  end
+
+  test "agents can report their location as labels" do
+    token = AgentToken.create!(label: "x")
+    payload = { "machine_id" => "m1", "hostname" => "staging-1", "labels" => { "lat" => "48.85", "lng" => "2.35" }, "containers" => [] }
+    Snapshot.new(payload, token: token).ingest
+
+    server = Server.find_by!(name: "staging-1.example.com")
+    assert_equal [ 48.85, 2.35 ], [ server.latitude, server.longitude ]
   end
 
   test "labels must be an object" do

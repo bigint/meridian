@@ -29,28 +29,13 @@
             <%= @tunnel.project.direct_commits? ? "Commit the change" : "Open a pull request" %>
           <% end %>
         <% else %>
-          <%= alert_box :bad, title: "Meridian can't make this change" do %>
-            <ul><% change.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
-          <% end %>
+          <%= render "shared/errors", record: change, title: "Meridian can't make this change" %>
         <% end %>
       <% end %>
 
       <% if ready %>
         <%= titled_section "By hand" do %>
-          <ol class="walk">
-            <% if change.remove_commands.any? %>
-              <%= render layout: "tunnels/step", locals: { number: 1, title: "Before merging, stop the dropped connectors", done: false } do %>
-                <p class="walk__text">Once the change is merged, Kamal no longer knows them.</p>
-                <%= render "shared/code_block", code: change.remove_commands.join("\n"), label: "Terminal", language: "shell" %>
-              <% end %>
-            <% end %>
-            <% if change.boot_commands.any? %>
-              <%= render layout: "tunnels/step", locals: { number: change.remove_commands.any? ? 2 : 1, title: "After merging, start the new ones", done: false } do %>
-                <p class="walk__text">With <code><%= @tunnel.secret_name %></code> in the environment. Each should register four connections, and Cloudflare lists it under its server's name.</p>
-                <%= render "shared/code_block", code: change.boot_commands.join("\n"), label: "Terminal", language: "shell" %>
-              <% end %>
-            <% end %>
-          </ol>
+          <%= render "tunnels/connectors/by_hand", change: change, tunnel: @tunnel, direct: @tunnel.project.direct_commits? %>
         <% end %>
 
         <%= disclosure "#{change.path} after the change" do %>

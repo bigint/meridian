@@ -117,7 +117,7 @@
           <dt>Connectors</dt>
           <dd>
             <% if setup.tunnel %>
-              <% running = setup.tunnel.connectors.count { it.state == :running } %>
+              <% running = setup.tunnel.running_count %>
               <%= badge("#{running} of #{setup.tunnel.connectors.size} running", tone: running == setup.tunnel.connectors.size ? :ok : :warn) %>
             <% else %>
               <span class="txt-faint">not in Git yet</span>

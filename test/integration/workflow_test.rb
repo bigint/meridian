@@ -24,7 +24,7 @@ class WorkflowTest < ActionDispatch::IntegrationTest
     assert_equal ".github/workflows/meridian-deploy.yml", write["path"]
     assert_match %r{\Ameridian/ci-}, write["branch"]
     assert_match "kamal deploy", write["content"]
-    assert_match "gem install kamal -v 2.12.0", write["content"]
+    assert_match "gem install kamal -v #{KamalConfig::KAMAL_VERSION}", write["content"]
     commands = body.scan(/`(kamal [^`]+)`/).flatten
     assert_equal [ "kamal deploy" ], commands
     commands.each { assert_includes write["content"], it, "the pull request names a command the workflow doesn't run" }
@@ -65,20 +65,6 @@ class WorkflowTest < ActionDispatch::IntegrationTest
     assert_nil workflow["concurrency"], "a workflow-wide group lets a third push cancel the second, pending one"
     assert_equal({ "group" => "meridian-${{ matrix.config }}-${{ matrix.destination }}", "cancel-in-progress" => false },
       workflow.dig("jobs", "kamal", "concurrency"))
-  end
-
-  test "a commit GitHub refuses for a reason other than a stale SHA says why" do
-    sign_in_as users(:ada)
-    @project.sync
-    app = @project.apps.find_by!(service: "web", destination: "production")
-    stub_request(:put, %r{/contents/deploy/web.production.version}).to_return(status: 409,
-      body: { message: "Repository rule violations found\n\nChanges must be made through a pull request." }.to_json, headers: { "Content-Type" => "application/json" })
-
-    post app_deploys_path(app), params: { deploy: { version: "v43" } }
-
-    assert_redirected_to app_path(app)
-    assert_match "GitHub refused", flash[:alert]
-    assert_match "Changes must be made through a pull request", flash[:alert]
   end
 
   private

@@ -220,11 +220,6 @@ class AgentChannelTest < ActionCable::Channel::TestCase
     assert_equal [ { reason: "unauthorized", reconnect: false } ], @closed
   end
 
-  private
-    def run_periodic_checks
-      AgentChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
-    end
-
   test "a token revoked since the cable opened can't subscribe again" do
     agent_tokens(:web_1).revoke
 
@@ -235,7 +230,12 @@ class AgentChannelTest < ActionCable::Channel::TestCase
 
   test "revoking a token hangs up its agents for good" do
     assert_broadcast_on "action_cable/#{agent_tokens(:web_1).to_gid_param}", { type: "disconnect", reconnect: false } do
-      AgentChannel.disconnect(agent_tokens(:web_1))
+      agent_tokens(:web_1).revoke
     end
   end
+
+  private
+    def run_periodic_checks
+      AgentChannel.periodic_timers.each { |callback, _| subscription.instance_exec(&callback) }
+    end
 end

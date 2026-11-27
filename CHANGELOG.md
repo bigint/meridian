@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.1.5 (2026-11-27)
+
+### Added
+
+- The docs site ships as an image, `ghcr.io/bigint/meridian-docs`, published with every release.
 
 ### Changed
 
@@ -9,8 +13,17 @@
 
 ### Fixed
 
+- In the image, Kamal configs are parsed as a user of their own, `meridian-parse`. ERB in a config ran as Meridian's user, so it could read `SECRET_KEY_BASE`, the GitHub App's key and the databases. See Upgrading.
+- Meridian refuses to start in production without `MERIDIAN_URL`. Without it, Meridian answered to any host name. The quickstart publishes the port on `127.0.0.1` only, and the agent warns when it would send its token over plain `http://` to another machine.
+- Sessions end after 14 days unused, or 90 days after signing in. Session cookies never expired before. An hourly job clears the expired ones.
+- A fleet token is refused for a server that has an active token of its own. Any machine with a fleet token could report as that server, or open its live line.
 - The agent no longer follows a redirect when it posts a snapshot. Following one could send its token again over plain `http://`, and a 301 or 302 turned the snapshot into a GET. A redirect now shows as a failed snapshot with its status.
 - The agent spaces out the past log lines it fetches for a container it already follows. With many containers tailed at once, it now stays under the 100 log frames a second Meridian accepts.
+
+### Upgrading
+
+- Set `MERIDIAN_URL` to the address you open Meridian at, if you haven't. Meridian no longer starts without it.
+- Don't run the container with `no-new-privileges` (`--security-opt no-new-privileges`, or `security_opt` in Compose). Parsing a config uses `sudo` to change user, which that option blocks, so every sync would fail.
 
 ## v0.1.4 (2026-11-27)
 

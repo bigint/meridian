@@ -1,279 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 import { cable } from "@hotwired/turbo-rails"
+import { parseAnsi, PLAIN } from "logs/ansi"
+import { parseStructured } from "logs/structured"
+import { parseTime, clock } from "logs/time"
+import { lowerOf, matchRanges, drawText } from "logs/highlight"
 
 const MAX_LINES = 5_000        // rows kept in the page; the oldest go first
 const BACKLOG = 200            // lines of history a new reader asks each container for (LiveLogs::BACKLOG)
 const WAITING_AFTER = 10_000   // ms without anything from the agents
 const RENEW_EVERY = 10_000     // ms between telling the channel this page is still open
 const NEAR_BOTTOM = 4          // px from the end that still counts as the end
-const MAX_MARKS = 200          // highlights drawn in one line
-
-// Log text comes from containers, so it only ever reaches the page as text
-// nodes and textContent, never as markup.
-
-// ANSI, as the agent passes it through. SGR colours and styles become
-// classes; every other escape sequence (cursor moves, OSC titles…) is cut.
-const ESCAPE = /\x1b(?:\[([0-?]*)[ -/]*([@-~])|\][^\x07\x1b]*(?:\x07|\x1b\\)?|[@-Z\\-_]|[\s\S]?)/g
-const CONTROLS = /[\x00-\x08\x0b-\x1f\x7f]/g
-const NO_CLASSES = Object.freeze([])
-
-const isColor = code => (code >= 30 && code <= 37) || (code >= 90 && code <= 97)
-
-function applySgr(style, params) {
-  const codes = params === "" ? [ 0 ] : params.split(";").map(code => code === "" ? 0 : Number(code))
-  const next = { ...style }
-
-  for (let index = 0; index < codes.length; index++) {
-    const code = codes[index]
-    if (code === 0) Object.assign(next, { color: null, bold: false, dim: false, italic: false, underline: false })
-    else if (code === 1) next.bold = true
-    else if (code === 2) next.dim = true
-    else if (code === 3) next.italic = true
-    else if (code === 4) next.underline = true
-    else if (code === 22) Object.assign(next, { bold: false, dim: false })
-    else if (code === 23) next.italic = false
-    else if (code === 24) next.underline = false
-    else if (code === 39) next.color = null
-    else if (isColor(code)) next.color = code
-    else if (code === 38 || code === 48) index += codes[index + 1] === 5 ? 2 : codes[index + 1] === 2 ? 4 : 0 // 256 and truecolour: skip their arguments
-  }
-  return next
-}
-
-function classesFor(style) {
-  const classes = []
-  if (style.color) classes.push(`ansi-${style.color}`)
-  if (style.bold) classes.push("ansi-bold")
-  if (style.dim) classes.push("ansi-dim")
-  if (style.italic) classes.push("ansi-italic")
-  if (style.underline) classes.push("ansi-underline")
-  return classes.length ? classes : NO_CLASSES
-}
-
-// A message as [{ text, classes }] runs, with no escape sequences left.
-function parseAnsi(message) {
-  if (!message.includes("\x1b")) return [ { text: message.replace(CONTROLS, ""), classes: NO_CLASSES } ]
-
-  const segments = []
-  let style = { color: null, bold: false, dim: false, italic: false, underline: false }
-  let last = 0
-  const push = text => {
-    text = text.replace(CONTROLS, "")
-    if (text) segments.push({ text, classes: classesFor(style) })
-  }
-
-  for (const match of message.matchAll(ESCAPE)) {
-    push(message.slice(last, match.index))
-    last = match.index + match[0].length
-    if (match[2] === "m" && /^[0-9;]*$/.test(match[1])) style = applySgr(style, match[1])
-  }
-  push(message.slice(last))
-  return segments
-}
-
-// Structured logs: a line that is one JSON object (kamal-proxy, slog, pino,
-// zap, logfmt-free Rails JSON loggers…) reads as its level, its message and
-// then key=value fields, most useful first. Empty fields and a timestamp
-// that only repeats Docker's are left out; the whole object is one click away.
-const LEVEL_KEYS = [ "level", "lvl", "severity", "log.level", "@level" ]
-const MESSAGE_KEYS = [ "msg", "message", "@message" ]
-const TIME_KEYS = [ "time", "ts", "timestamp", "@timestamp" ]
-const FIRST_KEYS = [ "error", "err", "status", "method", "host", "path", "duration", "service" ]
-const INLINE_FIELDS = 6  // key=value pairs drawn on the line; the rest are searchable and one click away
-const NUMERIC_LEVELS = { 10: "trace", 20: "debug", 30: "info", 40: "warn", 50: "error", 60: "fatal" } // pino and bunyan
-
-function levelTone(level) {
-  const word = String(level).toLowerCase()
-  if (/^(err|error|fatal|panic|crit|critical|alert|emerg|emergency)/.test(word)) return "bad"
-  if (/^warn/.test(word)) return "warn"
-  if (/^(info|notice)/.test(word)) return "info"
-  return "quiet"
-}
-
-// Any JSON value as text. A parsed object can hold its own "toString" key,
-// which String() and template strings would call, and throw on.
-const asText = value => value !== null && typeof value === "object" ? JSON.stringify(value) : String(value)
-
-function shown(value) {
-  if (typeof value === "string") return /[\s"=]/.test(value) ? JSON.stringify(value) : value
-  return JSON.stringify(value)
-}
-
-// kamal-proxy's request lines (kamal-proxy v0.10.3, internal/server/
-// logging_middleware.go) read as what happened: the status, the request, how
-// long it took, the container that answered and who asked. Behind Cloudflare,
-// "who" is the visitor, their country and the Cloudflare location, when the
-// app's Kamal config logs those headers. A query string (often a long cache
-// buster) shows as "?…"; it and the rest stay searchable and open on a click.
-const REQUEST_DRAWN = [ "time", "level", "msg", "status", "method", "host", "path", "duration",
-  "remote_addr", "req_cf_connecting_ip", "req_cf_ipcountry", "req_cf_ray" ]
-
-const isRequest = object => object.msg === "Request" && typeof object.status === "number" && typeof object.method === "string" && typeof object.path === "string"
-
-function statusTone(status) {
-  if (status >= 500) return "bad"
-  if (status >= 400) return "warn"
-  if (status >= 300) return "quiet"
-  return "ok"
-}
-
-// kamal-proxy logs nanoseconds.
-function took(nanoseconds) {
-  const milliseconds = nanoseconds / 1e6
-  if (milliseconds < 10) return `${milliseconds.toFixed(1)} ms`
-  if (milliseconds < 1000) return `${Math.round(milliseconds)} ms`
-  return `${(milliseconds / 1000).toFixed(milliseconds < 10_000 ? 2 : 1)} s`
-}
-
-// The container's name for a target, "<short id>:<port>", when Meridian knows it.
-function answeredBy(object, targets) {
-  const target = typeof object.target === "string" ? object.target : ""
-  const id = target.split(":")[0]
-  return Object.hasOwn(targets, id) ? targets[id] : (target || object.service || "")
-}
-
-function requestSegments(object, targets) {
-  const segments = []
-  const add = (text, ...classes) => { if (text) segments.push({ text: asText(text).replace(CONTROLS, ""), classes }) }
-  add(String(object.status), "json-level", `json-level--${statusTone(object.status)}`)
-  add(` ${object.method} `, "json-message")
-  add(`${asText(object.host ?? "")}${object.path}`, "json-message")
-  if (object.query) add("?…", "json-more")
-  if (typeof object.duration === "number") add(`  ${took(object.duration)}`, "json-value")
-  const container = answeredBy(object, targets)
-  if (container) { add("  → ", "json-key"); add(container, "json-value") }
-
-  const visitor = object.req_cf_connecting_ip || object.remote_addr
-  const edge = typeof object.req_cf_ray === "string" ? object.req_cf_ray.split("-")[1] : null
-  const where = [ object.req_cf_ipcountry, edge && `via ${edge}` ].filter(Boolean).map(asText).join(" ")
-  if (visitor || where) add("  from ", "json-key")
-  add([ visitor, where ].filter(Boolean).map(asText).join(" "), "json-value")
-  return segments
-}
-
-// Errors and 5xx statuses read as bad, 4xx as a warning.
-function valueTone(key, value) {
-  if (key === "error" || key === "err") return "json-value--bad"
-  if (key !== "status") return null
-
-  const status = Number(asText(value))
-  if (status >= 500) return "json-value--bad"
-  if (status >= 400) return "json-value--warn"
-  return null
-}
-
-// [{ text, classes }] runs for a JSON line, or null when it isn't one.
-// targets names the containers kamal-proxy sends requests to. What isn't
-// drawn (hidden) still answers the filter.
-function parseStructured(message, targets) {
-  const text = message.trim()
-  if (!text.startsWith("{") || !text.endsWith("}")) return null
-  let object
-  try { object = JSON.parse(text) } catch { return null }
-  if (!object || typeof object !== "object" || Array.isArray(object)) return null
-
-  const present = key => object[key] !== "" && object[key] !== null
-  const scalar = key => typeof object[key] === "string" || typeof object[key] === "number"
-  const fields = keys => keys.map(key => `${key}=${shown(object[key])}`).join(" ")
-
-  if (isRequest(object)) {
-    const hidden = fields(Object.keys(object).filter(key => !REQUEST_DRAWN.includes(key) && present(key)))
-    return { segments: requestSegments(object, targets), hidden, pretty: JSON.stringify(object, null, 2) }
-  }
-
-  const level = LEVEL_KEYS.find(scalar), said = MESSAGE_KEYS.find(scalar)
-  const skip = new Set([ level, said, ...TIME_KEYS.filter(scalar) ])
-
-  const segments = []
-  if (level) {
-    const value = object[level]
-    const name = typeof value === "number" ? (NUMERIC_LEVELS[value] ?? String(value)) : value
-    segments.push({ text: name.toUpperCase(), classes: [ "json-level", `json-level--${levelTone(name)}` ] })
-  }
-  if (said) segments.push({ text: (segments.length ? " " : "") + String(object[said]), classes: [ "json-message" ] })
-
-  const keys = Object.keys(object).filter(key => !skip.has(key) && present(key))
-  const rank = key => FIRST_KEYS.includes(key) ? FIRST_KEYS.indexOf(key) : FIRST_KEYS.length
-  keys.sort((a, b) => rank(a) - rank(b))
-  for (const key of keys.slice(0, INLINE_FIELDS)) {
-    const tone = valueTone(key, object[key])
-    segments.push({ text: (segments.length ? "  " : "") + key, classes: [ "json-key" ] })
-    segments.push({ text: "=", classes: [ "json-key" ] })
-    segments.push({ text: shown(object[key]).replace(CONTROLS, ""), classes: tone ? [ "json-value", tone ] : [ "json-value" ] })
-  }
-  const rest = keys.slice(INLINE_FIELDS)
-  if (rest.length) segments.push({ text: `  +${rest.length} more`, classes: [ "json-more" ] })
-  if (!segments.length) return null
-
-  return { segments, hidden: fields(rest), pretty: JSON.stringify(object, null, 2) }
-}
-
-// Docker's RFC3339Nano as a sortable number: milliseconds, plus the digits
-// below a millisecond as a fraction of one. null when it isn't a timestamp.
-const TIMESTAMP = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?(Z|[+-]\d\d:\d\d)$/
-
-function parseTime(text) {
-  const match = TIMESTAMP.exec(text)
-  if (!match) return null
-
-  const fraction = (match[2] ?? "").padEnd(3, "0")
-  const milliseconds = Date.parse(`${match[1]}.${fraction.slice(0, 3)}${match[3]}`)
-  return Number.isNaN(milliseconds) ? null : milliseconds + Number(`0.${fraction.slice(3) || "0"}`)
-}
-
-const pad = (number, width = 2) => String(number).padStart(width, "0")
-
-// HH:MM:SS.mmm in the reader's time zone.
-function clock(milliseconds) {
-  const time = new Date(milliseconds)
-  return `${pad(time.getHours())}:${pad(time.getMinutes())}:${pad(time.getSeconds())}.${pad(time.getMilliseconds(), 3)}`
-}
-
-// Lower case that never changes a text's length, so match offsets from the
-// lower-cased copy still point into the original.
-function lowerOf(text) {
-  const lower = text.toLowerCase()
-  if (lower.length === text.length) return lower
-  return Array.from(text, character => { const small = character.toLowerCase(); return small.length === character.length ? small : character }).join("")
-}
-
-function matchRanges(lower, query) {
-  const ranges = []
-  for (let from = lower.indexOf(query); from !== -1 && ranges.length < MAX_MARKS; from = lower.indexOf(query, from + query.length)) {
-    ranges.push([ from, from + query.length ])
-  }
-  return ranges
-}
-
-function drawText(container, segments, ranges) {
-  const fragment = document.createDocumentFragment()
-  let offset = 0
-
-  for (const { text, classes } of segments) {
-    const wrapper = classes.length ? document.createElement("span") : null
-    wrapper?.classList.add(...classes)
-    const target = wrapper ?? fragment
-    let cursor = 0
-
-    for (const [ from, to ] of ranges) {
-      const start = Math.max(from - offset, cursor), stop = Math.min(to - offset, text.length)
-      if (stop <= start) continue
-      if (start > cursor) target.append(text.slice(cursor, start))
-      const mark = document.createElement("mark")
-      mark.textContent = text.slice(start, stop)
-      target.append(mark)
-      cursor = stop
-    }
-    if (cursor < text.length) target.append(text.slice(cursor))
-    if (wrapper) fragment.append(wrapper)
-    offset += text.length
-  }
-  container.replaceChildren(fragment)
-}
-
-const plural = (count, word) => `${count.toLocaleString("en-US")} ${word}${count === 1 ? "" : "s"}`
-
-const tag = (name, className, text = "") => Object.assign(document.createElement(name), { className, textContent: text })
 
 const STATUS = {
   rejected: "Stopped: reload the page to keep reading",
@@ -283,12 +19,23 @@ const STATUS = {
   unavailable: "Not streaming"
 }
 
+const plural = (count, word) => `${count.toLocaleString("en-US")} ${word}${count === 1 ? "" : "s"}`
+
+// Log text only ever reaches the page as text nodes and textContent, never as markup.
+const tag = (name, className, text = "") => Object.assign(document.createElement(name), { className, textContent: text })
+
 // One or several containers' logs, or an app's traffic. Subscribes to the
 // channel it is given (LogsChannel or TrafficChannel) through Turbo's own
 // cable consumer, which asks each container's agent for its last lines
 // and then new ones. Lines from every source are kept in timestamp order (a
 // new one almost always lands at the end), at most MAX_LINES of them, and
 // the page is only touched once per animation frame.
+//
+// Each line is a record: its source, key (the timestamp, sortable), stream,
+// title (Docker's timestamp), segments (the [{ text, classes }] runs drawn),
+// for a JSON line pretty and hidden (see logs/structured), and for one the
+// viewer wrote itself, notice. lower is the text the filter searches; element
+// and text are the row and the span its message is drawn in.
 export default class extends Controller {
   static targets = [ "filter", "stream", "wrap", "follow", "status", "scroller", "lines", "empty", "jump" ]
   static values = { channel: Object, sources: Array, targets: Object, empty: String }
@@ -298,7 +45,7 @@ export default class extends Controller {
     this.connected = false
     this.rejected = false
     this.lines = []
-    this.structured = new WeakMap()
+    this.structured = new WeakMap() // row → record, for expand
     this.queue = []
     this.queued = 0
     this.unseen = 0
@@ -330,6 +77,8 @@ export default class extends Controller {
     this.subscription?.unsubscribe()
     this.subscription = null
   }
+
+  // Actions
 
   filter() {
     this.query = this.filterTarget.value.toLowerCase()
@@ -381,6 +130,27 @@ export default class extends Controller {
     if (atEnd !== this.follow) this.#setFollow(atEnd)
   }
 
+  // A structured line opens to its whole object, and closes again. Selecting
+  // text inside it doesn't count as a click.
+  expand(event) {
+    if (event.target.closest(".logs__json")) return
+    const row = event.target.closest(".logs__line--json")
+    const record = row && this.structured.get(row)
+    if (!record || window.getSelection()?.toString()) return
+
+    if (record.expanded) {
+      record.expanded.remove()
+      record.expanded = null
+    } else {
+      record.expanded = tag("pre", "logs__json", record.pretty)
+      row.append(record.expanded)
+      if (this.follow) this.#setFollow(false) // reading one line: don't scroll it away
+    }
+    row.setAttribute("aria-expanded", record.expanded ? "true" : "false")
+  }
+
+  // The channel
+
   async #subscribe() {
     const subscription = await cable.subscribeTo(
       this.channelValue,
@@ -414,6 +184,8 @@ export default class extends Controller {
       this.drawFrame ??= requestAnimationFrame(() => { this.drawFrame = null; this.#draw() })
     }
   }
+
+  // Batches into records
 
   #draw() {
     const batches = this.queue
@@ -487,7 +259,7 @@ export default class extends Controller {
   }
 
   #notice(source, notice, text, key = this.#now()) {
-    return this.#record({ notice, source, key, segments: [ { text, classes: NO_CLASSES } ] })
+    return this.#record({ notice, source, key, segments: [ { text, classes: PLAIN } ] })
   }
 
   // Arrival time, but never before the newest line: what the viewer says goes at the end.
@@ -501,6 +273,8 @@ export default class extends Controller {
     const lower = lowerOf(fields.hidden ? `${plain}\n${fields.hidden}` : plain)
     return { ...fields, lower, painted: false, marked: false, element: null, text: null }
   }
+
+  // Rows
 
   // Into its place by timestamp, searching from the end. Returns whether it is shown.
   #insert(record) {
@@ -538,25 +312,6 @@ export default class extends Controller {
     }
   }
 
-  // A structured line opens to its whole object, and closes again. Selecting
-  // text inside it doesn't count as a click.
-  expand(event) {
-    if (event.target.closest(".logs__json")) return
-    const row = event.target.closest(".logs__line--json")
-    const record = row && this.structured.get(row)
-    if (!record || window.getSelection()?.toString()) return
-
-    if (record.expanded) {
-      record.expanded.remove()
-      record.expanded = null
-    } else {
-      record.expanded = tag("pre", "logs__json", record.pretty)
-      row.append(record.expanded)
-      if (this.follow) this.#setFollow(false) // reading one line: don't scroll it away
-    }
-    row.setAttribute("aria-expanded", record.expanded ? "true" : "false")
-  }
-
   #matches(record) {
     if (!record.source.enabled) return false
     if (this.stream !== "both" && record.stream && record.stream !== this.stream) return false
@@ -587,6 +342,8 @@ export default class extends Controller {
       if (this.follow) this.#toBottom()
     })
   }
+
+  // Following, and what the page says about itself
 
   #setFollow(following) {
     this.follow = following

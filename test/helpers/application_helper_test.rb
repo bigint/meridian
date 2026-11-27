@@ -5,7 +5,7 @@ class ApplicationHelperTest < ActionView::TestCase
   Named = Struct.new(:name)
 
   def cell(state, versions: [ "v42" ], release: "v42")
-    Board::Cell.new(app: Named.new("web"), server: Named.new("web-1"), state: state, versions: versions, roles: [ "web" ], health: nil, release: release, role_states: { "web" => state })
+    Board::Cell.new(app: Named.new("web"), server: Named.new("web-1"), state: state, versions: versions, health: nil, release: release, role_states: { "web" => state })
   end
 
   test "a version cell shows the running version and says the state in words" do

@@ -66,7 +66,7 @@ class GitHost::GitHub
     request { Base64.decode64(client.blob(repo, sha).content).force_encoding(Encoding::UTF_8) }
   end
 
-  def commits(path:, limit: 20)
+  def commits(path:, limit:)
     request do
       # The committer date says when a commit landed on the branch, as the
       # API orders them. The author date says when it was written, which a

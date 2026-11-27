@@ -10,9 +10,10 @@ class Board
 
   # state is the worst of role_states: each role Git assigns here, and each
   # role running here that Git doesn't assign, has a state of its own.
-  Cell = Data.define(:app, :server, :state, :versions, :roles, :health, :release, :role_states) do
+  Cell = Data.define(:app, :server, :state, :versions, :health, :release, :role_states) do
     # What the server reported running, never Git's version standing in for it.
     def version = versions.compact.first
+    def roles = role_states.keys.compact.sort
     def roles_in(state) = role_states.select { |_, it| it == state }.keys
 
     # Every container here runs release: a server with an old container left,
@@ -81,11 +82,8 @@ class Board
   def pages = [ (rows.size / PER_PAGE.to_f).ceil, 1 ].max
   def page_rows = rows.slice((page - 1) * PER_PAGE, PER_PAGE) || []
 
-  # The newest release of an app, from any of its cells.
-  def release_for(app)
-    groups.each { |group| group.cells.each_value { |cell| return cell.release if cell.app == app } }
-    nil
-  end
+  # The newest release version of an app, as Git says.
+  def release_for(app) = releases[app.id]
 
   def groups
     @groups ||= begin
@@ -119,7 +117,7 @@ class Board
       scope = App.deployable.includes(:project)
       scope = scope.where(id: filters[:app_id]) if filters[:app_id]
       scope = scope.where(project_id: filters[:project]) if filters[:project]
-      scope = scope.where("apps.service LIKE ? ESCAPE '\\'", "%#{App.sanitize_sql_like(filters[:app])}%") if filters[:app]
+      scope = scope.search(filters[:app]) if filters[:app]
       scope = scope.where(service: filters[:service]) if filters[:service]
       scope.to_a.index_by(&:id)
     end
@@ -161,8 +159,11 @@ class Board
     Turbo::StreamsChannel.broadcast_refresh_to(:board, key)
   end
 
-  def stream_keys
-    groups.flat_map { [ *it.rows, *it.columns ] }.grep(Server).map { self.class.stream_key(it) }.uniq.presence || [ "all" ]
+  def stream_keys = Board.stream_keys(groups.flat_map { [ *it.rows, *it.columns ] }.grep(Server))
+
+  # The streams a page showing these servers listens to.
+  def self.stream_keys(servers)
+    servers.map { stream_key(it) }.uniq.presence || [ "all" ]
   end
 
   private
@@ -174,13 +175,15 @@ class Board
       server.label(group_by) if group_by
     end
 
+    def releases
+      @releases ||= Release.latest_per_app.where(app_id: apps.values.select(&:versioned?).map(&:id)).pluck(:app_id, :version).to_h
+    end
+
     def all_cells
       @all_cells ||= begin
         app_ids, server_ids = apps.keys, servers.keys
         assigned = Assignment.where(app_id: app_ids, server_id: server_ids).pluck(:app_id, :server_id, :role).group_by { it.first(2) }
         running = Placement.running.where(app_id: app_ids, server_id: server_ids).pluck(:app_id, :server_id, :role, :version, :health).group_by { it.first(2) }
-        releases = Release.latest_per_app.where(app_id: apps.values.select(&:versioned?).map(&:id)).pluck(:app_id, :version).to_h
-
         (assigned.keys | running.keys).filter_map do |app_id, server_id|
           pair = [ app_id, server_id ]
           build_cell(apps[app_id], servers[server_id], wanted: Array(assigned[pair]).map(&:third), containers: Array(running[pair]), release: releases[app_id])
@@ -199,7 +202,6 @@ class Board
       state = Drift.worst(role_states.values) or return
 
       health = containers.filter_map(&:fifth).min_by { HEALTH.index(it) || HEALTH.size }
-      Cell.new(app: app, server: server, state: state, versions: containers.map(&:fourth).uniq, roles: role_states.keys.compact.sort,
-        health: health, release: release, role_states: role_states)
+      Cell.new(app: app, server: server, state: state, versions: containers.map(&:fourth).uniq, health: health, release: release, role_states: role_states)
     end
 end

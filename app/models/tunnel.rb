@@ -17,6 +17,7 @@ class Tunnel
   Connector = Data.define(:host, :server, :placement, :accessory, :config) do
     include Accessory::State
     def name = accessory["name"]
+    def boot_command = config.accessory_command("boot", name)
   end
 
   # An app with a hostname and the connector hosts it doesn't run on. None
@@ -56,11 +57,10 @@ class Tunnel
   # connector's server is advice, not a problem: it may not be routed here.
   def problems? = state != :running
 
-  def boot_command(connector) = connector.config.accessory_command("boot", connector.name)
-
   # Problems first. A handful of queries however many tunnels there are.
-  def self.all
-    pairs = App.ordered.includes(:project).flat_map { |app| app.accessories.select { cloudflared?(it) }.map { |accessory| [ app, accessory ] } }
+  def self.all(project: nil)
+    configs = project ? project.apps : App.all
+    pairs = configs.ordered.includes(:project).flat_map { |app| app.accessories.select { cloudflared?(it) }.map { |accessory| [ app, accessory ] } }
     return [] if pairs.empty?
 
     servers = Accessory.servers_by_host(pairs.flat_map { |_, accessory| accessory["hosts"] }.uniq)
@@ -83,6 +83,9 @@ class Tunnel
     tunnels.sort_by.with_index { |tunnel, index| [ tunnel.problems? ? 0 : 1, -STATES.index(tunnel.state), index ] }
   end
 
+  # The project's tunnel, if it has one: Meridian sets up one per project.
+  def self.for(project) = all(project: project).first
+
   # Every app with a hostname, and the hosts among these it doesn't run on.
   # Only roles behind kamal-proxy count: on a server that runs just the
   # app's workers, kamal-proxy has no route for it and answers 404.
@@ -94,9 +97,7 @@ class Tunnel
     end
   end
 
-  # Apps recorded without roles count every server they run on.
   def self.proxied_servers(app)
-    return app.servers if app.roles.empty?
     hosts = app.roles.select { it["proxy"] }.flat_map { it["hosts"] }
     app.servers.select { hosts.include?(it.hostname) || hosts.include?(it.name) }
   end

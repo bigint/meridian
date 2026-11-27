@@ -126,13 +126,11 @@ module ApplicationHelper
     end
   end
 
-  ALERT_ICONS = { warn: :warn, bad: :bad }.freeze
-
   # A message in the flow of the page. Errors are announced at once; the
   # rest politely.
   def alert_box(tone = nil, title: nil, &body)
     tag.div class: [ "alert", ("alert--#{tone}" if tone) ], role: (tone == :bad ? "alert" : "status") do
-      icon(ALERT_ICONS.fetch(tone, :info), class: "alert__icon") +
+      icon(tone || :info, class: "alert__icon") +
         tag.div(safe_join([ (tag.p(title, class: "alert__title") if title), capture(&body) ].compact), class: "alert__body")
     end
   end
@@ -197,7 +195,7 @@ module ApplicationHelper
 
   # Errors for a form, above its fields.
   def field_errors(record, attribute)
-    messages = record.respond_to?(:errors) ? record.errors[attribute] : []
+    messages = record.errors[attribute]
     tag.p(messages.to_sentence, class: "field__error") if messages.any?
   end
 

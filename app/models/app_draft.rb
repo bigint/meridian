@@ -132,7 +132,7 @@ class AppDraft
 
     def tunnel
       return @tunnel if defined?(@tunnel)
-      @tunnel = Tunnel.all.find { it.project == project }
+      @tunnel = Tunnel.for(project)
     end
 
     def config(with_servers:)
@@ -181,7 +181,7 @@ class AppDraft
       if project && service.present? && (twin = project.apps.find_by(service: service, destination: destination.to_s))
         errors.add(:service, "is already the service of #{twin.name}, in #{twin.config_path}")
       end
-      if hostname.present? && (owner = App.where.not(hostnames: []).find { it.hostnames.any? { |taken| taken.casecmp?(hostname) } })
+      if hostname.present? && (owner = App.all.find { it.hostnames.any? { |taken| taken.casecmp?(hostname) } })
         errors.add(:hostname, "is already served by #{owner.name}")
       end
     end
@@ -201,7 +201,7 @@ class AppDraft
 
     # Never propose a config Kamal would reject.
     def kamal_accepts_it
-      return if errors.any? || project.nil?
+      return if errors.any?
       result = KamalConfig.parse(files, [ { "path" => config_path, "destination" => destination.presence } ]).sole
       errors.add(:base, "Kamal rejected the generated config: #{result.dig("error", "message")}") if result["error"]
     end

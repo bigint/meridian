@@ -4,7 +4,7 @@
       <div class="field">
         <%= form.label :version %>
         <%= form.text_field :version, list: "versions-#{app.id}", required: true, pattern: App::VERSION_PATTERN, autocomplete: "off", placeholder: app.latest_release&.version, class: "mono" %>
-        <datalist id="versions-<%= app.id %>"><% app.releases.limit(20).map(&:version).uniq.each do |version| %><option value="<%= version %>"><% end %></datalist>
+        <datalist id="versions-<%= app.id %>"><% app.releases.limit(App::Releases::HISTORY).map(&:version).uniq.each do |version| %><option value="<%= version %>"><% end %></datalist>
         <p class="field__hint">A past release or a new image tag. Meridian commits it to <code><%= app.version_file_path %></code>, and CI runs <code>kamal deploy</code>.</p>
       </div>
       <div><%= form.submit "Deploy", class: "btn btn--primary", data: { turbo_confirm: "Commit this version to #{app.version_file_path}?" } %></div>

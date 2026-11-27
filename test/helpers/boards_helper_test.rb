@@ -11,7 +11,7 @@ class BoardsHelperTest < ActionView::TestCase
   test "a cell with one role down names that role" do
     named = Struct.new(:name, :short_name)
     cell = Board::Cell.new(app: named.new("shop", "shop"), server: named.new("web-1.example.com", "web-1"), state: "missing", versions: [ "v2" ],
-      roles: %w[ job web ], health: nil, release: "v2", role_states: { "web" => "in_sync", "job" => "missing" })
+      health: nil, release: "v2", role_states: { "web" => "in_sync", "job" => "missing" })
     item = Board::Attention.new(state: "missing", app: cell.app, server: cell.server, count: 1, cell: cell)
 
     assert_equal "shop's job role isn't running on web-1, but Git says it should.", CGI.unescapeHTML(strip_tags(attention_sentence(item)))

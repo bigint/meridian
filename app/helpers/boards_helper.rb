@@ -76,9 +76,8 @@ module BoardsHelper
   # Under a region heading the region part of a name is noise:
   # "aps2-az1-node-01" reads as "az1-01".
   def matrix_server_label(server, grouped)
-    name = server.try(:short_name) || server.name
-    parts = name.split("-")
-    grouped && parts.size > 2 ? (parts.drop(1) - [ "node" ]).join("-") : name
+    parts = server.short_name.split("-")
+    grouped && parts.size > 2 ? (parts.drop(1) - [ "node" ]).join("-") : server.short_name
   end
 
   def matrix_group_title(board, group)

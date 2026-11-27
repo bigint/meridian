@@ -2,7 +2,7 @@
 # the servers picked to run connectors.
 class Tunnels::SetupsController < ApplicationController
   def show
-    @projects = Project.order(:name).to_a
+    @projects = Project.ordered.to_a
     project = @projects.find { it.id == params[:project].to_s.to_i } || @projects.first
     @setup = Tunnel::Setup.for(project, hosts: Array(params[:hosts]).compact_blank) if project
   end

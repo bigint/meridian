@@ -21,7 +21,6 @@ class Tunnels::ConnectorsController < ApplicationController
 
   private
     def set_tunnel
-      @tunnel = Tunnel.all.find { it.project.id == params[:project].to_s.to_i && it.secret_name == params[:secret] } or raise ActiveRecord::RecordNotFound
-      @candidates = (@tunnel.project.apps.deployable.includes(:servers).flat_map(&:servers) + @tunnel.connectors.filter_map(&:server)).uniq.sort_by(&:name)
+      @tunnel = Tunnel.all(project: Project.find(params[:project].to_s)).find { it.secret_name == params[:secret] } or raise ActiveRecord::RecordNotFound
     end
 end

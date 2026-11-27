@@ -2,7 +2,7 @@ class SecretsController < ApplicationController
   rate_limit to: 20, within: 1.minute, only: %i[ create update ]
 
   def index
-    @projects = Project.includes(:secret_names).order(:name)
+    @projects = Project.includes(:secret_names).ordered
   end
 
   # Adds a name (and optionally its first value).

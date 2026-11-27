@@ -74,7 +74,7 @@ module KamalParse
         "service" => accessory.service_name,
         "image" => accessory.image,
         "hosts" => accessory.hosts,
-        "secrets" => accessory.env.secret_keys.map { |key| key.to_s.split(":", 2).last }
+        "secrets" => accessory.env.secret_keys.map { |key| secret_name(key) }
       }
     end
 
@@ -87,8 +87,11 @@ module KamalParse
       envs += envs.grep(Hash).flat_map { |env| Array(env["tags"]&.values) }
       keys = envs.grep(Hash).flat_map { |env| Array(env["secret"]) }
       keys += Array(raw.dig("registry", "password")) if raw.dig("registry", "password").is_a?(Array)
-      keys.map { |key| key.to_s.split(":", 2).last }.uniq.sort
+      keys.map { |key| secret_name(key) }.uniq.sort
     end
+
+    # "DB_PASSWORD:MYSQL_PASSWORD" is MYSQL_PASSWORD read into DB_PASSWORD.
+    def secret_name(key) = key.to_s.split(":", 2).last
 
     def describe_error(error, path, destination)
       message = error.message.to_s.lines.first.to_s.strip
@@ -101,14 +104,10 @@ module KamalParse
 
       if error.is_a?(Psych::SyntaxError)
         [ candidates.find { |file| error.file.to_s.end_with?(file) } || unparsable(candidates) || candidates.last, error.line ]
-      elsif (keys = key_path(error.message))
-        candidates.each do |file|
-          line = line_for(file, keys)
-          return [ file, line ] if line
-        end
-        [ candidates.last, nil ]
       else
-        [ candidates.last, nil ]
+        keys = key_path(error.message)
+        found = keys && candidates.lazy.filter_map { |file| (line = line_for(file, keys)) && [ file, line ] }.first
+        found || [ candidates.last, nil ]
       end
     end
 

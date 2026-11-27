@@ -10,7 +10,7 @@
       <div class="card__body">
         <div class="field">
           <%= form.label :project_id, "Infra repository" %>
-          <%= form.select :project_id, Project.order(:name).map { [ "#{it.name} (#{it.repo_full_name})", it.id ] } %>
+          <%= form.select :project_id, Project.ordered.map { [ "#{it.name} (#{it.repo_full_name})", it.id ] } %>
           <%= field_errors(form.object, :project) %>
         </div>
         <div class="field">

@@ -19,8 +19,7 @@ module LiveTraffic
   # role as "<service>-<role>[-<destination>]" (kamal v2.12.0,
   # Kamal::Configuration::Role#container_prefix).
   def services(app)
-    roles = app.roles.map { it["name"] }.presence || [ "web" ]
-    roles.to_set { |role| [ app.service, role, app.destination.presence ].compact.join("-") }
+    app.roles.to_set { [ app.service, it["name"], app.destination.presence ].compact.join("-") }
   end
 
   # Someone is reading the app's traffic. Renewed with the tail leases.

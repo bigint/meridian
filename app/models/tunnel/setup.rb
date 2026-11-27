@@ -9,17 +9,15 @@ class Tunnel::Setup
 
   SERVICE = "edge"
 
-  attr_reader :project, :tunnel, :secret
+  attr_reader :project, :tunnel
 
   def self.for(project, hosts: nil)
-    tunnel = Tunnel.all.find { it.project == project }
-    new(project, tunnel: tunnel, hosts: hosts.presence || tunnel&.connector_hosts,
-      secret: project.secret_names.find_by(name: tunnel&.secret_name || Tunnel::SECRET))
+    tunnel = Tunnel.for(project)
+    new(project, tunnel: tunnel, hosts: hosts.presence || tunnel&.connector_hosts)
   end
 
-  def initialize(project, tunnel:, hosts:, secret:)
-    @project, @tunnel, @secret = project, tunnel, secret
-    @hosts = hosts
+  def initialize(project, tunnel:, hosts:)
+    @project, @tunnel, @requested_hosts = project, tunnel, hosts
   end
 
   def name = tunnel&.name || project.name.parameterize
@@ -32,7 +30,7 @@ class Tunnel::Setup
   # for connectors: by default the tunnel's, or every candidate. Picks come
   # from the URL and go into a config to commit, so only host names count.
   def candidates = apps.flat_map(&:servers).uniq.sort_by(&:name)
-  def hosts = @picked ||= (@hosts.presence || candidates.map(&:hostname)).grep(Server::HOST_FORMAT)
+  def hosts = @hosts ||= (@requested_hosts.presence || candidates.map(&:hostname)).grep(Server::HOST_FORMAT)
 
   def apps = @apps ||= project.apps.deployable.includes(:servers).ordered.to_a
   def coverage = @coverage ||= Tunnel.coverage(apps, hosts)
@@ -43,6 +41,7 @@ class Tunnel::Setup
       accessories: hosts.map { connector_yaml(it) }.join("\n"))
   end
 
+  def secret = @secret ||= project.secret_names.find_by(name: secret_name)
   def token_saved? = secret&.last_set_at.present?
   def in_config? = tunnel.present?
   def running? = tunnel&.state == :running

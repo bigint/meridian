@@ -133,7 +133,8 @@ class AgentChannelTest < ActionCable::Channel::TestCase
   end
 
   test "a kamal-proxy batch also reaches the readers of each app's traffic, only that app's requests" do
-    app = App.create!(project: projects(:infra), service: "web", destination: "production", config_path: "deploy/web.yml", kind: "rails")
+    app = App.create!(project: projects(:infra), service: "web", destination: "production", config_path: "deploy/web.yml", kind: "rails",
+      roles: [ { "name" => "web", "hosts" => [ @server.hostname ], "proxy" => true } ])
     place(@server, WEB, app: app)
     proxy = place(@server, "f" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
     LiveTraffic.watch(app, [ proxy ])

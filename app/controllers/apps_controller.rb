@@ -1,12 +1,12 @@
 class AppsController < ApplicationController
   def index
     @apps = App.includes(:project).ordered
-    @apps = @apps.where("service LIKE ? ESCAPE '\\'", "%#{App.sanitize_sql_like(params[:q].to_s)}%") if params[:q].present?
+    @apps = @apps.search(params[:q]) if params[:q].present?
     @latest_releases = Release.latest_per_app.where(app_id: @apps.map(&:id)).index_by(&:app_id)
   end
 
   def new
-    @draft = AppDraft.new(project_id: params[:project_id] || Project.order(:name).first&.id)
+    @draft = AppDraft.new(project_id: params[:project_id] || Project.ordered.first&.id)
   end
 
   def create
@@ -24,7 +24,7 @@ class AppsController < ApplicationController
   def show
     @app = App.find(params[:id])
     @board = Board.new(app_id: @app.id, group: "none")
-    @releases = @app.releases.limit(20)
+    @releases = @app.releases.limit(App::Releases::HISTORY)
     @accessories = Accessory.for(@app)
   end
 end

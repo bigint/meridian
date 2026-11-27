@@ -69,7 +69,8 @@ class Tunnel::SetupTest < ActiveSupport::TestCase
 
   private
     def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
-      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames, accessories: accessories)
+      app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames, accessories: accessories,
+        roles: [ { "name" => "web", "hosts" => on.map(&:hostname), "proxy" => true } ])
       on.each { app.assignments.create!(server: it, role: "web") }
       app
     end

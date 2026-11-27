@@ -4,8 +4,6 @@
 class LogsChannel < ApplicationCable::Channel
   include ApplicationCable::Renewal
 
-  RENEW_EVERY = 10.seconds
-
   periodically every: RENEW_EVERY do
     next unless heard_lately?
 

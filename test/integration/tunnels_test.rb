@@ -122,6 +122,7 @@ class TunnelsTest < ActionDispatch::IntegrationTest
   private
     def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
       app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames,
+        roles: [ { "name" => "web", "hosts" => on.map(&:hostname), "proxy" => true } ],
         accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
       on.each { app.assignments.create!(server: it, role: "web") }
       app

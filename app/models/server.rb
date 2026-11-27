@@ -45,7 +45,10 @@ class Server < ApplicationRecord
   # a sync writes its assignment (web-1.sgp and web-1.fra in one config).
   def self.reported_as(host)
     matches = sharing_first_label(where.not(machine_id: nil).where.missing(:assignments), host)
-    matches -= matches.select { git_hosts.include?(it.name) } if matches.any?
+    if matches.any?
+      taken = git_hosts
+      matches.reject! { taken.include?(it.name) }
+    end
     matches.sole.tap { it.update!(name: host, hostname: host) } if matches.one?
   end
 
@@ -61,7 +64,7 @@ class Server < ApplicationRecord
 
   # Every host a config lists, for its roles or its accessories.
   def self.git_hosts
-    App.pluck(:roles, :accessories).flatten.filter_map { it["hosts"] if it.is_a?(Hash) }.flatten.to_set
+    App.pluck(:roles, :accessories).flatten.flat_map { it["hosts"] }.to_set
   end
 
   def self.ip?(host)

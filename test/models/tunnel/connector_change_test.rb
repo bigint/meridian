@@ -82,7 +82,8 @@ class Tunnel::ConnectorChangeTest < ActiveSupport::TestCase
 
   test "warns about apps the new servers don't run" do
     a = Server.create!(name: "aps2-az1-node-01", hostname: "aps2-az1-node-01", last_seen_at: 1.second.ago)
-    shop = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ])
+    shop = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", hostnames: [ "shop.example.com" ],
+      roles: [ { "name" => "web", "hosts" => [ a.hostname ], "proxy" => true } ])
     shop.assignments.create!(server: a, role: "web")
 
     change = change_for(file_fixture("edge/generated.yml").read, hosts: %w[ aps2-az1-node-01 euc1-az1-node-01 ])

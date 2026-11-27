@@ -1,7 +1,7 @@
 class BoardsController < ApplicationController
   def show
     @board = Board.new(filter_params)
-    @projects = Project.order(:name)
+    @projects = Project.ordered
   end
 
   private

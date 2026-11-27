@@ -9,10 +9,9 @@ class JumpsController < ApplicationController
 
   private
     def results
-      pattern = "%#{ApplicationRecord.sanitize_sql_like(@query)}%"
-      apps = best(App.where("service LIKE ? ESCAPE '\\' OR destination LIKE ? ESCAPE '\\'", pattern, pattern), "service", "length(service) + length(destination)", "service, destination")
+      apps = best(App.search(@query), "service", "length(service) + length(destination)", "service, destination")
       servers = best(Server.search(@query), "name")
-      projects = best(Project.where("name LIKE ? ESCAPE '\\' OR repo_full_name LIKE ? ESCAPE '\\'", pattern, pattern), "name")
+      projects = best(Project.search(@query), "name")
 
       (apps.map { [ it.name, it, :apps, "App" ] } + servers.map { [ it.name, it, :servers, "Server" ] } + projects.map { [ it.name, it, :projects, "Project" ] })
         .sort_by { |name, *| [ name.downcase.start_with?(@query.downcase) ? 0 : 1, name.length, name ] }.first(LIMIT)

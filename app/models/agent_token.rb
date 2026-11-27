@@ -2,6 +2,8 @@
 # shown once, when it is created.
 class AgentToken < ApplicationRecord
   PREFIX = "meridian_"
+  # Every snapshot authenticates, so last_used_at moves at most this often.
+  TOUCH_EVERY = 1.minute
 
   belongs_to :server, optional: true
 
@@ -20,7 +22,7 @@ class AgentToken < ApplicationRecord
 
   def self.authenticate(token)
     return if token.blank?
-    active.find_by(digest: digest(token))&.tap { it.touch(:last_used_at) }
+    active.find_by(digest: digest(token))&.tap { it.touch(:last_used_at) if it.last_used_at.nil? || it.last_used_at < TOUCH_EVERY.ago }
   end
 
   # Agents on an open cable are hung up now, not at the next recheck.

@@ -5,7 +5,7 @@
 class TrafficChannel < ApplicationCable::Channel
   include ApplicationCable::Renewal
 
-  periodically every: LogsChannel::RENEW_EVERY do
+  periodically every: RENEW_EVERY do
     next unless heard_lately?
 
     LiveTraffic.watch(@app, @proxies)

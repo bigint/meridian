@@ -47,7 +47,7 @@
             <% end %>
           </ul>
           <% tunnel.missing.each do |connector| %>
-            <p class="txt-small txt-muted">Start <span class="mono"><%= connector.host %></span>'s with <%= copyable tunnel.boot_command(connector) %></p>
+            <p class="txt-small txt-muted">Start <span class="mono"><%= connector.host %></span>'s with <%= copyable connector.boot_command %></p>
           <% end %>
         </div>
 

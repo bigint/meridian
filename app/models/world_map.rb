@@ -105,7 +105,7 @@ class WorldMap
   # Names on the map: Meridian and places that need you or are being
   # deployed to. The rest are named on hover.
   def named_keys
-    keys = sites.select { it.state.in?(Drift::ATTENTION_RANK.keys) || deploying?(it) }.map(&:key)
+    keys = sites.select { it.state.in?(Drift::ATTENTION) || deploying?(it) }.map(&:key)
     keys << :hub if hub
     keys.uniq
   end
@@ -152,9 +152,7 @@ class WorldMap
   # How many configs run each service, for the app chips.
   def services = App.deployable.group(:service).order(:service).count
 
-  def stream_keys
-    board.servers.values.map { Board.stream_key(it) }.uniq.presence || [ "all" ]
-  end
+  def stream_keys = Board.stream_keys(board.servers.values)
 
   private
     def deploying_sites

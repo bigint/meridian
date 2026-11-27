@@ -48,7 +48,7 @@ class TunnelTest < ActiveSupport::TestCase
     make_app("edge", accessories: [ connector("cloudflared-a", "a.example.com") ])
 
     tunnel = Tunnel.all.sole
-    assert_equal "kamal accessory boot cloudflared-a -c deploy/edge.yml", tunnel.boot_command(tunnel.missing.sole)
+    assert_equal "kamal accessory boot cloudflared-a -c deploy/edge.yml", tunnel.missing.sole.boot_command
   end
 
   test "an app is safe to serve only if it runs on every connector's server" do
@@ -117,6 +117,7 @@ class TunnelTest < ActiveSupport::TestCase
   private
     def make_app(service, kind: "other", hostnames: [], on: [], accessories: [])
       app = @project.apps.create!(service: service, kind: kind, config_path: "deploy/#{service}.yml", hostnames: hostnames,
+        roles: [ { "name" => "web", "hosts" => on.map(&:hostname), "proxy" => true } ],
         accessories: accessories.map { it.merge("service" => "#{service}-#{it["name"]}") })
       on.each { app.assignments.create!(server: it, role: "web") }
       app

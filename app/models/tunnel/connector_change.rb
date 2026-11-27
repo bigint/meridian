@@ -32,7 +32,12 @@ class Tunnel::ConnectorChange
   # The config as it is on the default branch now.
   def source = @source ||= project.git.file(path).content
 
-  def coverage = @coverage ||= Tunnel.coverage(project.apps.deployable.includes(:servers).ordered.to_a, hosts)
+  def apps = @apps ||= project.apps.deployable.includes(:servers).ordered.to_a
+  def coverage = @coverage ||= Tunnel.coverage(apps, hosts)
+
+  # The servers to pick from: every one the project's apps run on, and every
+  # one that runs a connector now.
+  def candidates = (apps.flat_map(&:servers) + tunnel.connectors.filter_map(&:server)).uniq.sort_by(&:name)
 
   # Kamal forgets a connector once its entry is gone, so remove it first.
   def remove_commands = removed_connectors.map { config.accessory_command("remove", it.name, "-y") }

@@ -7,6 +7,8 @@ module ApplicationCable
   module Renewal
     extend ActiveSupport::Concern
 
+    # How often a page says it is still open (the browser's renew timer).
+    RENEW_EVERY = 10.seconds
     SILENCE = 75.seconds # a hidden tab's timers can slow to once a minute
 
     included do

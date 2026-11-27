@@ -66,7 +66,7 @@
       <%= hidden_field_tag :secret, @tunnel.secret_name %>
       <fieldset class="field">
         <legend>Connector servers</legend>
-        <% @candidates.each do |server| %>
+        <% @change.candidates.each do |server| %>
           <label class="check">
             <%= check_box_tag "hosts[]", server.hostname, change.hosts.include?(server.hostname), id: "host-#{server.id}", data: { action: "autosubmit#submit" } %>
             <span>

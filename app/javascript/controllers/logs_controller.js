@@ -103,8 +103,9 @@ function shown(value) {
 // logging_middleware.go) read as what happened: the status, the request, how
 // long it took, the container that answered and who asked. Behind Cloudflare,
 // "who" is the visitor, their country and the Cloudflare location, when the
-// app's Kamal config logs those headers. The rest stays searchable.
-const REQUEST_DRAWN = [ "time", "level", "msg", "status", "method", "host", "path", "query", "duration",
+// app's Kamal config logs those headers. A query string (often a long cache
+// buster) shows as "?…"; it and the rest stay searchable and open on a click.
+const REQUEST_DRAWN = [ "time", "level", "msg", "status", "method", "host", "path", "duration",
   "remote_addr", "req_cf_connecting_ip", "req_cf_ipcountry", "req_cf_ray" ]
 
 const isRequest = object => object.msg === "Request" && typeof object.status === "number" && typeof object.method === "string" && typeof object.path === "string"
@@ -134,11 +135,10 @@ function answeredBy(object, targets) {
 function requestSegments(object, targets) {
   const segments = []
   const add = (text, ...classes) => { if (text) segments.push({ text: asText(text).replace(CONTROLS, ""), classes }) }
-  const query = object.query ? `?${asText(object.query)}` : ""
-
   add(String(object.status), "json-level", `json-level--${statusTone(object.status)}`)
   add(` ${object.method} `, "json-message")
-  add(`${asText(object.host ?? "")}${object.path}${query}`, "json-message")
+  add(`${asText(object.host ?? "")}${object.path}`, "json-message")
+  if (object.query) add("?…", "json-more")
   if (typeof object.duration === "number") add(`  ${took(object.duration)}`, "json-value")
   const container = answeredBy(object, targets)
   if (container) { add("  → ", "json-key"); add(container, "json-value") }

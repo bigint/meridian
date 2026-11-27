@@ -21,7 +21,7 @@ class TrafficChannel < ApplicationCable::Channel
 
       stream_for @app
       LiveTraffic.watch(@app, @proxies)
-      @proxies.each { LiveLogs.tail(it, backlog: LiveLogs::BACKLOG) }
+      @proxies.each { LiveLogs.tail(it, backlog: 0) } # live only: LiveTraffic drops history
     end
 
     def find_app

@@ -19,12 +19,12 @@ On an app's page, click **Traffic**.
 Each request is one line:
 
 ```text
-web-1  200 GET shop.example.com/cart?step=2  4.2 ms  → shop-web-3f2a9c1e5b7d  from 203.0.113.7
+web-1  200 GET shop.example.com/cart?…  4.2 ms  → shop-web-3f2a9c1e5b7d  from 203.0.113.7
 ```
 
 - The chip at the start: the server the request came through.
 - The status, coloured: green below 300, muted for 3xx, amber for 4xx, red for 5xx.
-- The method, host, path and query.
+- The method, host and path. A query string shows as `?…`, since it is often a long cache buster. Click the line to read it.
 - How long kamal-proxy took to answer.
 - The container that answered, by name and short version, when Meridian knows it.
 - Who asked, after `from`: the client address. Behind Cloudflare, you see the visitor's address and country and the Cloudflare location, such as `from 198.51.100.4 SG via SIN`. That needs the headers in [Behind a Cloudflare Tunnel](#behind-a-cloudflare-tunnel).
@@ -47,7 +47,7 @@ kamal-proxy logs every app's requests in one stream. Meridian keeps only lines w
 Other apps' requests and kamal-proxy's own lines stop at Meridian and never reach the page.
 
 <Note>
-The page starts from kamal-proxy's last 200 lines on each server, for every app together. So a quiet app on a busy server shows few requests at first. Meridian can't ask for more. The agent sends at most 512 KB a second from one container, and a kamal-proxy line is about a kilobyte.
+The page shows requests from the moment you open it, with no history. Meridian doesn't store traffic, so a request served while nobody had the page open doesn't show up later.
 </Note>
 
 ## Behind a Cloudflare Tunnel

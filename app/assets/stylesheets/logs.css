@@ -52,7 +52,7 @@
   }
   .logs[data-multi] .logs__line { grid-template-columns: 12ch var(--source-width, 8ch) minmax(0, 1fr); }
   .logs__time { color: var(--color-ink-faint); font-variant-numeric: tabular-nums; user-select: none; }
-  .logs__source { justify-self: start; overflow: hidden; max-inline-size: 100%; padding-inline: var(--space-s); text-overflow: ellipsis; user-select: none; }
+  .logs__source { justify-self: start; align-self: start; overflow: hidden; max-inline-size: 100%; padding-inline: var(--space-s); text-overflow: ellipsis; user-select: none; }
   .logs__text { min-inline-size: 0; white-space: pre; color: var(--color-ink); }
   .logs[data-wrap] .logs__text { white-space: pre-wrap; overflow-wrap: anywhere; }
   .logs__text mark { border-radius: 2px; background: light-dark(#fde68a, rgb(251 191 36 / 0.35)); color: inherit; }

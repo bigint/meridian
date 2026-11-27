@@ -1,7 +1,7 @@
 module LogsHelper
   TONES = 8
 
-  # What the page's channel needs to stream what this viewing recorded (LiveLogs.grant).
+  # What the page's channel needs to stream what the page shows (LiveLogs.grant).
   def live_grant(*subject)
     LiveLogs.grant(current_user, *subject)
   end

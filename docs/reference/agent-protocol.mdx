@@ -212,7 +212,7 @@ For each lease, the agent keeps `until = max(until, now + min(seconds, 120))`. I
   {"type":"tail","container":"<64-hex id>","seconds":30,"backlog":200}
   ```
 
-  Someone is reading this container's logs, or an app's traffic through [kamal-proxy](/reference/glossary#kamal-proxy). A new reader asks for `backlog: 200` recent lines. Renewals come every 10 seconds, with `backlog: 0`. The agent accepts a backlog of up to 1,000.
+  Someone is reading this container's logs, or an app's traffic through [kamal-proxy](/reference/glossary#kamal-proxy). A new logs reader asks for `backlog: 200` recent lines; a traffic reader asks for none (`backlog: 0`), and Meridian drops backlog lines before they reach traffic readers. Renewals come every 10 seconds, with `backlog: 0`. The agent accepts a backlog of up to 1,000.
 </ResponseField>
 
 When an agent subscribes, Meridian sends it any watch lease still running. It also sends a `tail` with `backlog: 200` for each container someone is still reading. Without this, the agent would miss leases sent while it was away. The agent ignores messages of any other type.

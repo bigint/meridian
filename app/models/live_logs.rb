@@ -64,13 +64,12 @@ module LiveLogs
     end
   end
 
-  # Every viewing is an Event, and the page records it. So the page hands its
-  # channel a grant for exactly what it shows, and LogsChannel and
-  # TrafficChannel stream nothing a page didn't record. A grant is bound to
-  # its reader, so it can't be passed on; a reconnect reuses it, so it isn't
-  # another viewing. It lapses after GRANT_FOR, so one recorded viewing isn't
-  # a way to read for good: a page still open then is turned down when it
-  # next reconnects, and asks for a reload, which records a new viewing.
+  # The page hands its channel a grant for exactly what it shows, and
+  # LogsChannel and TrafficChannel stream nothing a page didn't grant. A grant
+  # is bound to its reader, so it can't be passed on; a reconnect reuses it.
+  # It lapses after GRANT_FOR, so one page load isn't a way to read for good:
+  # a page still open then is turned down when it next reconnects, and asks
+  # for a reload, which checks access again.
   def grant(user, *subject)
     grants.generate([ user.id, *subject ], purpose: :live, expires_in: GRANT_FOR)
   end

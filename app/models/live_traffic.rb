@@ -32,6 +32,8 @@ module LiveTraffic
   # A batch from kamal-proxy on server, as LiveLogs.parse left it. Each app
   # being read gets its own requests, and kamal-proxy's notices (logs off,
   # refused, stopped, lines dropped) since they are about its traffic too.
+  # Traffic is live only: a backlog's lines, asked for by someone reading
+  # kamal-proxy's logs or by an agent's reconnect, are history and stop here.
   def relay(server, proxy, batch)
     return unless Rails.cache.read(server_key(server.id))
 
@@ -39,14 +41,14 @@ module LiveTraffic
     return if apps.empty?
 
     owners = apps.each_with_object({}) { |app, owners| services(app).each { owners[it] = app } }
-    lines = Array(batch["lines"]).group_by { owners[request_service(it["m"])] }
+    lines = batch["backlog"] ? {} : Array(batch["lines"]).group_by { owners[request_service(it["m"])] }
     status = batch.slice(*STATUS_KEYS)
 
     apps.each do |app|
       mine = lines[app]
       next if mine.nil? && status.empty?
 
-      TrafficChannel.broadcast_to(app, { "container" => batch["container"], "source" => proxy.id, "backlog" => batch["backlog"], "lines" => mine, **status }.compact)
+      TrafficChannel.broadcast_to(app, { "container" => batch["container"], "source" => proxy.id, "lines" => mine, **status }.compact)
     end
   end
 

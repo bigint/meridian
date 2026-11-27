@@ -3,7 +3,7 @@ A static site served by nginx. Build your site into `dist/` (adjust the path), t
 `Dockerfile`:
 
 ```dockerfile
-FROM nginx:1.27-alpine
+FROM nginx:1.30-alpine
 LABEL service="<service>"
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY dist/ /usr/share/nginx/html/

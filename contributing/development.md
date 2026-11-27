@@ -46,24 +46,23 @@ A GitHub App works too, with `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`. See [
 
 ## Run the checks
 
-`bin/ci` runs every check that must pass before a change lands, in this order. CI runs the same script, then builds the Docker image.
+`bin/ci` runs every check that must pass before a change lands, in this order. CI runs the same script, then builds the app and agent images.
 
 | Step | Command |
 | --- | --- |
 | Setup | `bin/setup --skip-server` |
 | Style: Ruby | `bin/rubocop` |
 | Security: gem audit | `bin/bundler-audit` |
-| Security: importmap audit | `bin/importmap audit` |
 | Security: Brakeman | `bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error` |
 | Tests: Rails | `bin/rails test` |
 | Agent: vet | `cd agent && go vet ./...` |
 | Agent: staticcheck | `cd agent && $(go env GOPATH)/bin/staticcheck ./...` |
 | Agent: test | `cd agent && go test -race ./...` |
 
-The steps live in `config/ci.rb`. Staticcheck must be installed once:
+The steps live in `config/ci.rb`. Staticcheck must be installed once, at the version CI pins:
 
 ```bash
-go install honnef.co/go/tools/cmd/staticcheck@latest
+go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
 ```
 
 ## Run the tests
@@ -136,19 +135,29 @@ Use small conventional commits, such as `feat(board): …`, `fix(agent): …` or
 
 ## Release
 
-A release is a Git tag. Pushing a tag that starts with `v` runs `.github/workflows/release.yml`, which builds two images for `linux/amd64` and `linux/arm64` and pushes them to the GitHub Container Registry:
+A release is a Git tag. Pushing a tag that starts with `v` runs `.github/workflows/release.yml`, which builds three images for `linux/amd64` and `linux/arm64` and pushes them to the GitHub Container Registry:
 
 | Image | Built from | Tags |
 | --- | --- | --- |
 | `ghcr.io/<owner>/meridian` | `Dockerfile` | the tag, and `latest` |
 | `ghcr.io/<owner>/meridian-agent` | `agent/Dockerfile` | the tag, and `latest` |
+| `ghcr.io/<owner>/meridian-docs` | `docs/Dockerfile`, from the repository root | the tag, and `latest` |
 
-The workflow passes the tag as the `VERSION` build argument. The agent's `Dockerfile` stamps it into the binary, which reports it as its agent version. The app's `Dockerfile` ignores it.
+The workflow passes the tag as the `VERSION` build argument to the app and the agent. The app's `Dockerfile` bakes it into `MERIDIAN_VERSION`, which the account menu shows, and the **Agents** page uses it as the agent's image tag. The agent's `Dockerfile` stamps it into the binary, which reports it as its agent version. The docs image takes no version.
 
 ### 1. Name the release in the changelog
 
 In `CHANGELOG.md`, rename `## Unreleased` to the version and date, for example `## v0.2.0 (2027-01-15)`, and start a new empty `## Unreleased` above it if there is more to come.
-### 2. Commit, tag and push
+### 2. Bump the pinned versions
+
+The docs and the README name the current release by hand. Before tagging, find the previous tag wherever it appears and replace it with the new one:
+
+```bash
+git grep -nF "$(git describe --tags --abbrev=0)" -- README.md docs .github
+```
+
+That covers `README.md`, `docs/index.mdx`, `docs/install.mdx`, `docs/quickstart.mdx`, `docs/guides/agent.mdx`, `docs/operate/upgrading.mdx`, `docs/reference/agent-protocol.mdx` and the bug report template. Leave `CHANGELOG.md` alone.
+### 3. Commit, tag and push
 
 ```bash
 git commit -am "chore(release): v0.2.0"

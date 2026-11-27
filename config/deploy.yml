@@ -21,9 +21,8 @@ registry:
 env:
   clear:
     MERIDIAN_URL: https://meridian.example.com   # 4. same as proxy.host
-    # Solid Queue runs inside Puma. For large installs, set this to "false"
-    # and uncomment the job role below.
-    SOLID_QUEUE_IN_PUMA: true
+    # Solid Queue runs inside Puma. For large installs, add
+    # SOLID_QUEUE_IN_PUMA: false and uncomment the job role below.
   secret:
     - SECRET_KEY_BASE
     - GITHUB_APP_ID

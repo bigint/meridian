@@ -44,7 +44,7 @@ class GitHost::GitHubTest < ActiveSupport::TestCase
     stub_github_repo(project)
     stub_request(:post, %r{/actions/workflows/meridian-deploy.yml/dispatches}).to_return(status: 404, body: "{}", headers: { "Content-Type" => "application/json" })
 
-    error = assert_raises(GitHost::NotFound) { project.git.dispatch_workflow("meridian-deploy.yml", inputs: { command: "deploy" }) }
+    error = assert_raises(GitHost::NotFound) { project.git.dispatch_workflow("meridian-deploy.yml", inputs: { config: "deploy/web.yml", version: "v1" }) }
     assert_equal "example/infra has no meridian-deploy.yml workflow on main: add the CI workflow first", error.message
 
     project.sync

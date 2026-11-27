@@ -30,5 +30,10 @@ module Meridian
 
     # The release this build came from, set by the Docker build.
     config.version = ENV.fetch("MERIDIAN_VERSION", "dev")
+
+    # Every agent's snapshot is a job, four a minute per server. Keeping each
+    # finished one (and its payload) for a day would grow the queue database
+    # by gigabytes a day. Failed jobs are still kept.
+    config.solid_queue.preserve_finished_jobs = false
   end
 end

@@ -68,7 +68,7 @@ module App::Deployable
     raise App::Refused, "#{name} has no version file yet: deploy a version first" unless version
 
     head = project.git.head_sha
-    project.git.dispatch_workflow(Project::Changes::WORKFLOW_FILE, inputs: { config: config_path, destination: destination, version: version, command: "deploy" })
+    project.git.dispatch_workflow(Project::Changes::WORKFLOW_FILE, inputs: { config: config_path, destination: destination, version: version })
     deploy = deploys.create_or_find_by!(commit_sha: head) { it.assign_attributes(kind: "redeploy", version: version, actor: actor) }
     deploy.update!(version: version) unless deploy.version == version
     Event.record("app.redeploy", subject: self, actor: actor, summary: "Redeployed #{name} at #{version}", version: version)

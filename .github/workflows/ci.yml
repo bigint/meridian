@@ -21,17 +21,22 @@ jobs:
         with:
           bundler-cache: true
 
+      # The agent has no dependencies, so no go.sum: key the cache on go.mod.
       - uses: actions/setup-go@v5
         with:
           go-version-file: agent/go.mod
+          cache-dependency-path: agent/go.mod
 
-      - run: go install honnef.co/go/tools/cmd/staticcheck@latest
+      - run: go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
 
       - name: bin/ci
         run: bin/ci
 
       - name: The image builds
         run: docker build --tag meridian:ci .
+
+      - name: The agent image builds
+        run: docker build --tag meridian-agent:ci agent
 
       # Production loads less than development, so parse a config in the built image.
       - name: The image parses a Kamal config

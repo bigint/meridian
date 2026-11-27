@@ -49,10 +49,6 @@ Rails.application.configure do
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }
-  # Every agent's snapshot is a job, four a minute per server. Keeping each
-  # finished one (and its payload) for a day would grow the queue database
-  # by gigabytes a day. Failed jobs are still kept.
-  config.solid_queue.preserve_finished_jobs = false
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

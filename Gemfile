@@ -45,7 +45,7 @@ gem "rbnacl"
 # Highlights code blocks on the server, so pages need no highlighting script
 gem "rouge", "~> 5.1"
 
-# Jobs dashboard for admins
+# Jobs dashboard at /jobs
 gem "mission_control-jobs"
 
 group :development, :test do

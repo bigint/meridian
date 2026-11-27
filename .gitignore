@@ -10,9 +10,7 @@
 /storage/*
 !/storage/.keep
 /public/assets
-/node_modules/
 /agent/meridian-agent
-/coverage
 .DS_Store
 /.claude
 /lab/.secrets

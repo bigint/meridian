@@ -20,20 +20,11 @@
 !/log/.keep
 !/tmp/.keep
 
-# Ignore pidfiles, but keep the directory.
-/tmp/pids/*
-!/tmp/pids/.keep
-
 # Ignore storage (uploaded files in development and any SQLite databases).
 /storage/*
 !/storage/.keep
-/tmp/storage/*
-!/tmp/storage/.keep
 
 # Ignore assets.
-/node_modules/
-/app/assets/builds/*
-!/app/assets/builds/.keep
 /public/assets
 
 # Ignore CI service files.
@@ -43,15 +34,13 @@
 /config/deploy*.yml
 /.kamal
 
-# Ignore development files
-/.devcontainer
-
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
 
 # Not needed in the app image.
 /agent/
+/contributing/
 /docs/
 /test/
 /vendor/bundle/

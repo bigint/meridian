@@ -3,9 +3,7 @@
 
 # This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
 # docker build -t meridian .
-# docker run -d -p 80:80 -e SECRET_KEY_BASE=<secret> --name meridian meridian
-
-# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
+# docker run -d -p 127.0.0.1:3000:80 -v meridian:/rails/storage -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e MERIDIAN_URL=http://localhost:3000 meridian
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
 ARG RUBY_VERSION=4.0.10
@@ -16,7 +14,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libsodium23 sqlite3 sudo && \
+    apt-get install --no-install-recommends -y libjemalloc2 libsodium23 sqlite3 sudo && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -24,7 +22,7 @@ RUN apt-get update -qq && \
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development" \
+    BUNDLE_WITHOUT="development:test" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
 # Throw-away build stage to reduce size of final image
@@ -32,11 +30,10 @@ FROM base AS build
 
 # Install packages needed to build gems
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Install application gems
-COPY vendor/* ./vendor/
 COPY Gemfile Gemfile.lock ./
 
 RUN bundle install && \
@@ -54,17 +51,17 @@ RUN bundle exec bootsnap precompile -j 1 app/ lib/
 # Precompiling assets for production without requiring SECRET_KEY_BASE
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
-
-
-
 # Final stage for app image
 FROM base
+
+# Kamal only boots images labelled with their service.
+LABEL service="meridian"
 
 # The release tag, shown in the account menu. Releases pass it as a build arg.
 ARG VERSION=dev
 ENV MERIDIAN_VERSION=$VERSION
 
-# Run and own only the runtime files as a non-root user for security.
+# Run as a non-root user for security; it owns the gems and the app it runs.
 # Kamal configs are parsed as a second user, which can read neither the
 # databases nor Meridian's environment (KamalConfig). rails may run only env,
 # and only as that user, which can do less than rails can.

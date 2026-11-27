@@ -34,8 +34,8 @@ This is the file Meridian adds for a project on `main`:
 # `<config>.<destination>.version`), and this workflow runs `kamal deploy`.
 # Redeploys use the same workflow through workflow_dispatch.
 name: Meridian deploy
-# Meridian matches redeploy runs by this name: "<command> <config> <destination>".
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('{0} {1} {2}', inputs.command, inputs.config, inputs.destination) || github.event.head_commit.message }}
+# Meridian matches redeploy runs by this name: "deploy <config> <destination>".
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('deploy {0} {1}', inputs.config, inputs.destination) || github.event.head_commit.message }}
 
 on:
   push:
@@ -51,11 +51,7 @@ on:
         required: false
       version:
         description: Version to deploy
-        required: false
-      command:
-        description: Kamal command (deploy)
         required: true
-        default: deploy
 
 jobs:
   plan:
@@ -70,13 +66,18 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      # Inputs reach the shell as environment variables, never as script text.
       - id: plan
         shell: bash
+        env:
+          DEPLOY_CONFIG: ${{ inputs.config }}
+          DEPLOY_DESTINATION: ${{ inputs.destination }}
+          DEPLOY_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            jq -nc --arg c "${{ inputs.config }}" --arg d "${{ inputs.destination }}" --arg v "${{ inputs.version }}" --arg k "${{ inputs.command }}" \
-              '[{config:$c, destination:$d, version:$v, command:$k}]' > matrix.json
+            jq -nc --arg c "$DEPLOY_CONFIG" --arg d "$DEPLOY_DESTINATION" --arg v "$DEPLOY_VERSION" \
+              '[{config:$c, destination:$d, version:$v}]' > matrix.json
           else
             # Every version file the push changed, from the commit before it
             # (the parent when that commit is unknown, e.g. a new branch).
@@ -100,7 +101,7 @@ jobs:
               done
               if [ -z "$config" ]; then echo "::warning::No Kamal config for $file"; continue; fi
               jq -nc --arg c "$config" --arg d "$destination" --arg v "$(tr -d '[:space:]' < "$file")" \
-                '{config:$c, destination:$d, version:$v, command:"deploy"}' >> rows
+                '{config:$c, destination:$d, version:$v}' >> rows
             done
             jq -sc '.' rows > matrix.json
           fi
@@ -114,7 +115,7 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJson(needs.plan.outputs.matrix) }}
-    name: ${{ matrix.command }} ${{ matrix.config }} ${{ matrix.destination }}
+    name: deploy ${{ matrix.config }} ${{ matrix.destination }}
     # One Kamal run per app at a time, whether a push or a dispatch started it.
     # Runs for different apps never wait on or cancel each other; a newer
     # pending run for the same app replaces an older pending one.
@@ -141,11 +142,15 @@ jobs:
           echo "$SECRETS" | jq -r 'to_entries[] | select(.key != "github_token") | "\(.key)<<MERIDIAN_EOF\n\(.value)\nMERIDIAN_EOF"' >> "$GITHUB_ENV"
       - name: Kamal
         shell: bash
+        env:
+          DEPLOY_CONFIG: ${{ matrix.config }}
+          DEPLOY_DESTINATION: ${{ matrix.destination }}
+          DEPLOY_VERSION: ${{ matrix.version }}
         run: |
           set -euo pipefail
-          args=(-c "${{ matrix.config }}")
-          [ -n "${{ matrix.destination }}" ] && args+=(-d "${{ matrix.destination }}")
-          kamal deploy "${args[@]}" --version "${{ matrix.version }}" --skip-push
+          args=(-c "$DEPLOY_CONFIG")
+          [ -n "$DEPLOY_DESTINATION" ] && args+=(-d "$DEPLOY_DESTINATION")
+          kamal deploy "${args[@]}" --version "$DEPLOY_VERSION" --skip-push
 ```
 
 The comment at the top says "edit freely", and you can. Keep the parts listed in [What Meridian relies on](#what-meridian-relies-on).
@@ -164,7 +169,7 @@ Two triggers start the workflow: `push` and `workflow_dispatch`.
 
 ### Inputs
 
-A dispatched run takes these four inputs.
+A dispatched run takes these three inputs.
 
 <ResponseField name="config" type="string" required>
   The Kamal config path, for example `deploy/web.yml`.
@@ -174,13 +179,13 @@ A dispatched run takes these four inputs.
   The Kamal destination, for example `production`. Leave it empty for an app without one.
 </ResponseField>
 
-<ResponseField name="version" type="string">
+<ResponseField name="version" type="string" required>
   The image tag to deploy. For a redeploy, it is the version in the version file.
 </ResponseField>
 
-<ResponseField name="command" type="string" default="deploy" required>
-  `deploy` runs `kamal deploy`. Meridian sends no other command.
-</ResponseField>
+A dispatched run always runs `kamal deploy`.
+
+The workflow passes each input to the shell as an environment variable, never as part of the script, so an input can't run commands. The `kamal` job does the same with its matrix row.
 
 ## Run name
 
@@ -188,10 +193,10 @@ Meridian reads the `run-name` line to tell what each run is for, so keep its for
 
 | Started by | Run name | Example |
 | --- | --- | --- |
-| `workflow_dispatch` | `<command> <config> <destination>` | `deploy deploy/web.yml production` |
+| `workflow_dispatch` | `deploy <config> <destination>` | `deploy deploy/web.yml production` |
 | `push` | The message of the newest commit in the push | `deploy(web-production): 3f2a9c1e` |
 
-A dispatched `deploy` run is a redeploy of the app with that config and destination.
+A dispatched run is a redeploy of the app with that config and destination.
 
 For a push run, Meridian looks at its newest commit instead, and finds the deploy that made that commit.
 
@@ -199,7 +204,7 @@ For a push run, Meridian looks at its newest commit instead, and finds the deplo
 
 The `plan` job turns the trigger into a list of Kamal runs. GitHub calls this list a matrix.
 
-- **On a dispatch**, the list has one row, built from the four inputs.
+- **On a dispatch**, the list has one row, built from the three inputs.
 - **On a push**, it has one row per version file the push changed. `plan` compares against the commit before the push. When that commit is unknown, as on a new branch, it starts from the parent commit.
 - `plan` skips version files that the push deleted.
 
@@ -213,7 +218,7 @@ The version is the file's content with whitespace removed. If the list is empty,
 
 ## The kamal job
 
-The `kamal` job runs once per row, named `<command> <config> <destination>`. `fail-fast: false` keeps the other apps going when one fails.
+The `kamal` job runs once per row, named `deploy <config> <destination>`. `fail-fast: false` keeps the other apps going when one fails.
 
 | Step | What it does |
 | --- | --- |
@@ -273,7 +278,7 @@ You can change anything else in the file, but keep these:
 
 - The file name, `meridian-deploy.yml`. Meridian starts the workflow by this name, and only its runs move deploys along.
 - The `run-name` expression. Meridian reads it to track redeploys.
-- The four inputs, with these names. Meridian sends `config`, `destination`, `version` and `command`.
+- The three inputs, with these names. Meridian sends `config`, `destination` and `version`.
 - The `push` trigger on `**/*.version` and the project's branch. Deploy and Roll back are commits there.
 
 When the file is missing from the project's branch, a redeploy fails with this error: `<repo> has no meridian-deploy.yml workflow on <branch>: add the CI workflow first`.

@@ -90,7 +90,7 @@ They live only as long as their pull request, and a pull request per preview wou
 
 > **Note:** Superseded by [43](#43-previews-are-out-of-the-first-release).
 
-The workflow names dispatched runs `<command> <config> <destination>`, because GitHub doesn't report a run's inputs.
+The workflow names dispatched runs `deploy <config> <destination>`, because GitHub doesn't report a run's inputs.
 
 ## 21. A preview inherits the destination file of its app
 

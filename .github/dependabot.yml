@@ -15,3 +15,11 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+- package-ecosystem: docker
+  directories:
+    - "/"
+    - "/agent"
+    - "/docs"
+  schedule:
+    interval: weekly
+  open-pull-requests-limit: 10

@@ -49,7 +49,7 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 </ResponseField>
 
 <ResponseField name="bin/ci" type="script">
-  Runs every check a change must pass, as `config/ci.rb` lists them. They are setup, RuboCop, `bundler-audit`, the importmap audit, Brakeman, the Rails tests, and the agent's `go vet`, `staticcheck` and `go test -race`.
+  Runs every check a change must pass, as `config/ci.rb` lists them. They are setup, RuboCop, `bundler-audit`, Brakeman, the Rails tests, and the agent's `go vet`, `staticcheck` and `go test -race`.
 </ResponseField>
 
 <ResponseField name="bin/jobs" type="script">
@@ -97,7 +97,8 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
   | `kamal owner/repo ARGS...` | Runs Kamal against a fresh clone of the infra repository, inside the lab network. |
   | `ssh [server]` | Opens a shell on a lab server. The default is `apse1-az1-node-01`. |
   | `status` | Lists the lab's containers, and the containers on each server. |
-  | `down` | Stops the lab. |
+  | `down` | Stops the lab and empties the servers and the registry, so push and run `agents` again after `up`. |
+  | `help` | Lists the subcommands. |
 </ResponseField>
 
 The other files in `bin/` are the standard Rails and gem launchers: `bin/rails`, `bin/rake`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `bin/importmap` and `bin/thrust`. `bin/docker-entrypoint` is the script the image runs at start.

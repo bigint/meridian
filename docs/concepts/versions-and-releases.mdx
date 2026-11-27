@@ -86,7 +86,7 @@ A version-file commit made outside Meridian gets a deploy too, credited to **Git
 
   Redeploy reads the version from GitHub when you press the button, not from the last sync.
 
-  Meridian matches a workflow run to apps by its commit SHA. It hears about runs from `workflow_run` webhooks, and also checks every 30 seconds. Kamal deploys every host in one CI job, so CI can't report progress per server.
+  Meridian matches a workflow run to apps by its commit SHA. It checks for new runs every 30 seconds. Kamal deploys every host in one CI job, so CI can't report progress per server.
 </Accordion>
 
 ## Related

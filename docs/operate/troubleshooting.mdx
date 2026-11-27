@@ -90,13 +90,10 @@ Two places help with most problems:
     Rename the secret in the config.
   </Accordion>
   <Accordion title="Pushes and CI runs show up late">
-    GitHub's [webhooks](/reference/glossary#webhook) don't reach Meridian. Meridian still checks each project every 30 seconds, so pushes and CI runs show up within 30 seconds.
+    Meridian polls GitHub every 30 seconds, so a push or CI run can take up to 30 seconds to show. Longer than that:
 
-    - **Settings → Connections** says **Webhooks: Off**. Set `GITHUB_APP_WEBHOOK_SECRET`.
-    - In the App's settings, **Advanced → Recent Deliveries** shows each delivery and Meridian's answer. `401` means the secret in GitHub and `GITHUB_APP_WEBHOOK_SECRET` differ. `400` from a repository webhook means its content type isn't `application/json`.
-    - No answer at all means GitHub can't reach Meridian. A Meridian on a private network gets no webhooks unless you forward them to it.
-
-    See [GitHub App](/reference/github-app#webhook).
+    - The project's page shows when it last synced. If that keeps falling behind, check Meridian's log for GitHub errors, such as a revoked token or an App no longer installed on the repository.
+    - Background jobs aren't running. Open `/jobs` and check that `reconcile_projects` runs every 30 seconds.
   </Accordion>
 </AccordionGroup>
 
@@ -177,7 +174,7 @@ kamal accessory logs meridian_agent
     - Someone renamed the workflow file. Meridian tracks only `meridian-deploy.yml`.
     - The workflow's `push` trigger doesn't cover the branch or `**/*.version`.
 
-    Without webhooks, a run shows up within 30 seconds of starting. See [CI workflow](/reference/ci-workflow).
+    A run shows up within 30 seconds of starting. See [CI workflow](/reference/ci-workflow).
   </Accordion>
   <Accordion title="The deploy's CI run fails">
     Open the run from the deploy's CI link, and find which cause fits:

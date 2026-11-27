@@ -1,6 +1,6 @@
 ---
 title: "GitHub App"
-description: "How to set up the GitHub App Meridian uses: its permissions, events, webhook, installation ID, GitHub Enterprise, and how to use a token instead."
+description: "How to set up the GitHub App Meridian uses: its permissions, installation ID, GitHub Enterprise, and how to use a token instead."
 icon: "git-branch"
 ---
 
@@ -13,14 +13,12 @@ Meridian reads and writes your repositories as a GitHub App. The App keeps Merid
 | Setting | Value |
 | --- | --- |
 | Homepage URL | Your Meridian, for example `https://meridian.example.com` |
-| Webhook | Active |
-| Webhook URL | `https://<your Meridian>/webhooks/github` |
-| Webhook secret | A long random string, for example from `openssl rand -hex 32`. It becomes `GITHUB_APP_WEBHOOK_SECRET`. |
+| Webhook | Not active. Meridian polls GitHub instead. |
 | Where can this App be installed | Only on this account |
 
 After you create the App, note its **App ID** and generate a **private key**. They become `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`. See [Environment variables](/reference/environment#github).
 
-## Permissions and events
+## Permissions
 
 <GitHubAppPermissions />
 
@@ -45,36 +43,9 @@ Enter that number as **GitHub App installation ID** when you add the project. Se
   Meridian signs a JSON Web Token with the private key and trades it with GitHub for an installation token. GitHub's installation tokens last one hour. Meridian keeps the token in memory and fetches a new one five minutes before the old one expires. It writes nothing to disk.
 </Accordion>
 
-## Webhook
+## Polling
 
-A [webhook](/reference/glossary#webhook) is a message GitHub sends to Meridian when something changes. GitHub sends every event to `POST /webhooks/github`. Meridian checks the signature, queues a job and answers at once.
-
-### Signature
-
-GitHub signs each delivery with the webhook secret, so Meridian can tell it is real. Meridian works out its own signature and compares it with the `X-Hub-Signature-256` header.
-
-| Response | When |
-| --- | --- |
-| `202 Accepted` | The signature matches. Meridian accepts and ignores events other than the two below. |
-| `400 Bad Request` | The body is not JSON. |
-| `401 Unauthorized` | The signature doesn't match, or `GITHUB_APP_WEBHOOK_SECRET` is unset. |
-
-<Accordion title="How the signature check works">
-  Meridian computes `sha256=` followed by the hex HMAC-SHA256 of the raw body, keyed with `GITHUB_APP_WEBHOOK_SECRET`. It compares that with the `X-Hub-Signature-256` header in constant time.
-</Accordion>
-
-### Events Meridian acts on
-
-| Event | Action | What Meridian does |
-| --- | --- | --- |
-| `push` | A push to the project's branch | Syncs the project: reads configs and version files. Meridian ignores pushes to other branches. |
-| `workflow_run` | Any, for `meridian-deploy.yml` on the project's branch | Moves deploys along (`pending`, `queued`, `in_progress`, `completed`). Meridian ignores runs of other workflows. |
-
-Repository names match whatever their case. So a project added as `Acme/Infra` gets the webhooks for `acme/infra`.
-
-### Without webhooks
-
-Webhooks make Meridian react at once. Without them, Meridian still sees every push and workflow run, at most 30 seconds later. Every 30 seconds it reads each project's newest commit on its branch, and the branch's last 20 workflow runs.
+GitHub never calls Meridian. Meridian sees every push and workflow run within 30 seconds: every 30 seconds it reads each project's newest commit on its branch, and the branch's last 20 workflow runs.
 
 Each request sends an ETag, the tag GitHub gave its last answer. When nothing changed, GitHub says so, and that costs none of your rate limit.
 
@@ -111,13 +82,6 @@ Meridian makes every call as the token's owner, and projects need no installatio
     Select the `repo` and `workflow` scopes.
   </Tab>
 </Tabs>
-
-A token gets no App webhooks. To get them, add a webhook to the infra repository under **Settings → Webhooks**:
-
-- **Payload URL:** `https://<your Meridian>/webhooks/github`
-- **Content type:** `application/json`. Meridian refuses form-encoded deliveries with `400`.
-- **Secret:** the value of `GITHUB_APP_WEBHOOK_SECRET`.
-- **Events:** **Pushes** and **Workflow runs**.
 
 <Warning>
   A token reaches every repository its owner can reach. An App reaches only the repositories you install it on. Use the App in production.

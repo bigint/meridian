@@ -7,7 +7,7 @@ icon: "key"
 
 This page lists every environment variable Meridian reads, with its default. Meridian keeps everything specific to your site here, so it stays out of the database and out of Git.
 
-Settings you change inside the app are on [Settings](/operate/settings). The **Connections** card on that page shows what Meridian read from the environment: GitHub, webhooks and the Kamal version.
+Settings you change inside the app are on [Settings](/operate/settings). The **Connections** card on that page shows what Meridian read from the environment: GitHub and the Kamal version.
 
 In Meridian's own `config/deploy.yml`, put plain values under `env.clear` and secrets under `env.secret`. [Kamal](/reference/glossary#kamal) reads the secrets from `.kamal/secrets`:
 
@@ -20,7 +20,6 @@ env:
     - SECRET_KEY_BASE
     - GITHUB_APP_ID
     - GITHUB_APP_PRIVATE_KEY
-    - GITHUB_APP_WEBHOOK_SECRET
 ```
 
 ## Meridian
@@ -58,12 +57,6 @@ Meridian talks to GitHub as a GitHub App, or with a personal access token. When 
   The App's private key: the whole PEM file that GitHub gives you. Meridian turns each literal `\n` into a new line, so the key can sit on one line. You need it to use the App.
 </ResponseField>
 
-<ResponseField name="GITHUB_APP_WEBHOOK_SECRET" type="string">
-  The secret Meridian uses to check the `X-Hub-Signature-256` header on `POST /webhooks/github`. That header proves a [webhook](/reference/glossary#webhook) came from GitHub.
-
-  Unset, Meridian refuses every webhook with `401`. It then finds changes by polling GitHub every 30 seconds, and Settings shows **Webhooks: Off**. With a token, give your repository webhooks this same secret.
-</ResponseField>
-
 <ResponseField name="GITHUB_TOKEN" type="string">
   A personal access token to use in place of a GitHub App. Meridian makes every call as the token's owner. In this mode, projects need no installation ID. For the scopes it needs, see [Using a token instead](/reference/github-app#using-a-token-instead).
 </ResponseField>
@@ -80,7 +73,6 @@ When a GitHub variable is unset or empty, Meridian reads it from Rails credentia
 | --- | --- |
 | `GITHUB_APP_ID` | `github.app_id` |
 | `GITHUB_APP_PRIVATE_KEY` | `github.private_key` |
-| `GITHUB_APP_WEBHOOK_SECRET` | `github.webhook_secret` |
 | `GITHUB_TOKEN` | `github.token` |
 
 The published image has no `config/credentials.yml.enc`. So this matters only if you build your own image with one, and then Rails needs `RAILS_MASTER_KEY` to decrypt it. `GITHUB_API_URL` has no fallback.

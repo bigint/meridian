@@ -1,5 +1,5 @@
-# Runs of the deploy workflow on the default branch become deploys. A run arrives from a
-# workflow_run webhook, from polling, or from both; handling it again changes nothing.
+# Runs of the deploy workflow on the default branch become deploys. Polling may
+# see a run more than once; handling it again changes nothing.
 module Project::WorkflowRuns
   extend ActiveSupport::Concern
 

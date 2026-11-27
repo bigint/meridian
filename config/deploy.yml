@@ -28,7 +28,6 @@ env:
     - SECRET_KEY_BASE
     - GITHUB_APP_ID
     - GITHUB_APP_PRIVATE_KEY
-    - GITHUB_APP_WEBHOOK_SECRET
 
 # job:
 #   hosts:

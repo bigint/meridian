@@ -12,13 +12,13 @@ flowchart TB
 
   browser -- HTTPS --> meridian
   meridian -- "commits, pull requests, sealed secrets" --> github
-  github -- "webhooks and 30-second polls" --> meridian
+  meridian -- "polls every 30 seconds" --> github
   github -- "a version file changed" --> ci
   ci -- "kamal deploy over SSH" --> servers
   servers -- "agent snapshots and /cable, outbound only" --> meridian
 ```
 
-Meridian never opens a connection to a server. The agent reads Docker read-only and connects out to Meridian. CI connects to the servers over SSH. GitHub sends `push` and `workflow_run` webhooks, and Meridian polls every 30 seconds as well, so webhooks are optional.
+Meridian never opens a connection to a server. The agent reads Docker read-only and connects out to Meridian. CI connects to the servers over SSH. Meridian learns of pushes and CI runs by polling GitHub every 30 seconds. GitHub never calls Meridian, so Meridian needs no public address for GitHub.
 
 ## What should run comes from Git
 
@@ -30,7 +30,7 @@ sequenceDiagram
   participant M as Meridian
   participant G as GitHub
   participant P as kamal-parse
-  T->>M: webhook, reconcile or Sync now
+  T->>M: reconcile or Sync now
   M->>G: branch head, with ETag
   G-->>M: 304 if unchanged
   M->>G: tree, then new blobs only
@@ -40,13 +40,12 @@ sequenceDiagram
   M->>M: one write transaction
 ```
 
-1. A sync starts four ways.
-   - A `push` webhook for the default branch runs it in `GitHubEventJob`.
+1. A sync starts three ways.
    - `ReconcileProjectsJob` enqueues `ProjectSyncJob` for every project every 30 seconds.
    - **Sync now** on a project page enqueues a forced `ProjectSyncJob`, which syncs even when the head hasn't moved.
    - A deploy or a rollback that finds the version file changed in Git enqueues one. So does adding a project, or saving a new repository, branch, installation ID or config paths.
 
-   `ProjectSyncJob` reads Git, then polls the branch's recent workflow runs, so deploys show up without webhooks. Both jobs share one concurrency group per repository, so one repository has one writer at a time.
+   `ProjectSyncJob` reads Git, then polls the branch's recent workflow runs. It runs one at a time per repository, so one repository has one writer.
 2. The sync reads the default branch's head SHA. If it equals the last synced SHA, the sync stops there. Each GitHub read carries the last answer's ETag, so an unchanged repository answers `304`, which costs no rate limit.
 3. The sync reads the tree at that SHA and keeps the paths that match the project's `config_globs`. A matched `deploy/web.staging.yml` beside a matched `deploy/web.yml` is a destination file, not a config. Matched `.yml` and `.yaml` files count. Blobs are fetched by SHA and cached by SHA, so a blob that hasn't changed is never fetched again.
 4. The files are written to a temporary directory, and `bin/kamal-parse` parses them in a separate Ruby process. The process gets an empty environment (only Bundler's paths, `PATH`, `HOME` and `LANG`), the temporary directory as its working directory, and 60 seconds. The script calls `Kamal::Configuration`, the same code that `kamal deploy` runs, so Meridian sees what Kamal sees: ERB, aliases, destinations, roles and accessories. Kamal configs evaluate ERB, and ERB is arbitrary Ruby from the infra repository, so that Ruby must not see Meridian's credentials.
@@ -119,7 +118,7 @@ sequenceDiagram
 - **Roll back** reverts the newest release only. Meridian checks with Git that the release is still the newest commit to the version file, then writes the content the file had at that commit's parent. The message is `rollback(<service>[-<destination>]): <previous version>`, with `This reverts commit <sha>.` in the body and the same trailer.
 - **Redeploy** changes no file. It dispatches the deploy workflow (`workflow_dispatch`) with the version the version file holds at that moment.
 - **New apps, tunnel connector changes and the CI workflow** arrive as pull requests on a `meridian/<slug>-<hex>` branch. A project setting lets admins commit them straight to the default branch instead.
-- **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored). Runs arrive through `workflow_run` webhooks and the 30-second poll, and both go through `Project#track_workflow_run`. A run is matched to apps by its `head_sha`; a dispatched run is matched by its run name, `<command> <config> <destination>`. A `Deploy` moves through `pending`, `queued`, `in_progress` and `completed`.
+- **Deploy status** comes from the deploy workflow's runs (`.github/workflows/meridian-deploy.yml`; other workflows are ignored). Runs arrive through the 30-second poll, which hands each to `Project#track_workflow_run`. A run is matched to apps by its `head_sha`; a dispatched run is matched by its run name, `<command> <config> <destination>`. A `Deploy` moves through `pending`, `queued`, `in_progress` and `completed`.
 - **Per-server progress** comes from the agents, not from CI. Kamal deploys every host in one CI job, so a server is done when its agent reports the target version running there.
 
 ## Jobs
@@ -130,7 +129,6 @@ Solid Queue runs inside Puma unless `SOLID_QUEUE_IN_PUMA` is `false`. Recurring 
 | --- | --- | --- |
 | `ReconcileProjectsJob` | Every 30 seconds | Enqueues `ProjectSyncJob` for every project. |
 | `ProjectSyncJob` | Reconcile, **Sync now**, a project added or edited, a deploy or rollback that hit a change in Git | Syncs Git, then polls the deploy workflow's runs. |
-| `GitHubEventJob` | Each signed webhook | `push` syncs, `workflow_run` tracks a run. |
 | `SnapshotIngestJob` | Each accepted snapshot | Records the server and its placements, then refreshes the board. |
 | `BoardRefreshJob` | The end of a throttled second | Sends the trailing board refresh. |
 | `SilentAgentsJob` | Every minute | Refreshes the regions of servers whose agents went quiet. |

@@ -89,7 +89,6 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
   | `push SITE [VERSION]` | Builds a site from `ghcr.io/bigint/<site>` and pushes it to the lab registry. `all` pushes every site. `push umami VERSION` pushes an Umami release. |
   | `versions SITE` | Lists a site's published versions, as short commit IDs. |
   | `agents` | Builds the agent, creates a token per server and starts an agent on each, with `MERIDIAN_INTERVAL=5s` and `MERIDIAN_LOGS=1`. `MERIDIAN_URL` defaults to `http://host.docker.internal:3000`. |
-  | `webhooks owner/repo` | Forwards the repository's webhooks to the dev server with `gh webhook forward`, until you stop it. |
   | `secrets owner/repo` | Sets the repository secrets the lab's `.kamal/secrets` reads, skipping any already set. |
   | `kamal owner/repo ARGS...` | Runs Kamal against a fresh clone of the infra repository, inside the lab network. |
   | `ssh [server]` | Opens a shell on a lab server. The default is `apse1-az1-node-01`. |

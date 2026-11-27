@@ -9,7 +9,7 @@ module IconsHelper
     info: "info", ok: "circle-check", warn: "triangle-alert", bad: "circle-x",
     system: "monitor", light: "sun", dark: "moon",
     cpu: "cpu", memory: "memory-stick", load: "gauge", disk: "hard-drive", download: "arrow-down", upload: "arrow-up",
-    git_host: "folder-git-2", webhooks: "webhook", kamal: "ship", logs: "scroll-text", traffic: "arrow-left-right"
+    git_host: "folder-git-2", kamal: "ship", logs: "scroll-text", traffic: "arrow-left-right"
   }.freeze
 
   # Meridian's own mark: a globe with one meridian drawn on it.

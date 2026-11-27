@@ -1,5 +1,5 @@
 # One rollout of one app, as CI ran it. Meridian creates the row when it makes
-# the commit; GitHub's workflow_run webhooks move it along. Progress per server
+# the commit; polling GitHub's workflow runs moves it along. Progress per server
 # is read from agents, not stored: a server is done when it runs the version.
 class Deploy < ApplicationRecord
   STATUSES = %w[ pending queued in_progress completed ].freeze

@@ -173,7 +173,7 @@ Each server's row comes from its agent, never from CI. A server without an agent
 **Success** means Kamal finished, not that every server runs the version. The rows tell you that. The board's cells turn **In sync** once every container matches Git. See [Drift](/concepts/drift).
 </Note>
 
-GitHub reports each status with a [webhook](/reference/glossary#webhook), a message it sends Meridian. Meridian also checks every 30 seconds, so a missed webhook only delays the update.
+Meridian checks GitHub for each run's status every 30 seconds.
 
 ## Rate limits
 

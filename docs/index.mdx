@@ -61,7 +61,7 @@ mode: "custom"
 flowchart LR
   op([Operator]) -->|HTTPS| m[Meridian]
   m -->|"commits, pull requests"| gh[(GitHub)]
-  gh -->|webhooks| m
+  m -->|polls every 30 s| gh
   gh -->|Actions| k["kamal deploy"]
   k -->|SSH| apps
   subgraph servers ["Your servers"]

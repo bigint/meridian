@@ -60,7 +60,7 @@ The version file is restored to its content at that release commit's parent. Mer
 
 ## 14. CI is linked to apps by commit SHA
 
-A `workflow_run` webhook from the deploy workflow is matched to apps through the releases (or Meridian-made deploys) at its `head_sha`. Runs of other workflows are ignored. The workflow therefore needs no knowledge of Meridian.
+A run of the deploy workflow is matched to apps through the releases (or Meridian-made deploys) at its `head_sha`. Runs of other workflows are ignored. The workflow therefore needs no knowledge of Meridian.
 
 ## 15. App kind and source repository are Docker labels in the config
 
@@ -84,7 +84,7 @@ They live only as long as their pull request, and a pull request per preview wou
 
 ## 20. Preview runs are matched by run name
 
-The workflow names dispatched runs `<command> <config> <destination>`, because `workflow_run` webhooks don't carry inputs.
+The workflow names dispatched runs `<command> <config> <destination>`, because GitHub doesn't report a run's inputs.
 
 ## 21. A preview inherits the destination file of its app
 
@@ -197,3 +197,7 @@ A preview runs the app's image, and `kamal deploy --skip-push` checks that the i
 ## 43. Previews are out of the first release
 
 Pull request previews were removed to keep the first release small. Meridian has no Previews page or settings, handles no `pull_request` webhook, and its CI workflow only runs `kamal deploy`. A `<config>.pr-<n>.yml` is a destination like any other. This supersedes [21](#21-a-preview-inherits-the-destination-file-of-its-app) and [39](#39-previews-skip-pull-requests-from-forks) to [42](#42-a-preview-keeps-its-apps-service).
+
+## 44. Meridian polls GitHub instead of taking webhooks
+
+Meridian learns of pushes and workflow runs only by polling: every 30 seconds it reads each project's branch head and its deploy workflow's recent runs. ETags make an unchanged repository cost no rate limit. Webhooks only made updates arrive up to 30 seconds sooner, and in exchange Meridian needed an address GitHub could reach, a webhook secret, a signed endpoint and a second code path into the same sync. Meridian on a private network or behind a tunnel now needs nothing from GitHub's side.

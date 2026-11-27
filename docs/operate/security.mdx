@@ -44,7 +44,7 @@ Git holds your configs and their history. Meridian's database holds your account
 
 <Steps>
   <Step title="Keep it on a private network">
-    Run Meridian on a VPN, a tailnet or behind an internal load balancer. Agents and GitHub's webhooks need to reach it. You don't need to reach it from the public internet.
+    Run Meridian on a VPN, a tailnet or behind an internal load balancer. Agents need to reach it. GitHub doesn't: Meridian polls it. You don't need to reach it from the public internet.
   </Step>
   <Step title="If it must be public, use HTTPS">
     Keep `MERIDIAN_URL` on `https://`. Meridian then forces HTTPS, sends HSTS, marks cookies `Secure`, and answers only to that URL's host. Set a long random `SECRET_KEY_BASE`.
@@ -103,9 +103,8 @@ Git holds your configs and their history. Meridian's database holds your account
 
     Meridian refuses a snapshot over 1 MiB before it parses it.
   </Accordion>
-  <Accordion title="First run, webhooks, browser rules and the audit trail">
+  <Accordion title="First run, browser rules and the audit trail">
     - **First run.** Creating the account needs the setup code from Meridian's log. So whoever reaches a fresh install first can't take it over.
-    - **Webhooks.** Meridian checks each [webhook](/reference/glossary#webhook)'s HMAC-SHA256 signature against the webhook secret. Without a secret, it refuses every webhook.
     - **Content Security Policy.** Scripts and styles load only from Meridian's own origin, or inline with a nonce. No framing, no plugins, and forms post only to Meridian and GitHub.
     - **Host check.** In production, Meridian answers only to `MERIDIAN_URL`'s host. That blocks DNS rebinding and forged `Host` headers.
     - **One user.** Meridian has one account, made at first run. It can do everything Meridian can, so give it a long, unique password.

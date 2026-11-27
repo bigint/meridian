@@ -67,10 +67,9 @@ The lab also runs Umami, a web analytics app, with its database split across reg
 ### 1. Start Meridian
 
 ```bash
-GITHUB_TOKEN=github_pat_… GITHUB_APP_WEBHOOK_SECRET=$(cat lab/.secrets/webhook_secret) bin/dev
+GITHUB_TOKEN=github_pat_… bin/dev
 ```
 
-The webhook secret only matters if you forward webhooks in the last step. `lab/.secrets/` exists after the first `bin/lab up`, so on a first run start Meridian after the next step.
 ### 2. Start the lab
 
 ```bash
@@ -116,14 +115,6 @@ The board fills in within a few seconds.
 ### 8. Deploy
 
 Pick a version on an app's page or in the board's inspector and press **Deploy**. Meridian commits the version file, the runner picks up the workflow, and Kamal deploys to the lab servers. See [Deploy and roll back](../docs/guides/deploy.mdx).
-### 9. Forward webhooks (optional)
-
-```bash
-bin/lab webhooks owner/infra-repo
-```
-
-Meridian polls GitHub every 30 seconds, so the lab works without webhooks. For instant updates, this runs `gh webhook forward` for `push`, `workflow_run` and `pull_request`, so GitHub relays them to `http://localhost:3000/webhooks/github` without exposing the dev server. It runs until you stop it, and GitHub allows one such forward per repository. Install the extension first with `gh extension install cli/gh-webhook`.
-
 ### Boot the Umami databases
 
 Kamal's accessories aren't started by the deploy workflow. Boot the databases once, primary first, with Kamal run from inside the lab:
@@ -146,7 +137,6 @@ Then log in to Umami as `admin` with the password `umami`, and change the passwo
 | `bin/lab agents` | Builds and pushes the agent, then runs it on every server with a fresh token. |
 | `bin/lab secrets owner/infra-repo` | Sets the repository secrets the infra repository needs, only the missing ones. |
 | `bin/lab kamal owner/infra-repo ARGS…` | Runs Kamal in the runner image on the lab network, against a fresh shallow clone of the repository. Use it for what the workflow doesn't do, such as `accessory boot` or `app exec`. |
-| `bin/lab webhooks owner/infra-repo` | Forwards the repository's webhooks to the dev server until stopped. |
 | `bin/lab ssh [server]` | Opens a shell on a server, `apse1-az1-node-01` by default. |
 | `bin/lab status` | Lists the lab's containers, then what runs on each server. |
 | `bin/lab down` | Stops and removes the lab's containers. |
@@ -161,7 +151,6 @@ Then log in to Umami as `admin` with the password `umami`, and change the passwo
 | --- | --- |
 | `id_ed25519`, `id_ed25519.pub`, `authorized_keys` | The SSH key Kamal uses to reach the servers |
 | `registry_password`, `htpasswd` | The registry user `lab`'s password |
-| `webhook_secret` | The secret for forwarded webhooks |
 | `umami_postgres_password`, `umami_replication_password`, `umami_app_secret` | Umami's database, replication and app secrets |
 | `cloudflare_tunnel_token` | Not generated. Put the tunnel's token here for `bin/lab kamal` to pass on. |
 

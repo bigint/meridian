@@ -14,7 +14,6 @@ class GitHost::GitHub
   class << self
     def app_id = setting(:app_id, "GITHUB_APP_ID")
     def private_key = setting(:private_key, "GITHUB_APP_PRIVATE_KEY")&.gsub("\\n", "\n")
-    def webhook_secret = setting(:webhook_secret, "GITHUB_APP_WEBHOOK_SECRET")
     def api_endpoint = ENV.fetch("GITHUB_API_URL", "https://api.github.com/")
 
     # Where people browse that API's repositories: api.github.com and
@@ -45,7 +44,7 @@ class GitHost::GitHub
     conditional("branches/#{project.default_branch}", ->(data) { data.commit.sha }) { client.branch(repo, project.default_branch, headers: it) }
   end
 
-  # The branch's latest workflow runs, newest first, shaped like a workflow_run webhook's.
+  # The branch's latest workflow runs, newest first, in GitHub's workflow_run shape.
   def workflow_runs
     conditional("runs/#{project.default_branch}", ->(data) { data.workflow_runs.map { it.to_attrs.deep_stringify_keys } }) do
       client.repository_workflow_runs(repo, branch: project.default_branch, per_page: 20, headers: it)

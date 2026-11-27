@@ -57,7 +57,6 @@ ensure_secrets() {
   [ -f "$SECRETS/id_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -C meridian-lab -f "$SECRETS/id_ed25519"
   cp "$SECRETS/id_ed25519.pub" "$SECRETS/authorized_keys"
   [ -f "$SECRETS/registry_password" ] || (openssl rand -hex 16 > "$SECRETS/registry_password")
-  [ -s "$SECRETS/webhook_secret" ] || (openssl rand -hex 32 > "$SECRETS/webhook_secret")
   [ -s "$SECRETS/htpasswd" ] || docker run --rm httpd:2.4-alpine htpasswd -Bbn lab "$(cat "$SECRETS/registry_password")" > "$SECRETS/htpasswd"
   # Umami: its database password, the replica's replication password and its app secret.
   [ -s "$SECRETS/umami_postgres_password" ] || (openssl rand -hex 24 > "$SECRETS/umami_postgres_password")
@@ -120,15 +119,6 @@ case "${1:-}" in
     done
     ;;
 
-  webhooks)
-    # GitHub forwards the repository's webhooks to the dev server, which stays
-    # private. Runs until stopped; GitHub allows one such forward per repository.
-    repo="${2:?usage: bin/lab webhooks owner/infra-repo}"
-    ensure_secrets
-    exec gh webhook forward --repo="$repo" --events=push,workflow_run,pull_request \
-      --url="${MERIDIAN_URL:-http://localhost:3000}/webhooks/github" --secret="$(cat "$SECRETS/webhook_secret")"
-    ;;
-
   secrets)
     # The repository secrets the infra repo's .kamal/secrets reads. Sets only
     # those the repository lacks, so it never replaces one set elsewhere.
@@ -184,7 +174,7 @@ EOF
     ;;
 
   *)
-    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | push umami VERSION | versions SITE | agents | secrets owner/repo | kamal owner/repo ARGS... | webhooks owner/repo | ssh [server] | status | down" >&2
+    echo "usage: bin/lab up owner/repo | push SITE|all [VERSION] | push umami VERSION | versions SITE | agents | secrets owner/repo | kamal owner/repo ARGS... | ssh [server] | status | down" >&2
     exit 1
     ;;
 esac

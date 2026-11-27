@@ -3,7 +3,7 @@ module SettingsHelper
   Connection = Data.define(:icon, :name, :status, :tone, :detail, :mono)
 
   def connections
-    [ github_connection, webhooks_connection, kamal_connection ]
+    [ github_connection, kamal_connection ]
   end
 
   private
@@ -18,16 +18,6 @@ module SettingsHelper
       else
         Connection.new(icon: :git_host, name: "GitHub", status: "Not connected", tone: :bad, mono: false,
           detail: safe_join([ "Set ", env_var("GITHUB_TOKEN"), ", or ", env_var("GITHUB_APP_ID"), " and ", env_var("GITHUB_APP_PRIVATE_KEY"), "." ]))
-      end
-    end
-
-    def webhooks_connection
-      if GitHost::GitHub.webhook_secret.present?
-        Connection.new(icon: :webhooks, name: "Webhooks", status: "On", tone: :ok, mono: false,
-          detail: safe_join([ "Pushes and CI runs arrive as they happen, checked against ", env_var("GITHUB_APP_WEBHOOK_SECRET"), "." ]))
-      else
-        Connection.new(icon: :webhooks, name: "Webhooks", status: "Off", tone: :warn, mono: false,
-          detail: safe_join([ "Meridian checks GitHub every 30 seconds instead. Set ", env_var("GITHUB_APP_WEBHOOK_SECRET"), " for instant updates." ]))
       end
     end
 

@@ -1,15 +1,14 @@
 ---
 title: "Endpoints"
-description: "The five endpoints that machines call, every page you use, and why Meridian has no general API."
+description: "The four endpoints that machines call, every page you use, and why Meridian has no general API."
 icon: "route"
 ---
 
-This page lists every address Meridian answers. Five are endpoints for machines. Everything else is an HTML page that needs you to be signed in, through the session cookie.
+This page lists every address Meridian answers. Four are endpoints for machines. Everything else is an HTML page that needs you to be signed in, through the session cookie.
 
 | Endpoint | Caller | Auth |
 | --- | --- | --- |
 | `POST /agent/snapshots` | The agent | `Authorization: Bearer <agent token>` |
-| `POST /webhooks/github` | GitHub | `X-Hub-Signature-256` |
 | `GET /cable` | The agent and browsers | Agent token, or the session cookie |
 | `GET /up` | kamal-proxy and monitors | None |
 | `/jobs` | You, in a browser | The session cookie |
@@ -23,15 +22,6 @@ A snapshot: what runs on one server. The [agent](/reference/glossary#agent) send
 - A fleet token can send 120 a minute for each machine ID, and 12,000 a minute in all.
 
 See [Agent protocol](/reference/agent-protocol#snapshots) for the fields and every status code.
-
-## POST /webhooks/github
-
-Where GitHub sends [webhooks](/reference/glossary#webhook), the messages it sends when something changes. Meridian checks each one's HMAC-SHA256 signature against `GITHUB_APP_WEBHOOK_SECRET`. It queues `push` and `workflow_run` events, and answers `202`.
-
-- A bad signature, or no secret set, gets `401`.
-- A body that is not JSON gets `400`.
-
-See [GitHub App](/reference/github-app#webhook).
 
 ## GET /cable
 

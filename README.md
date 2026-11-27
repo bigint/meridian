@@ -36,7 +36,7 @@ To use it for real, create a GitHub App, deploy Meridian with Kamal (it ships it
 ```
 Operator ──▶ Meridian ──commits, PRs──▶ GitHub ──Actions──▶ kamal deploy ──SSH──▶ servers
                ▲                         │                                       │
-               └────── webhooks ─────────┘     meridian-agent (outbound only) ────┘
+               └─ polls every 30 s ──────┘     meridian-agent (outbound only) ────┘
 ```
 
 - **Board:** what needs attention first, in plain sentences; then apps × servers, with each cell's drift state: in sync, drifted, missing, stray, stale or unknown.

@@ -28,10 +28,6 @@ Rails.application.routes.draw do
   resources :tunnels, only: :index
   resources :agent_tokens, only: %i[ index create destroy ], path: "agents"
 
-  namespace :webhooks do
-    resource :github, only: :create, controller: "githubs"
-  end
-
   namespace :agent do
     resources :snapshots, only: :create
   end

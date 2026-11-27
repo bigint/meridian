@@ -42,7 +42,7 @@ To sync an infra repository, the quickest way is a personal access token:
 GITHUB_TOKEN=github_pat_… bin/dev
 ```
 
-A GitHub App works too, with `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` and `GITHUB_APP_WEBHOOK_SECRET`. See [Environment](../docs/reference/environment.mdx) and [GitHub App](../docs/reference/github-app.mdx).
+A GitHub App works too, with `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`. See [Environment](../docs/reference/environment.mdx) and [GitHub App](../docs/reference/github-app.mdx).
 
 ## Run the checks
 

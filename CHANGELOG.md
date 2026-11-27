@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- GitHub webhooks. Meridian learns of pushes and CI runs only by polling GitHub every 30 seconds, as it already did without them. `POST /webhooks/github`, `GITHUB_APP_WEBHOOK_SECRET`, the **Webhooks** row under **Settings → Connections** and `bin/lab webhooks` are gone. GitHub no longer needs to reach Meridian, so in the App's settings untick **Webhook → Active**. See decision 44.
+
 ## v0.1.2 (2026-11-27)
 
 ### Fixed

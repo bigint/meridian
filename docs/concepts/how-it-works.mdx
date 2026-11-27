@@ -17,7 +17,7 @@ Meridian never touches a server. To change what runs, it writes to Git. GitHub A
 flowchart LR
   op([Operator]) -- HTTPS --> m[Meridian]
   m -- "commits, pull requests,<br/>secret values" --> gh[(GitHub)]
-  gh -- "push and<br/>workflow_run webhooks" --> m
+  m -- "polls pushes and<br/>CI runs every 30 s" --> gh
   gh -- Actions --> k["kamal deploy"]
   k -- SSH --> s[Servers]
   a["meridian-agent<br/>on each server"] -- "snapshots and live line,<br/>outbound only" --> m
@@ -62,7 +62,7 @@ The version file holds `v41`, and the server `web-1` runs `v41`, so the board sh
     ```
   </Step>
   <Step title="Git now says v42">
-    GitHub sends Meridian a [webhook](/reference/glossary#webhook), a message that says the branch changed. Meridian records release `v42`. The server still runs `v41`, so the cell turns **drifted**.
+    Within 30 seconds, Meridian's poll sees that the branch moved. Meridian records release `v42`. The server still runs `v41`, so the cell turns **drifted**.
   </Step>
   <Step title="GitHub Actions runs Kamal">
     The [CI workflow](/reference/glossary#ci-workflow), `.github/workflows/meridian-deploy.yml`, sees that a version file changed. It runs `kamal deploy -c config/deploy.yml -d production --version v42 --skip-push`. Kamal connects to `web-1` over SSH, as it would from your laptop.
@@ -86,11 +86,11 @@ sequenceDiagram
   participant A as Agent
   You->>M: Deploy v42
   M->>G: Commit config/deploy.production.version = v42
-  G-->>M: push webhook
+  M->>G: Poll: the branch moved
   M->>G: Read the tree, record release v42
   G->>CI: Push changed *.version
   CI->>S: kamal deploy --version v42 (SSH)
-  CI-->>M: workflow_run: queued, in progress, completed
+  M->>G: Poll the run: queued, in progress, completed
   A->>M: Snapshot: v42 running
   M-->>You: Cells turn in sync
 ```
@@ -99,7 +99,7 @@ A rollback works the same way. Meridian commits the previous version, and CI dep
 
 ## Where "should run" comes from
 
-Meridian reads each infra repository through the GitHub API. This read is a sync. It runs every 30 seconds, when GitHub sends a `push` webhook, and when you press **Sync now**.
+Meridian reads each infra repository through the GitHub API. This read is a sync. It runs every 30 seconds, and when you press **Sync now**.
 
 Meridian reads each config with Kamal's own code, so it sees what `kamal deploy` would see. A config that fails to parse shows its file and line on the project's page. Its app keeps the last good parse. See [Apps and destinations](/concepts/apps-and-destinations).
 
@@ -123,7 +123,7 @@ For every app on every server, Meridian compares the agent's report with the new
 
 A commit that you asked for names you in a `Meridian-Actor:` line. Every action shows in [Activity](/guides/activity).
 
-Webhooks are optional. With them, Meridian reacts within a second or two. Without them, it finds the same changes within 30 seconds.
+GitHub never calls Meridian. Meridian polls it, and finds each change within 30 seconds.
 
 ## What Meridian never does
 
@@ -141,7 +141,7 @@ If you uninstall Meridian, Git still holds every config, version and deploy. You
 
   An agent's snapshot goes to `/agent/snapshots`. Meridian answers `202` and records it in a background job. The agent spaces its snapshots 15 seconds apart, give or take 20%. It reads Docker through a proxy that allows only `GET` requests under `/containers`. Live stats, logs and requests travel over a WebSocket to `/cable`, only while someone has the page open.
 
-  A deploy's status comes from the deploy workflow's runs. Meridian matches a run to an app by its commit SHA. It hears about runs from `workflow_run` webhooks, and it also checks the branch's runs every 30 seconds. When a snapshot changes what a page shows, Meridian refreshes open boards for that server's region, at most about once a second.
+  A deploy's status comes from the deploy workflow's runs. Meridian matches a run to an app by its commit SHA. It checks the branch's runs every 30 seconds. When a snapshot changes what a page shows, Meridian refreshes open boards for that server's region, at most about once a second.
 </Accordion>
 
 ## Related

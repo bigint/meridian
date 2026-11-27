@@ -31,18 +31,17 @@ You need:
 
         1. Open **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. For an organisation, open the organisation's **Settings**, then **Developer settings**, **GitHub Apps**.
         2. Set **Homepage URL** to your Meridian URL, such as `https://meridian.example.com`.
-        3. Set **Webhook URL** to `https://meridian.example.com/webhooks/github`.
-        4. Set **Webhook secret** to a long random string, such as the output of `openssl rand -hex 32`. Keep it for step 3, as `GITHUB_APP_WEBHOOK_SECRET`.
-        5. Give the App these repository permissions:
+        3. Under **Webhook**, untick **Active**. Meridian polls GitHub instead.
+        4. Give the App these repository permissions:
 
         <GitHubAppPermissions />
 
-        6. Create the App and note its **App ID**.
-        7. Under **Private keys**, press **Generate a private key**. GitHub downloads a `.pem` file.
-        8. Press **Install App**. Pick the infra repository.
-        9. Note the installation ID. After you install, it is the number at the end of the page's URL, such as `12345678` in `https://github.com/settings/installations/12345678`.
+        5. Create the App and note its **App ID**.
+        6. Under **Private keys**, press **Generate a private key**. GitHub downloads a `.pem` file.
+        7. Press **Install App**. Pick the infra repository.
+        8. Note the installation ID. After you install, it is the number at the end of the page's URL, such as `12345678` in `https://github.com/settings/installations/12345678`.
 
-        You now have four values: the App ID, the private key, the webhook secret and the installation ID.
+        You now have three values: the App ID, the private key and the installation ID.
       </Tab>
       <Tab title="Personal access token">
         A token acts as the person who made it, on every repository they can reach. Use it for a homelab or a trial. If you set both, Meridian uses the App.
@@ -54,16 +53,7 @@ You need:
 
            A classic token with the `repo` and `workflow` scopes also works.
 
-        3. Webhooks are optional with a token. Without them, Meridian checks GitHub every 30 seconds. To add them, open the infra repository's **Settings**, **Webhooks**, **Add webhook**, and fill in the form:
-
-           | Field | Value |
-           | --- | --- |
-           | **Payload URL** | `https://meridian.example.com/webhooks/github` |
-           | **Content type** | `application/json` |
-           | **Secret** | A long random string. It becomes `GITHUB_APP_WEBHOOK_SECRET`. |
-           | **Events** | **Pushes** and **Workflow runs** |
-
-        You now have the token, and the webhook secret if you added webhooks. Leave the installation ID blank in step 6.
+        You now have the token. Leave the installation ID blank in step 6.
       </Tab>
     </Tabs>
   </Step>
@@ -104,7 +94,6 @@ You need:
         - SECRET_KEY_BASE
         - GITHUB_APP_ID
         - GITHUB_APP_PRIVATE_KEY
-        - GITHUB_APP_WEBHOOK_SECRET
     ```
 
     | # | Key | Set it to |
@@ -121,7 +110,6 @@ You need:
       secret:
         - SECRET_KEY_BASE
         - GITHUB_TOKEN
-        - GITHUB_APP_WEBHOOK_SECRET   # only if you added webhooks
     ```
 
     The rest of the file keeps Meridian's SQLite databases on the `meridian_storage` volume. It also adds two commands, `kamal console` and `kamal logs`.
@@ -137,7 +125,6 @@ You need:
         SECRET_KEY_BASE=$MERIDIAN_SECRET_KEY_BASE
         GITHUB_APP_ID=$MERIDIAN_GITHUB_APP_ID
         GITHUB_APP_PRIVATE_KEY=$MERIDIAN_GITHUB_APP_PRIVATE_KEY
-        GITHUB_APP_WEBHOOK_SECRET=$MERIDIAN_GITHUB_APP_WEBHOOK_SECRET
         ```
 
         Set the values in your shell, or read them from a password manager:
@@ -147,24 +134,21 @@ You need:
         export MERIDIAN_SECRET_KEY_BASE=$(openssl rand -hex 64)
         export MERIDIAN_GITHUB_APP_ID=123456
         export MERIDIAN_GITHUB_APP_PRIVATE_KEY="$(cat meridian.private-key.pem)"
-        export MERIDIAN_GITHUB_APP_WEBHOOK_SECRET=...
         ```
       </Tab>
       <Tab title="Personal access token">
-        Replace the three `GITHUB_APP_*` lines in `.kamal/secrets` to match the secret list in `config/deploy.yml`:
+        Replace the two `GITHUB_APP_*` lines in `.kamal/secrets` to match the secret list in `config/deploy.yml`:
 
         ```bash .kamal/secrets
         KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
         SECRET_KEY_BASE=$MERIDIAN_SECRET_KEY_BASE
         GITHUB_TOKEN=$MERIDIAN_GITHUB_TOKEN
-        GITHUB_APP_WEBHOOK_SECRET=$MERIDIAN_GITHUB_APP_WEBHOOK_SECRET
         ```
 
         ```bash
         export KAMAL_REGISTRY_PASSWORD=...
         export MERIDIAN_SECRET_KEY_BASE=$(openssl rand -hex 64)
         export MERIDIAN_GITHUB_TOKEN=github_pat_...
-        export MERIDIAN_GITHUB_APP_WEBHOOK_SECRET=...
         ```
       </Tab>
     </Tabs>
@@ -279,7 +263,6 @@ Open **Settings**. The **Connections** card shows how Meridian reaches GitHub:
 | Connection | Expect |
 | --- | --- |
 | GitHub | **App 123456**, or **Token** with a personal access token |
-| Webhooks | **On**. **Off** means `GITHUB_APP_WEBHOOK_SECRET` is unset, and Meridian checks GitHub every 30 seconds instead. |
 | Kamal | The Kamal version Meridian parses configs with, `2.12.0` |
 
 The board's **Getting started** list ticks off three steps as you go. They are a project connected, an agent reporting and a first deploy. The list goes away when all three are done.

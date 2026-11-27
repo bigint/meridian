@@ -11,7 +11,7 @@ Meridian never edits or deletes an event. The page shows 50 at a time, newest fi
 Each event keeps:
 
 - **Action**, a dotted name such as `app.deploy`.
-- **Who**, the user who acted. Events from webhooks and scheduled jobs have no user, so they show as **Meridian**. An event from a user who no longer exists keeps their name, marked `(removed)`.
+- **Who**, the user who acted. Events from scheduled jobs have no user, so they show as **Meridian**. An event from a user who no longer exists keeps their name, marked `(removed)`.
 - **Summary**, the sentence the page shows, such as `Deployed web · production to 3f2a9c1e`.
 - **Details**, such as the commit, the version, the pull request URL or the files changed. The page links the commit and the pull request.
 
@@ -78,7 +78,7 @@ The page records the event before it streams anything. The logs and traffic chan
 These record no event:
 
 - Signing in and out.
-- Syncs, whether from a webhook, the 30-second poll or **Sync now**. The project page shows when it last synced and any parse errors.
+- Syncs, whether from the 30-second poll or **Sync now**. The project page shows when it last synced and any parse errors.
 - Deploy progress. The app's page shows each deploy's CI status, from `pending` to `completed`.
 - Snapshots and live stats.
 

@@ -36,7 +36,7 @@ RUN npx --yes "mint@${MINT_VERSION}" export --output /tmp/site.zip && \
     mkdir /site && unzip -q /tmp/site.zip -d /site && \
     rm -rf /site/serve.js "/site/Start Docs.command" "/site/Start Docs.bat" /site/README.md /site/nginx.conf
 
-FROM docker.io/nginxinc/nginx-unprivileged:1.30-alpine
+FROM docker.io/nginxinc/nginx-unprivileged:1.31-alpine
 # Kamal only boots images labelled with their service, and Meridian's deploys
 # use images built here, not by Kamal's own builder.
 LABEL service="meridian-docs"

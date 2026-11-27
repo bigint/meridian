@@ -33,7 +33,7 @@
     font-size: var(--text-s);
     color: var(--color-ink);
 
-    &:is(a):hover { background: var(--color-surface); color: var(--color-ink); }
+    &:is(a):hover { background: var(--color-surface); }
     &[aria-current="true"] { border-color: var(--color-accent); background: var(--color-accent-soft); }
   }
   .chip__symbol { font-weight: 700; }
@@ -81,13 +81,11 @@
     font-weight: 600;
 
     &[data-tone="0"] { background: var(--color-accent-soft); color: var(--color-accent-strong); }
-    &[data-tone="1"] { background: var(--color-info-soft); color: var(--color-info); }
-    &[data-tone="2"] { background: var(--color-warn-soft); color: var(--color-warn); }
+    &[data-tone="1"], &[data-state="stray"] { background: var(--color-info-soft); color: var(--color-info); }
+    &[data-tone="2"], &[data-state="drifted"] { background: var(--color-warn-soft); color: var(--color-warn); }
     &[data-tone="3"] { background: var(--color-ok-soft); color: var(--color-ok); }
     &[data-tone="4"], &[data-state="stale"] { background: var(--color-mute-soft); color: var(--color-mute); }
     &[data-state="missing"] { background: var(--color-bad-soft); color: var(--color-bad); }
-    &[data-state="drifted"] { background: var(--color-warn-soft); color: var(--color-warn); }
-    &[data-state="stray"] { background: var(--color-info-soft); color: var(--color-info); }
   }
   .avatar--small { inline-size: 1.5rem; block-size: 1.5rem; font-size: 0.625rem; }
 }

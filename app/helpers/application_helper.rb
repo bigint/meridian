@@ -119,7 +119,7 @@ module ApplicationHelper
     end
   end
 
-  ALERT_ICONS = { ok: :ok, warn: :warn, bad: :bad }.freeze
+  ALERT_ICONS = { warn: :warn, bad: :bad }.freeze
 
   # A message in the flow of the page. Errors are announced at once; the
   # rest politely.

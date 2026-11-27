@@ -26,6 +26,16 @@ function formatRate(bytes) {
 const percent = value => `${value.toFixed(1)}%`
 const share = (part, whole) => whole > 0 ? (part / whole) * 100 : null
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`
+const ofCores = host => host.cores ? `of ${plural(host.cores, "core")}` : ""
+
+// Memory and disk: bytes used out of a total.
+const bytesUsed = (used, total) => ({
+  value: host => host[used] ?? null,
+  capacity: host => host[total],
+  share: host => share(host[used], host[total]),
+  format: formatBytes,
+  caption: host => host[total] ? `of ${formatBytes(host[total])}` : ""
+})
 
 // How each host tile reads a frame. value is a number or null; capacity is
 // the most the value can be, used to keep the sparkline from exaggerating noise;
@@ -33,33 +43,23 @@ const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`
 const METRICS = {
   cpu: {
     value: host => share(host.cpu_cores, host.cores),
-    share: null, // the value already is one
     capacity: () => 100,
+    share: null, // the value already is one
     format: percent,
-    caption: host => host.cores ? `of ${plural(host.cores, "core")}` : "",
+    caption: ofCores
   },
-  memory: {
-    value: host => host.memory_used ?? null,
-    capacity: host => host.memory_total,
-    format: formatBytes,
-    caption: host => host.memory_total ? `of ${formatBytes(host.memory_total)}` : "",
-    share: host => share(host.memory_used, host.memory_total),
-  },
+  memory: bytesUsed("memory_used", "memory_total"),
   load: {
     value: host => host.load1 ?? null,
     capacity: host => host.cores,
-    format: value => value.toFixed(2),
-    caption: host => host.cores ? `of ${plural(host.cores, "core")}` : "",
     share: host => share(host.load1, host.cores),
+    format: value => value.toFixed(2),
+    caption: ofCores
   },
-  disk: {
-    value: host => host.disk_used ?? null,
-    capacity: host => host.disk_total,
-    format: formatBytes,
-    caption: host => host.disk_total ? `of ${formatBytes(host.disk_total)}` : "",
-    share: host => share(host.disk_used, host.disk_total),
-  },
+  disk: bytesUsed("disk_used", "disk_total")
 }
+
+const STATUS = { connecting: "Connecting…", live: "Live", paused: "Paused, the agent stopped sending" }
 
 function level(percentage) {
   if (percentage == null) return null
@@ -110,11 +110,7 @@ export default class extends Controller {
   async #subscribe() {
     const subscription = await cable.subscribeTo(
       { channel: "ServerStatsChannel", server_id: this.serverIdValue },
-      {
-        received: frame => this.#receive(frame),
-        connected: () => this.stripTarget.toggleAttribute("data-subscribed", true),
-        disconnected: () => this.stripTarget.toggleAttribute("data-subscribed", false)
-      }
+      { received: frame => this.#receive(frame) }
     )
     if (this.closed) subscription.unsubscribe()
     else this.subscription = subscription
@@ -136,10 +132,9 @@ export default class extends Controller {
   #drawStatus() {
     const now = performance.now()
     const state = this.lastFrameAt == null ? "connecting" : now - this.lastFrameAt > PAUSED_AFTER ? "paused" : "live"
-    const labels = { connecting: "Connecting…", live: "Live", paused: "Paused, the agent stopped sending" }
 
     this.stripTarget.dataset.state = state
-    if (this.statusTarget.textContent !== labels[state]) this.statusTarget.textContent = labels[state]
+    if (this.statusTarget.textContent !== STATUS[state]) this.statusTarget.textContent = STATUS[state]
     this.noFramesTarget.hidden = !(this.lastFrameAt == null && now - this.startedAt > HINT_AFTER)
     this.noHostTarget.hidden = !(this.latest && !this.latest.host)
   }

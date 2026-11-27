@@ -37,7 +37,7 @@
 
   /* Forms: every input looks right without a class. */
   input:where(:not([type=checkbox], [type=radio], [type=submit], [type=button], [type=hidden], [type=range])),
-  select, textarea {
+  select {
     display: block;
     inline-size: 100%;
     max-inline-size: 28rem;
@@ -129,7 +129,6 @@
 
     @starting-style { select:not([multiple], [size])::picker(select) { opacity: 0; } }
   }
-  textarea { block-size: auto; min-block-size: 8rem; max-inline-size: 42rem; padding-block: 0.5rem; font-family: var(--font-mono); font-size: var(--text-s); }
   input[type=checkbox], input[type=radio] { inline-size: 1rem; block-size: 1rem; accent-color: var(--color-accent); }
   label { cursor: default; }
 

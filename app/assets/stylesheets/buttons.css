@@ -19,18 +19,18 @@
 
     svg { inline-size: 1rem; block-size: 1rem; }
 
-    &:hover { background: var(--color-raised); color: var(--color-ink); }
-    &:disabled, &[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+    &:hover { background: var(--color-raised); }
+    &:disabled { opacity: 0.5; pointer-events: none; }
   }
 
   .btn--primary {
     border-color: transparent;
     background: var(--color-accent);
     color: var(--color-accent-ink);
-    &:hover { background: var(--color-accent-strong); color: var(--color-accent-ink); }
+    &:hover { background: var(--color-accent-strong); }
   }
 
-  .btn--danger { color: var(--color-bad); &:hover { background: var(--color-bad-soft); color: var(--color-bad); } }
+  .btn--danger { color: var(--color-bad); &:hover { background: var(--color-bad-soft); } }
   .btn--plain { border-color: transparent; background: none; color: var(--color-ink-muted); &:hover { color: var(--color-ink); } }
   .btn--plain.btn--danger { color: var(--color-ink-muted); &:hover { background: var(--color-bad-soft); color: var(--color-bad); } }
   .btn--icon { inline-size: 2rem; padding: 0; }

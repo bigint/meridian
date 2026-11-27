@@ -68,8 +68,7 @@
     color: var(--color-ink-muted);
   }
 
-  .sidebar__link {
-    position: relative;
+  .sidebar__link, .sidebar__toggle {
     display: flex;
     align-items: center;
     gap: var(--space);
@@ -81,11 +80,16 @@
     svg { inline-size: 1.125rem; block-size: 1.125rem; }
 
     &:hover { background: var(--color-raised); color: var(--color-ink); }
+  }
+
+  .sidebar__link {
+    position: relative;
+
     &[aria-current="page"] { background: var(--color-accent-soft); color: var(--color-accent); font-weight: 500; }
   }
 
   /* Names are on screen, so no tooltips; the collapsed rail turns them on. */
-  .sidebar :is(.sidebar__brand, .sidebar__link, .sidebar__toggle) { --tooltip: off; }
+  .sidebar__brand, .sidebar__link, .sidebar__toggle { --tooltip: off; }
 
   .sidebar__label { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -101,21 +105,13 @@
 
   .sidebar__foot { margin-block-start: auto; display: flex; flex-direction: column; gap: var(--space-xs); padding-block-start: var(--space); }
 
+  /* Only the wide sidebar collapses; the phone drawer has no rail. */
   .sidebar__toggle {
     display: none;
-    align-items: center;
-    gap: var(--space);
-    padding: var(--space-s) 0.625rem;
     border: 0;
-    border-radius: var(--radius-large);
     background: none;
-    color: var(--color-ink-muted);
-    font-size: var(--text-m);
     text-align: start;
     cursor: pointer;
-
-    &:hover { background: var(--color-raised); color: var(--color-ink); }
-    svg { inline-size: 1.125rem; block-size: 1.125rem; }
 
     @media (min-width: 64rem) { display: flex; }
   }
@@ -126,7 +122,7 @@
       .sidebar__inner { align-items: center; }
       .sidebar__brand { padding-inline: 0; }
       .sidebar__link, .sidebar__toggle { justify-content: center; inline-size: 2.5rem; block-size: 2.5rem; padding: 0; }
-      .sidebar :is(.sidebar__brand, .sidebar__link, .sidebar__toggle) { --tooltip: on; --tooltip-side: right; }
+      .sidebar__brand, .sidebar__link, .sidebar__toggle { --tooltip: on; --tooltip-side: right; }
       .sidebar__label, .sidebar__heading, .sidebar__brand-name {
         position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
       }
@@ -152,7 +148,6 @@
 
     @media (min-width: 64rem) { padding-inline: var(--space-xl); }
   }
-
 
   .search { position: relative; inline-size: 100%; max-inline-size: 24rem; }
   .search__icon { position: absolute; inset-inline-start: 0.625rem; inset-block-start: 50%; translate: 0 -50%; inline-size: 1rem; block-size: 1rem; color: var(--color-ink-faint); pointer-events: none; }

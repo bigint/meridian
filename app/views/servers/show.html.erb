@@ -65,8 +65,8 @@
           <tbody>
             <% @placements.each do |placement| %>
               <tr <%= tag.attributes(data: { live_container: (placement.container_id if placement.running?) }) %>>
-                <td class="container-cell">
-                  <div class="container-cell__title">
+                <td>
+                  <div>
                     <%= safe_join([ (placement.app ? link_to(placement.service, placement.app) : placement.service), (badge(placement.kind) unless placement.kind == "app"), (tag.span("· #{placement.role}", class: "txt-faint") if placement.role) ].compact, " ") %>
                   </div>
                   <div class="container-cell__name mono txt-small txt-faint" data-tooltip="<%= placement.name %>"><%= placement.name %></div>

@@ -16,8 +16,8 @@
   .logs__filter { inline-size: 14rem; block-size: 1.75rem; font-size: var(--text-s); }
   .logs .btn[aria-pressed="true"] { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); background: var(--color-accent-soft); color: var(--color-accent-strong); }
 
-  /* One colour per container, light and dark: set on whatever carries data-tone. */
-  .logs [data-tone] { --tone: var(--color-accent); }
+  /* One colour per container, light and dark: set on whatever carries data-tone
+     (LogsHelper::TONES of them). */
   .logs [data-tone="0"] { --tone: light-dark(#4338ca, #818cf8); }
   .logs [data-tone="1"] { --tone: light-dark(#0f766e, #2dd4bf); }
   .logs [data-tone="2"] { --tone: light-dark(#b45309, #fbbf24); }
@@ -47,7 +47,6 @@
     display: grid; grid-template-columns: 12ch minmax(0, 1fr); column-gap: var(--space);
     padding: 0 var(--space); border-inline-start: 2px solid transparent;
     &:hover { background: var(--color-surface); }
-    &[hidden] { display: none; }
     &[data-stream="err"] { border-inline-start-color: var(--color-bad); }
   }
   .logs[data-multi] .logs__line { grid-template-columns: 12ch var(--source-width, 8ch) minmax(0, 1fr); }
@@ -58,8 +57,8 @@
   .logs__text mark { border-radius: 2px; background: light-dark(#fde68a, rgb(251 191 36 / 0.35)); color: inherit; }
 
   /* What the viewer says itself: lines skipped, a container that stopped, logs that are off. */
-  .logs__line--notice .logs__text { font-family: var(--font-sans); font-size: var(--text-s); font-style: italic; color: var(--color-ink-muted); }
-  .logs__line--notice[data-notice="off"] .logs__text, .logs__line--notice[data-notice="refused"] .logs__text { color: var(--color-warn); }
+  .logs__line[data-notice] .logs__text { font-family: var(--font-sans); font-size: var(--text-s); font-style: italic; color: var(--color-ink-muted); }
+  .logs__line:is([data-notice="off"], [data-notice="refused"]) .logs__text { color: var(--color-warn); }
 
   /* Structured (JSON) lines: level, message, then quieter key=value fields.
      A click opens the whole object under the line. */
@@ -88,9 +87,7 @@
 
   .logs__jump {
     position: absolute; inset-block-end: var(--space-m); inset-inline: 0; inline-size: fit-content; margin-inline: auto;
-    border-color: transparent; background: var(--color-accent); color: var(--color-accent-ink); box-shadow: var(--shadow-float);
-    &:hover { background: var(--color-accent-strong); color: var(--color-accent-ink); }
-    &[hidden] { display: none; }
+    box-shadow: var(--shadow-float);
   }
 
   /* ANSI colours (SGR 30-37 and 90-97). Black and white follow the ink, so they stay readable on either theme. */

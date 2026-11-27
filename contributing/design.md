@@ -31,14 +31,14 @@ The styles live in `app/assets/stylesheets/`, served as they are by Propshaft (`
 | `layout.css` | The shell (sidebar, rail, top bar), page header, sections, the main and side panel split, the sign-in card |
 | `buttons.css` | `.btn` and its variants |
 | `badges.css` | `.badge`, `.chip`, `.cell` (a version on a server), `.avatar` |
-| `blocks.css` | Cards, tables, rows, facts, tabs, segmented controls, empty states, alerts, code blocks, steps, walkthroughs, copyable values, fields, filters, menus, search results, pagination, tooltips |
+| `blocks.css` | Cards, tables, rows, facts, disclosures, segmented controls, empty states, alerts, code blocks, steps, walkthroughs, copyable values, fields, filters, menus, the theme switch, search results, pagination, tooltips |
 | `board.css` | The board's matrix |
 | `map.css` | The world map |
 | `live.css` | A server's live host tiles with their sparklines, the per-container meters, and the live status pill |
 | `logs.css` | The log viewer: toolbar, one colour per container, and the scroller of lines |
-| `utilities.css` | A short list of single-purpose classes (`flex`, `gap`, `txt-muted`, `mono`, `sr-only`) |
+| `utilities.css` | A short list of single-purpose classes (`flex`, `gap-s`, `txt-muted`, `mono`, `sr-only`) |
 
-Class names follow a light BEM: a block (`.sidebar`), its parts (`.sidebar__link`) and variants (`.btn--primary`). State lives in attributes the markup needs anyway: `aria-current`, `aria-selected`, `data-state`, `data-collapsed`, `[open]`. For example, `live_stats_controller.js` sets `data-state` on `.live` to `connecting`, `live` or `paused`, and `logs_controller.js` sets it on `.logs`. Modern CSS does the rest: nesting, `:has()`, `color-mix()`, logical properties. Inputs, selects and tables are styled by element, so forms need no classes.
+Class names follow a light BEM: a block (`.sidebar`), its parts (`.sidebar__link`) and variants (`.btn--primary`). State lives in attributes the markup needs anyway: `aria-current`, `data-state`, `data-collapsed`, `[open]`. For example, `live_stats_controller.js` sets `data-state` on `.live` to `connecting`, `live` or `paused`, and `logs_controller.js` sets it on `.logs`. Modern CSS does the rest: nesting, `:has()`, `color-mix()`, logical properties. Inputs, selects and tables are styled by element, so forms need no classes.
 
 > **Warning:** Never use an inline `style` attribute. The Content Security Policy blocks it.
 
@@ -57,14 +57,14 @@ Class names follow a light BEM: a block (`.sidebar`), its parts (`.sidebar__link
 | `canvas`, `surface`, `raised` | Page background, quiet panels and table heads, hover |
 | `ink`, `ink-muted`, `ink-faint` | Text, secondary text, placeholders |
 | `line`, `line-strong` | Borders and dividers |
-| `accent`, `accent-strong`, `accent-soft`, `accent-ink` | Indigo: primary buttons, focus, current navigation, the selected row, links |
+| `accent`, `accent-strong`, `accent-soft`, `accent-ink` | Indigo: primary buttons, focus, current navigation, links |
 | `ok`, `warn`, `bad` and `info`, each with `-soft` and `-line`, and `mute` with `mute-soft` | Drift states, health, alerts and badges |
 
 Each token is a custom property named `--color-<token>`. Neutrals are zinc. Type is the system sans stack at 13px (`--text`), with `ui-monospace` for technical values. Corners are 4, 6 and 8px (`--radius-small`, `--radius`, `--radius-large`).
 
 ## Layout
 
-- **Sidebar** (`layouts/_sidebar`): the main places, then Manage (Projects, Agents, Secrets), then Settings and Jobs. The Board carries the number of things that need attention. One toggle collapses it to an icon rail and back. The choice is a cookie, so the server renders the right width on every page. `sidebar_controller.js` only flips `data-collapsed` on `.shell` and the toggle's label.
+- **Sidebar** (`layouts/_sidebar`): the main places, then Manage (Projects, Agents, Tunnels, Secrets), then Settings and Jobs. The Board carries the number of things that need attention. One toggle collapses it to an icon rail and back. The choice is a cookie, so the server renders the right width on every page. `sidebar_controller.js` only flips `data-collapsed` on `.shell` and the toggle's label.
 - **Top bar** (`layouts/_topbar`): search that finds any app, server or project as you type (Enter opens the first match), and the account menu.
 - **Phones:** the sidebar is a native `popover` drawer behind a **Menu** button, so it needs no JavaScript.
 - **Main column and side panel** (`.split`): an app and a server put their content on the left and what you act on in `.panel` on the right. An app's panel ships versions, and a server's holds its facts. The Board and the Map take the full width: an app's name on the board opens its page, and a place on the map opens its server, or the board for its region (`MapsHelper#place_path`). On narrow screens the panel drops below.
@@ -73,7 +73,7 @@ Each token is a custom property named `--color-<token>`. Neutrals are zinc. Type
 
 ## Helpers and partials
 
-Small, repeated pieces are helpers in `ApplicationHelper`: `page_header`, `titled_section`, `badge`, `state_badge`, `accessory_state_badge`, `chip`, `version_cell`, `avatar`, `tabs`, `segmented`, `disclosure`, `alert_box`, `empty_state`, `copyable`, `pagination`, `field_errors`, `current_path_with`.
+Small, repeated pieces are helpers in `ApplicationHelper`: `page_header`, `titled_section`, `badge`, `state_badge`, `accessory_state_badge`, `chip`, `version_cell`, `avatar`, `segmented`, `disclosure`, `alert_box`, `empty_state`, `copyable`, `pagination`, `field_errors`, `current_path_with`.
 
 Links that change one query parameter (the board's chips and pages, Activity's pages) are built by `current_path_with` from the page's own path, never `url_for(request.query_parameters…)`, so a query string can't pick the link's host or route. A `<details>` keeps the open or closed state the person gave it when a live page morphs (`application.js`).
 
@@ -87,12 +87,12 @@ Bigger pieces are partials next to the views that use them: `boards/_matrix`, `b
 
 - Everything has visible focus: a 2px indigo outline.
 - Every input has a label, visible or `.sr-only`. Icon-only buttons have an `aria-label`.
-- Current navigation uses `aria-current`. Sections are labelled by their headings. The selected board row uses `aria-selected`.
+- Current navigation uses `aria-current`. Sections are labelled by their headings.
 - Alerts use `role="alert"` for errors and `role="status"` for everything else.
 - Animations respect `prefers-reduced-motion`.
 
 ## From basic to advanced
 
 1. **Basic.** Open Meridian and read the sentences under Needs attention. Each links to the app or server it's about. If nothing needs attention, Meridian says so.
-2. **Regular.** Move between places with the sidebar or the search box. Click an app in the grid to inspect it, deploy it or roll it back without leaving the board. The state chips filter the grid.
+2. **Regular.** Move between places with the sidebar or the search box. Click an app in the grid to open its page, where you deploy it or roll it back. The state chips filter the grid.
 3. **Advanced.** Open the filters (label, project, state, grouping), switch between apps × servers and servers × apps, and read the map for where things run and what is moving between them.

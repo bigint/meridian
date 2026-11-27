@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Sidebar search: results appear as you type; Enter opens the first match.
+// The top bar's search: results appear as you type; Enter opens the first match.
 // Results come back late, so each one says what it answers (data-query):
 // Enter only opens a match for what the box says now, waiting for it if it
 // is still on its way, and an answer to an older query is never drawn.

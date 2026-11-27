@@ -163,7 +163,8 @@ function valueTone(key, value) {
 }
 
 // [{ text, classes }] runs for a JSON line, or null when it isn't one.
-// targets names the containers kamal-proxy sends requests to.
+// targets names the containers kamal-proxy sends requests to. What isn't
+// drawn (hidden) still answers the filter.
 function parseStructured(message, targets) {
   const text = message.trim()
   if (!text.startsWith("{") || !text.endsWith("}")) return null
@@ -171,24 +172,27 @@ function parseStructured(message, targets) {
   try { object = JSON.parse(text) } catch { return null }
   if (!object || typeof object !== "object" || Array.isArray(object)) return null
 
+  const present = key => object[key] !== "" && object[key] !== null
+  const scalar = key => typeof object[key] === "string" || typeof object[key] === "number"
+  const fields = keys => keys.map(key => `${key}=${shown(object[key])}`).join(" ")
+
   if (isRequest(object)) {
-    const hidden = Object.keys(object).filter(key => !REQUEST_DRAWN.includes(key) && object[key] !== "" && object[key] !== null)
-      .map(key => `${key}=${shown(object[key])}`).join(" ")
+    const hidden = fields(Object.keys(object).filter(key => !REQUEST_DRAWN.includes(key) && present(key)))
     return { segments: requestSegments(object, targets), hidden, pretty: JSON.stringify(object, null, 2) }
   }
 
-  const pick = keys => { const key = keys.find(key => typeof object[key] === "string" || typeof object[key] === "number"); return key && [ key, object[key] ] }
-  const level = pick(LEVEL_KEYS), said = pick(MESSAGE_KEYS)
-  const skip = new Set([ level?.[0], said?.[0], ...TIME_KEYS.filter(key => typeof object[key] === "string" || typeof object[key] === "number") ])
+  const level = LEVEL_KEYS.find(scalar), said = MESSAGE_KEYS.find(scalar)
+  const skip = new Set([ level, said, ...TIME_KEYS.filter(scalar) ])
 
   const segments = []
   if (level) {
-    const name = typeof level[1] === "number" ? (NUMERIC_LEVELS[level[1]] ?? String(level[1])) : level[1]
+    const value = object[level]
+    const name = typeof value === "number" ? (NUMERIC_LEVELS[value] ?? String(value)) : value
     segments.push({ text: name.toUpperCase(), classes: [ "json-level", `json-level--${levelTone(name)}` ] })
   }
-  if (said) segments.push({ text: (segments.length ? " " : "") + String(said[1]), classes: [ "json-message" ] })
+  if (said) segments.push({ text: (segments.length ? " " : "") + String(object[said]), classes: [ "json-message" ] })
 
-  const keys = Object.keys(object).filter(key => !skip.has(key) && object[key] !== "" && object[key] !== null)
+  const keys = Object.keys(object).filter(key => !skip.has(key) && present(key))
   const rank = key => FIRST_KEYS.includes(key) ? FIRST_KEYS.indexOf(key) : FIRST_KEYS.length
   keys.sort((a, b) => rank(a) - rank(b))
   for (const key of keys.slice(0, INLINE_FIELDS)) {
@@ -201,9 +205,7 @@ function parseStructured(message, targets) {
   if (rest.length) segments.push({ text: `  +${rest.length} more`, classes: [ "json-more" ] })
   if (!segments.length) return null
 
-  // What isn't drawn still answers the filter.
-  const hidden = rest.map(key => `${key}=${shown(object[key])}`).join(" ")
-  return { segments, hidden, pretty: JSON.stringify(object, null, 2) }
+  return { segments, hidden: fields(rest), pretty: JSON.stringify(object, null, 2) }
 }
 
 // Docker's RFC3339Nano as a sortable number: milliseconds, plus the digits
@@ -270,6 +272,16 @@ function drawText(container, segments, ranges) {
 }
 
 const plural = (count, word) => `${count.toLocaleString("en-US")} ${word}${count === 1 ? "" : "s"}`
+
+const tag = (name, className, text = "") => Object.assign(document.createElement(name), { className, textContent: text })
+
+const STATUS = {
+  rejected: "Stopped: reload the page to keep reading",
+  connecting: "Connecting…",
+  live: "Live",
+  waiting: "Waiting for new lines",
+  unavailable: "Not streaming"
+}
 
 // One or several containers' logs, or an app's traffic. Subscribes to the
 // channel it is given (LogsChannel or TrafficChannel) through Turbo's own
@@ -408,22 +420,22 @@ export default class extends Controller {
     this.queue = []
     this.queued = 0
 
-    let shown = 0
-    for (const { source, batch } of batches) shown += this.#apply(source, batch)
+    let visible = 0
+    for (const { source, batch } of batches) visible += this.#apply(source, batch)
 
     const excess = this.lines.length - MAX_LINES
     if (excess > 0) for (const record of this.lines.splice(0, excess)) record.element.remove()
 
     if (this.follow) this.#toBottom()
-    else if (shown) { this.unseen += shown; this.#drawJump() }
+    else if (visible) { this.unseen += visible; this.#drawJump() }
     this.#drawEmpty()
     this.#drawStatus()
   }
 
   // Returns how many rows it added that are not filtered out.
   #apply(source, batch) {
-    let shown = 0
-    const add = record => { if (this.#insert(record)) shown++ }
+    let visible = 0
+    const add = record => { if (this.#insert(record)) visible++ }
 
     if (batch.off && !source.off) {
       source.off = true
@@ -444,7 +456,7 @@ export default class extends Controller {
       source.ended = true
       add(this.#notice(source, "ended", "Container stopped", lines.at(-1)?.key))
     }
-    return shown
+    return visible
   }
 
   // The batch's lines as records. A backlog is history: it can arrive after
@@ -461,7 +473,7 @@ export default class extends Controller {
       const key = parseTime(raw.t) ?? this.#now()
       const structured = parseStructured(raw.m, this.targetsValue)
       const segments = structured?.segments ?? parseAnsi(raw.m)
-      records.push(this.#record({ kind: "line", source, key, stream: raw.s, title: raw.t, segments, pretty: structured?.pretty, hidden: structured?.hidden }))
+      records.push(this.#record({ source, key, stream: raw.s, title: raw.t, segments, pretty: structured?.pretty, hidden: structured?.hidden }))
     }
     return records
   }
@@ -475,7 +487,7 @@ export default class extends Controller {
   }
 
   #notice(source, notice, text, key = this.#now()) {
-    return this.#record({ kind: "notice", notice, source, key, stream: null, segments: [ { text, classes: NO_CLASSES } ] })
+    return this.#record({ notice, source, key, segments: [ { text, classes: NO_CLASSES } ] })
   }
 
   // Arrival time, but never before the newest line: what the viewer says goes at the end.
@@ -487,7 +499,7 @@ export default class extends Controller {
     const plain = fields.segments.map(segment => segment.text).join("")
     // Ranges past the drawn text (in hidden fields) match the filter but draw no mark.
     const lower = lowerOf(fields.hidden ? `${plain}\n${fields.hidden}` : plain)
-    return { ...fields, plain, lower, painted: false, marked: false, element: null, text: null }
+    return { ...fields, lower, painted: false, marked: false, element: null, text: null }
   }
 
   // Into its place by timestamp, searching from the end. Returns whether it is shown.
@@ -502,28 +514,21 @@ export default class extends Controller {
   }
 
   #build(record) {
-    const row = document.createElement("div")
-    row.classList.add("logs__line")
-    if (record.kind === "notice") { row.classList.add("logs__line--notice"); row.dataset.notice = record.notice }
+    const row = tag("div", "logs__line")
+    if (record.notice) row.dataset.notice = record.notice
     if (record.stream) row.dataset.stream = record.stream
 
-    const time = document.createElement("time")
-    time.classList.add("logs__time")
-    time.textContent = clock(record.key)
+    const time = tag("time", "logs__time", clock(record.key))
     if (record.title) time.dataset.tooltip = record.title
     row.append(time)
 
     if (this.sources.size > 1) {
-      const chip = document.createElement("span")
-      chip.classList.add("logs__source")
-      chip.dataset.tone = record.source.tone
-      chip.textContent = record.source.label
-      chip.dataset.tooltip = record.source.title
+      const chip = tag("span", "logs__source", record.source.label)
+      Object.assign(chip.dataset, { tone: record.source.tone, tooltip: record.source.title })
       row.append(chip)
     }
 
-    record.text = document.createElement("span")
-    record.text.classList.add("logs__text")
+    record.text = tag("span", "logs__text")
     record.element = row
     row.append(record.text)
 
@@ -545,9 +550,7 @@ export default class extends Controller {
       record.expanded.remove()
       record.expanded = null
     } else {
-      record.expanded = document.createElement("pre")
-      record.expanded.classList.add("logs__json")
-      record.expanded.textContent = record.pretty
+      record.expanded = tag("pre", "logs__json", record.pretty)
       row.append(record.expanded)
       if (this.follow) this.#setFollow(false) // reading one line: don't scroll it away
     }
@@ -614,9 +617,8 @@ export default class extends Controller {
       : sources.every(source => source.off || source.refused) ? "unavailable"
       : performance.now() - this.lastActivityAt > WAITING_AFTER ? "waiting"
       : "live"
-    const labels = { rejected: "Stopped: reload the page to keep reading", connecting: "Connecting…", live: "Live", waiting: "Waiting for new lines", unavailable: "Not streaming" }
 
     this.element.dataset.state = state === "rejected" ? "unavailable" : state
-    if (this.statusTarget.textContent !== labels[state]) this.statusTarget.textContent = labels[state]
+    if (this.statusTarget.textContent !== STATUS[state]) this.statusTarget.textContent = STATUS[state]
   }
 }

@@ -8,7 +8,6 @@
   .items-center { align-items: center; }
   .gap-xs { gap: var(--space-xs); }
   .gap-s { gap: var(--space-s); }
-  .gap { gap: var(--space); }
   .gap-l { gap: var(--space-l); }
   .stack { display: flex; flex-direction: column; gap: var(--space); }
   .stack-l { display: flex; flex-direction: column; gap: var(--space-l); }

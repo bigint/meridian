@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.4 (2026-11-27)
+
+### Changed
+
+- An app's traffic page shows requests from the moment you open it. It used to start with kamal-proxy's last 200 lines on each server, so it opened on old requests, and how far back they went depended on every other app on that server.
+- A request's query string shows as `?…` on the traffic page, since it is often a long cache buster. Click the line to read it; **Filter lines** still searches it.
+
+### Fixed
+
+- A server's chip no longer stretches into a tall oval when a long log or traffic line wraps.
+
 ## v0.1.3 (2026-11-27)
 
 ### Added

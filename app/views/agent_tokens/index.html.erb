@@ -11,7 +11,7 @@
 <div class="split">
   <%= titled_section "Install", class: "split__main" do %>
     <p class="txt-muted">Add the agent to a Kamal config that reaches every host, as two accessories. It only makes outbound HTTPS requests, and reads Docker through a proxy that allows listing and inspecting containers, nothing else. More in <code>docs/guides/agent.mdx</code>.</p>
-    <%= render "shared/code_block", code: render("agent_tokens/accessory", meridian_url: request.base_url), label: "config/deploy.yml" %>
+    <%= render "shared/code_block", code: Templates.render("kamal/agent-accessories.yml", meridian_url: request.base_url), label: "config/deploy.yml" %>
   <% end %>
 
   <div class="split__aside">

@@ -140,6 +140,15 @@ module ApplicationHelper
     end
   end
 
+  # Code for a code block, with syntax highlighting. The language comes from the
+  # label's file name unless given, and unknown files stay plain text.
+  def highlighted_code(code, label:, language: nil)
+    lexer = language ? Rouge::Lexer.find(language) : Rouge::Lexer.guess_by_filename(label)
+    raise ArgumentError, "unknown language: #{language}" unless lexer
+
+    Rouge::Formatters::HTML.new.format(lexer.lex(code.to_s)).html_safe # Rouge escapes every token
+  end
+
   # A short value to paste somewhere else, with a copy button beside it.
   def copyable(text)
     tag.span class: "copyable", data: { controller: "clipboard" } do

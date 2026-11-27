@@ -88,7 +88,16 @@
     &:hover { background: var(--color-raised); color: var(--color-ink); }
     .code-block__done { display: none; }
     &[data-copied] { color: var(--color-ok); .code-block__idle { display: none; } .code-block__done { display: block; } } }
-  .code-block pre { margin: 0; padding: var(--space); overflow-x: auto; background: var(--color-canvas); font-size: var(--text-s); line-height: 1.6; }
+  .code-block pre { margin: 0; padding: var(--space); overflow-x: auto; background: var(--color-canvas); font-size: var(--text-s); line-height: 1.6;
+    /* Rouge's token classes, in the app's own colours so both themes follow. */
+    :is(.c, .c1, .cm, .ch, .cs, .cp, .cpf) { color: var(--color-ink-muted); font-style: italic; }
+    :is(.k, .kd, .kn, .kr, .kt, .na, .nt, .gh, .gu) { color: var(--color-accent); }
+    :is(.s, .s1, .s2, .sb, .sh, .se, .sx, .ss, .dl, .nv, .vg) { color: var(--color-ok); }
+    :is(.m, .mi, .mf, .mh, .il, .kc, .l) { color: var(--color-warn); }
+    :is(.nb, .nf, .nc, .bp) { color: var(--color-info); }
+    :is(.p, .pi, .o, .ow, .nl) { color: var(--color-ink-muted); }
+    :is(.gh, .gu, .gs) { font-weight: 600; }
+    .ge { font-style: italic; } }
 
   /* A short checklist that ticks itself off. */
   .steps { display: grid; gap: var(--space-s); @media (min-width: 40rem) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

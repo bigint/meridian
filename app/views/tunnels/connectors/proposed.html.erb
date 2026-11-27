@@ -9,13 +9,13 @@
     <% if @change.remove_commands.any? %>
       <%= render layout: "tunnels/step", locals: { number: 1, title: @proposal.direct ? "Stop the dropped connectors" : "Before merging, stop the dropped connectors", done: false } do %>
         <p class="walk__text"><%= @proposal.direct ? "Run this from a checkout from before the commit: Kamal no longer knows them after it." : "Once the pull request is merged, Kamal no longer knows them." %></p>
-        <%= render "shared/code_block", code: @change.remove_commands.join("\n"), label: "Terminal" %>
+        <%= render "shared/code_block", code: @change.remove_commands.join("\n"), label: "Terminal", language: "shell" %>
       <% end %>
     <% end %>
     <% if @change.boot_commands.any? %>
       <%= render layout: "tunnels/step", locals: { number: @change.remove_commands.any? ? 2 : 1, title: "After #{@proposal.direct ? "the commit" : "merging"}, start the new ones", done: false } do %>
         <p class="walk__text">With <code><%= @tunnel.secret_name %></code> in the environment.</p>
-        <%= render "shared/code_block", code: @change.boot_commands.join("\n"), label: "Terminal" %>
+        <%= render "shared/code_block", code: @change.boot_commands.join("\n"), label: "Terminal", language: "shell" %>
       <% end %>
     <% end %>
   </ol>

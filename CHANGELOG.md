@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Syntax highlighting in every code block: Kamal configs as YAML, terminal commands as shell, an app's setup instructions as Markdown. It runs on the server with Rouge, follows the light and dark themes, and **Copy** still copies plain text.
+
 ### Removed
 
 - GitHub webhooks. Meridian learns of pushes and CI runs only by polling GitHub every 30 seconds, as it already did without them. `POST /webhooks/github`, `GITHUB_APP_WEBHOOK_SECRET`, the **Webhooks** row under **Settings → Connections** and `bin/lab webhooks` are gone. GitHub no longer needs to reach Meridian, so in the App's settings untick **Webhook → Active**. See decision 44.

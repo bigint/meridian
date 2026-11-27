@@ -58,7 +58,7 @@
         <ol class="walk">
           <%= render layout: "tunnels/step", locals: { number: 5, title: "Start the connectors", done: setup.running? } do %>
             <p class="walk__text">Run this once, from a machine that can SSH to the servers, with <code><%= setup.secret_name %></code> in its environment. <code>kamal deploy</code> doesn't start accessories.</p>
-            <%= render "shared/code_block", code: setup.boot_command, label: "Terminal" %>
+            <%= render "shared/code_block", code: setup.boot_command, label: "Terminal", language: "shell" %>
           <% end %>
         </ol>
       </section>

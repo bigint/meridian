@@ -16,6 +16,6 @@
     <% end %>
   </div>
   <%= titled_section "Dockerfile for #{@draft.source_repo}" do %>
-    <%= render "shared/code_block", code: @draft.instructions, label: "Instructions" %>
+    <%= render "shared/code_block", code: @draft.instructions, label: "Instructions", language: "markdown" %>
   <% end %>
 </div>

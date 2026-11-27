@@ -5,5 +5,5 @@
       <%= icon :copy, class: "code-block__idle" %><%= icon :copied, class: "code-block__done" %><span data-clipboard-target="label">Copy</span>
     </button>
   </div>
-  <pre><code data-clipboard-target="source"><%= code %></code></pre>
+  <pre><code data-clipboard-target="source"><%= highlighted_code(code, label: label, language: local_assigns[:language]) %></code></pre>
 </div>

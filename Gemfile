@@ -43,6 +43,8 @@ gem "jwt"
 # Seals secret values with the repository public key (libsodium), as GitHub requires
 gem "rbnacl"
 
+# Highlights code blocks on the server, so pages need no highlighting script
+gem "rouge", "~> 5.1"
 
 # Jobs dashboard for admins
 gem "mission_control-jobs"

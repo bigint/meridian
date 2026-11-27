@@ -31,6 +31,10 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
   Creates every database, or brings it up to date with the newest migrations. The image runs it before the server starts. See [Upgrading](/operate/upgrading).
 </ResponseField>
 
+<ResponseField name="bin/rails test" type="task">
+  Runs the Rails tests.
+</ResponseField>
+
 ## Scripts in bin
 
 <ResponseField name="bin/setup" type="script">
@@ -45,7 +49,7 @@ kamal app exec --reuse "bin/rails meridian:setup_code"
 </ResponseField>
 
 <ResponseField name="bin/ci" type="script">
-  Runs every check a change must pass, as `config/ci.rb` lists them. They are setup, RuboCop, `bundler-audit`, the importmap audit, Brakeman, and the agent's `go vet`, `staticcheck` and `go test -race`.
+  Runs every check a change must pass, as `config/ci.rb` lists them. They are setup, RuboCop, `bundler-audit`, the importmap audit, Brakeman, the Rails tests, and the agent's `go vet`, `staticcheck` and `go test -race`.
 </ResponseField>
 
 <ResponseField name="bin/jobs" type="script">

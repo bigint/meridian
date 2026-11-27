@@ -9,7 +9,7 @@ Thank you for helping. Meridian aims to be small, clear and boring in the best w
 - **Plain CSS, partials and helpers.** No CSS framework, no component library, no build step. Styles live in `app/assets/stylesheets/`, one file per concern; reuse the helpers in `ApplicationHelper` and the existing classes before adding new ones, and never use inline `style` attributes (the CSP blocks them). See [`contributing/design.md`](contributing/design.md).
 - **Icons come from Lucide.** Add one with `bin/icons <name>` (see `contributing/design.md`); don't draw new ones.
 - **Prefer deleting code to adding it.** The only planned abstraction is the Git host adapter (`app/models/git_host.rb`).
-- **Every change keeps `bin/ci` green.**
+- **Every change keeps `bin/ci` green.** A change in behaviour comes with a test: a model test first, an integration test for a request, never a browser.
 - **Examples use `example.com` and documentation IP ranges.** Never commit real hostnames, IPs, tokens or anyone's infrastructure.
 - **When a choice is ambiguous,** pick the simplest option that keeps Git as the record, and add one short entry to [`contributing/decisions.md`](contributing/decisions.md).
 

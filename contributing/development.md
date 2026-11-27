@@ -55,6 +55,7 @@ A GitHub App works too, with `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`. See [
 | Security: gem audit | `bin/bundler-audit` |
 | Security: importmap audit | `bin/importmap audit` |
 | Security: Brakeman | `bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error` |
+| Tests: Rails | `bin/rails test` |
 | Agent: vet | `cd agent && go vet ./...` |
 | Agent: staticcheck | `cd agent && $(go env GOPATH)/bin/staticcheck ./...` |
 | Agent: test | `cd agent && go test -race ./...` |
@@ -64,6 +65,28 @@ The steps live in `config/ci.rb`. Staticcheck must be installed once:
 ```bash
 go install honnef.co/go/tools/cmd/staticcheck@latest
 ```
+
+## Run the tests
+
+```bash
+bin/rails test                              # models, requests, channels, jobs, helpers, docs
+bin/rails test test/models/drift_test.rb    # one file
+bin/rails test test/models/drift_test.rb:12 # one test
+cd agent && go test -race ./...
+```
+
+The tests are Minitest with fixtures, the Rails defaults. Most are model tests; requests are integration tests, and there are no browser tests. They run in parallel, one worker per processor, in about ten seconds.
+
+- **GitHub is the only thing faked.** WebMock blocks every outside request. `test/test_helpers/github_helper.rb` serves `test/fixtures/files/infra/` as the GitHub API, so a sync runs the real Octokit and Kamal code against it: `stub_github_repo(project)`, then `project.sync`.
+- **Kamal parses for real,** in its own process. Each test process keeps what a set of files parsed to (`test/test_helpers/kamal_parse_cache.rb`), so a setup that syncs the same repository costs one parse.
+- **Scale has a test.** `build_fleet(servers: 500, apps: 200)` in `test/test_helpers/fleet_helper.rb` inserts a fleet with believable drift, and `test/integration/board_performance_test.rb` checks that the board runs the same number of queries for it as for 40 servers.
+- **Secret values have a test.** `test/integration/secrets_test.rb` checks that a value is never stored, logged, enqueued or broadcast.
+
+`test/docs/docs_test.rb` keeps this site in step with the code:
+
+- Every page in `docs/docs.json` has an `.mdx` file, and every `.mdx` file outside `docs/snippets/` is in `docs.json`.
+- Every environment variable that `app/`, `config/`, `lib/`, `bin/` or `db/` reads, and every one the agent reads, appears on [Environment](../docs/reference/environment.mdx).
+- `CHANGELOG.md` renders as one `<Update>` per release.
 
 ## Work on the docs
 
@@ -75,7 +98,7 @@ bin/docs check        # what CI checks: validate, broken links, accessibility
 bin/docs changelog    # write docs/changelog.mdx from CHANGELOG.md (bin/docs does this anyway)
 ```
 
-- **Add a page.** Create the `.mdx` file with `title`, `description` and `icon` in its frontmatter, then add its path to `docs/docs.json`.
+- **Add a page.** Create the `.mdx` file with `title`, `description` and `icon` in its frontmatter, then add its path to `docs/docs.json`. The docs test fails until both exist.
 - **Change the changelog.** Edit `CHANGELOG.md`, never `docs/changelog.mdx`. `script/docs_changelog.rb` turns each `## ` release into an `<Update>` and escapes what MDX would read as code. `bin/docs` writes the page before every preview and check, and git ignores it, so only `CHANGELOG.md` is committed.
 - **Link between pages** with site paths such as `/guides/deploy`, not file names.
 
@@ -105,7 +128,7 @@ Meridian aims to be small, clear and boring in the best way. The rules are in [`
 - **Plain CSS, partials and helpers.** No CSS framework, no component library, no build step. Reuse the helpers and classes described in [Design](design.md) before adding new ones, and never use inline `style` attributes.
 - **Icons come from Lucide.** Add one with `bin/icons <name>`. Don't draw new ones.
 - **Prefer deleting code to adding it.** The only planned abstraction is the Git host adapter, `app/models/git_host.rb`.
-- **Every change keeps `bin/ci` green.**
+- **Every change keeps `bin/ci` green.** A change in behaviour comes with a test: a model test first, an integration test for a request, never a browser.
 - **Examples use `example.com` and documentation IP ranges.** Never commit real hostnames, IPs, tokens or anyone's infrastructure.
 - **When a choice is ambiguous,** pick the simplest option that keeps Git as the record, and add one short entry to [Decisions](decisions.md).
 

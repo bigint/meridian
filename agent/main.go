@@ -70,6 +70,10 @@ func main() {
 	logger.Info("meridian agent starting",
 		"version", version, "url", cfg.url, "interval", cfg.interval.String(),
 		"machine_id", cfg.machineID, "hostname", cfg.hostname, "live", cfg.live, "logs", cfg.logs)
+	if plainHTTP(cfg.url) {
+		logger.Warn("MERIDIAN_URL is plain http: the token and every report cross the network unencrypted. Use https://, or keep Meridian on a network you trust, such as a VPN or tailnet",
+			"url", cfg.url)
+	}
 	liveDone := a.startLive(ctx)
 	a.run(ctx)
 	select { // let the live line say goodbye, but never hold up shutdown

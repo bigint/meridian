@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -101,6 +102,21 @@ func loadConfig(getenv func(string) string, readFile func(string) ([]byte, error
 		cfg.hostname, _ = os.Hostname()
 	}
 	return cfg, nil
+}
+
+// plainHTTP reports whether raw sends the agent's token and reports in the
+// clear to another machine: http://, and not to this one.
+func plainHTTP(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "http" {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return ip == nil || !ip.IsLoopback()
 }
 
 // parseInterval accepts Go durations ("30s", "1m") or bare seconds ("30").

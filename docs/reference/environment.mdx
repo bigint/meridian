@@ -36,7 +36,7 @@ env:
   - An `https://` URL turns on forced HTTPS, HSTS (a header that tells browsers to use HTTPS only) and secure cookies. It also trusts the proxy in front that handles TLS, which is [kamal-proxy](/reference/glossary#kamal-proxy).
   - A plain `http://` URL turns all of that off. Use it to try Meridian on a local network.
   - Meridian answers only requests for this URL's host, in the `Host` header. It refuses every other host, except `/up`, which kamal-proxy calls by IP address.
-  - Unset, Meridian forces HTTPS and answers to any host.
+  - Unset, or without a host, Meridian refuses to start.
 
   The agent reads a variable with the same name. See [Agent](#agent).
 </ResponseField>
@@ -119,6 +119,8 @@ The [agent](/reference/glossary#agent) reads these in `agent/config.go`. If a va
   Meridian's base URL, `http://` or `https://`, for example `https://meridian.example.com`. The agent drops a trailing `/`.
 
   The agent sends snapshots to `$MERIDIAN_URL/agent/snapshots` and opens the live line at `$MERIDIAN_URL/cable`. You don't need it with `-print`.
+
+  With `http://`, the token and every report cross the network unencrypted, so the agent logs a warning at start, unless the host is `localhost` or a loopback address.
 </ResponseField>
 
 <ResponseField name="MERIDIAN_TOKEN" type="string" required>

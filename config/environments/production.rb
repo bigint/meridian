@@ -68,9 +68,17 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Answer only to MERIDIAN_URL's host (DNS rebinding, forged Host headers),
-  # except the health check, which kamal-proxy calls by IP.
-  if (host = URI(ENV.fetch("MERIDIAN_URL", "")).host.presence)
+  # except the health check, which kamal-proxy calls by IP. Without a host
+  # there is nothing to check against, so Meridian refuses to start rather
+  # than answer to any host. The image's asset build needs no URL.
+  host = begin
+    URI(ENV.fetch("MERIDIAN_URL", "")).host.presence
+  rescue URI::InvalidURIError
+  end
+  if host
     config.hosts << host
     config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  elsif !ENV["SECRET_KEY_BASE_DUMMY"]
+    abort "MERIDIAN_URL must be the address Meridian is reached at, such as https://meridian.example.com. See docs/reference/environment.mdx."
   end
 end

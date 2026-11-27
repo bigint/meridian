@@ -47,7 +47,7 @@ Git holds your configs and their history. Meridian's database holds your account
     Run Meridian on a VPN, a tailnet or behind an internal load balancer. Agents need to reach it. GitHub doesn't: Meridian polls it. You don't need to reach it from the public internet.
   </Step>
   <Step title="If it must be public, use HTTPS">
-    Keep `MERIDIAN_URL` on `https://`. Meridian then forces HTTPS, sends HSTS, marks cookies `Secure`, and answers only to that URL's host. Set a long random `SECRET_KEY_BASE`.
+    Keep `MERIDIAN_URL` on `https://`. Meridian then forces HTTPS, sends HSTS, marks cookies `Secure`, and answers only to that URL's host. It refuses to start without `MERIDIAN_URL`. Set a long random `SECRET_KEY_BASE`. To try Meridian on your own machine, publish its port on `127.0.0.1` only, as the [Quickstart](/quickstart) does.
   </Step>
   <Step title="Give GitHub the least access">
     Install the App only on the infra repository. Use the App, not a personal access token, which reaches every repository its owner can. See [GitHub App](/reference/github-app).
@@ -118,6 +118,7 @@ Git holds your configs and their history. Meridian's database holds your account
 ## Known limits
 
 - Meridian trusts snapshots as reported. A server someone has taken over can lie about what it runs. It can't change Git.
+- An agent with a plain `http://` `MERIDIAN_URL` sends its token unencrypted, and logs a warning at start unless Meridian is on the same machine.
 - A personal access token in `GITHUB_TOKEN` acts as its owner everywhere. Use it for a homelab, not production.
 
 ## Report a vulnerability

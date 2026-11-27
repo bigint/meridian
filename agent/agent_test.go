@@ -525,3 +525,20 @@ func TestNewDockerClientRejectsUnknownScheme(t *testing.T) {
 		t.Fatal("want error for ssh://")
 	}
 }
+
+func TestPlainHTTP(t *testing.T) {
+	for raw, want := range map[string]bool{
+		"https://meridian.example.com": false,
+		"http://localhost:3000":        false,
+		"http://meridian.localhost":    false,
+		"http://127.0.0.1:3000":        false,
+		"http://[::1]:3000":            false,
+		"http://meridian.example.com":  true,
+		"http://10.0.0.5:3000":         true,
+		"":                             false,
+	} {
+		if got := plainHTTP(raw); got != want {
+			t.Errorf("plainHTTP(%q) = %v, want %v", raw, got, want)
+		}
+	}
+}

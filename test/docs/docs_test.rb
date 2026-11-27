@@ -19,7 +19,8 @@ class DocsTest < ActiveSupport::TestCase
   UNDOCUMENTED = {
     "BUNDLE_GEMFILE" => "config/boot.rb points Bundler at the Gemfile",
     "CI" => "config/environments/test.rb eager-loads on CI services",
-    "MERIDIAN_VERSION" => "the Docker build bakes in the release it came from; nobody sets it by hand"
+    "MERIDIAN_VERSION" => "the Docker build bakes in the release it came from; nobody sets it by hand",
+    "SECRET_KEY_BASE_DUMMY" => "Rails' own switch for the image's asset build, which production.rb lets boot without MERIDIAN_URL"
   }.freeze
 
   # bin/docs writes the Changelog page from CHANGELOG.md; it isn't committed.

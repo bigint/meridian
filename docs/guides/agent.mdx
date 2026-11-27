@@ -58,7 +58,7 @@ It never sends environment variables, commands, entrypoints or mounts, which can
           - /var/run/docker.sock:/var/run/docker.sock:ro
 
       meridian_agent:
-        image: ghcr.io/bigint/meridian-agent:v0.1.5
+        image: ghcr.io/bigint/meridian-agent:v0.1.6
         roles: [ web ]
         network: meridian
         env:

@@ -37,12 +37,12 @@ A snapshot is what one agent saw on one server at one moment. The agent sends it
 POST /agent/snapshots HTTP/1.1
 Authorization: Bearer meridian_…
 Content-Type: application/json
-User-Agent: meridian-agent/v0.1.5
+User-Agent: meridian-agent/v0.1.6
 ```
 
 ```json
 {
-  "agent_version": "v0.1.5",
+  "agent_version": "v0.1.6",
   "machine_id": "0123456789abcdef0123456789abcdef",
   "hostname": "app-1",
   "interval_seconds": 15,
@@ -172,7 +172,7 @@ GET /cable HTTP/1.1
 Authorization: Bearer meridian_…
 Origin: https://meridian.example.com
 Sec-WebSocket-Protocol: actioncable-v1-json
-User-Agent: meridian-agent/v0.1.5
+User-Agent: meridian-agent/v0.1.6
 ```
 
 Meridian treats a connection with an `Authorization` header as an agent, and nothing else. It never falls back to a session cookie. Meridian refuses an unknown or revoked token.

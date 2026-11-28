@@ -41,6 +41,46 @@ class LiveTrafficTest < ActiveSupport::TestCase
     assert_no_broadcasts TrafficChannel.broadcasting_for(@shop)
   end
 
+  test "the fleet's proxies are kamal-proxy on every server" do
+    elsewhere = place(server_named("db-1.example.com"), "e" * 64, name: "kamal-proxy", kind: "proxy", service: nil, role: nil)
+
+    assert_equal [ @proxy, elsewhere ], LiveTraffic.proxies(LiveTraffic::FLEET)
+    assert_equal 2, LiveTraffic.proxy_servers
+  end
+
+  test "the fleet gets every request, whoever's service, and none of kamal-proxy's own lines" do
+    LiveTraffic.watch(LiveTraffic::FLEET, [ @proxy ])
+    lines = [ request("shop-web-production", "/cart"), plain("Service deployed"), request("blog-web", "/post"), request("unknown-web", "/"), plain("not json") ]
+
+    assert_broadcast_on TrafficChannel.broadcasting_for(LiveTraffic::FLEET), { "container" => PROXY, "source" => @proxy.id, "lines" => lines.values_at(0, 2, 3) } do
+      LiveTraffic.relay(@server, @proxy, { "container" => PROXY, "lines" => lines })
+    end
+    assert_no_broadcasts TrafficChannel.broadcasting_for(@shop)
+  end
+
+  test "an app and the fleet read at once each get their requests" do
+    LiveTraffic.watch(@shop, [ @proxy ])
+    LiveTraffic.watch(LiveTraffic::FLEET, [ @proxy ])
+    lines = [ request("shop-web-production", "/cart"), request("blog-web", "/post") ]
+
+    assert_broadcast_on TrafficChannel.broadcasting_for(@shop), { "container" => PROXY, "source" => @proxy.id, "lines" => [ lines.first ] } do
+      assert_broadcast_on TrafficChannel.broadcasting_for(LiveTraffic::FLEET), { "container" => PROXY, "source" => @proxy.id, "lines" => lines } do
+        LiveTraffic.relay(@server, @proxy, { "container" => PROXY, "lines" => lines })
+      end
+    end
+  end
+
+  test "the fleet gets kamal-proxy's notices, and no history" do
+    LiveTraffic.watch(LiveTraffic::FLEET, [ @proxy ])
+
+    assert_broadcast_on TrafficChannel.broadcasting_for(LiveTraffic::FLEET), { "container" => PROXY, "source" => @proxy.id, "off" => true } do
+      LiveTraffic.relay(@server, @proxy, { "container" => PROXY, "off" => true })
+    end
+    assert_no_broadcasts TrafficChannel.broadcasting_for(LiveTraffic::FLEET) do
+      LiveTraffic.relay(@server, @proxy, { "container" => PROXY, "backlog" => true, "lines" => [ request("shop-web-production", "/cart") ] })
+    end
+  end
+
   test "a request line that repeats a key still counts" do
     line = { "t" => "2026-11-26T12:00:01.000Z", "s" => "out",
       "m" => '{"msg":"Request","path":"/","status":200,"service":"shop-web-production","req_content_type":"","req_content_type":"text/html"}' }

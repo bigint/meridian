@@ -1,7 +1,7 @@
 ---
 title: "Watch an app's traffic"
 sidebarTitle: "Traffic"
-description: "See each request to an app as it happens, from kamal-proxy on every server the app runs on. Meridian never stores the requests."
+description: "See each request to an app, or to every app at once, as it happens, from kamal-proxy on each server. Meridian never stores the requests."
 icon: "arrow-left-right"
 ---
 
@@ -49,6 +49,14 @@ Other apps' requests and kamal-proxy's own lines stop at Meridian and never reac
 <Note>
 The page shows requests from the moment you open it, with no history. Meridian doesn't store traffic, so a request served while nobody had the page open doesn't show up later.
 </Note>
+
+## Every app at once
+
+**Traffic** in the sidebar shows every app's requests on one page. It reads kamal-proxy on every server, up to 20 of them, and keeps every request line, whatever its `service`. That includes requests for services that no app in Meridian owns. kamal-proxy's own lines still stop at Meridian.
+
+Each line looks the same as on an app's page. The container after `→` and the host tell you which app answered. Type an app's name in **Filter lines** to see only its requests.
+
+With more than 20 servers, the header says so, such as `Every app, through kamal-proxy on the first 20 of 37 servers`. Open an app's **Traffic** to read its servers.
 
 ## Behind a Cloudflare Tunnel
 

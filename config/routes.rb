@@ -19,6 +19,7 @@ Rails.application.routes.draw do
     end
   end
   resources :servers, only: %i[ index show update ]
+  resource :traffic, only: :show
   resources :events, only: :index
   resources :secrets, only: %i[ index create update ]
   namespace :tunnels do

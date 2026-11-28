@@ -79,6 +79,29 @@ class TrafficChannelTest < ActionCable::Channel::TestCase
     assert subscription.rejected?
   end
 
+  test "the fleet's traffic streams from kamal-proxy on every server" do
+    grant = LiveGrant.grant(users(:ada), "traffic", LiveTraffic::FLEET)
+
+    assert_broadcast_on AgentChannel.broadcasting_for(@web_1), { type: "tail", container: "c" * 64, seconds: 30, backlog: 0 } do
+      assert_broadcast_on AgentChannel.broadcasting_for(@web_2), { type: "tail", container: "d" * 64, seconds: 30, backlog: 0 } do
+        subscribe fleet: true, grant: grant
+      end
+    end
+
+    assert subscription.confirmed?
+    assert_has_stream TrafficChannel.broadcasting_for(LiveTraffic::FLEET)
+  end
+
+  test "the fleet's traffic needs the fleet's grant" do
+    [ nil, LiveGrant.grant(users(:ada), "traffic", @app.id), LiveGrant.grant(users(:ada), "logs", LiveTraffic::FLEET) ].each do |grant|
+      subscribe fleet: true, grant: grant
+      assert subscription.rejected?, grant.inspect
+    end
+
+    subscribe fleet: "true", grant: LiveGrant.grant(users(:ada), "traffic", LiveTraffic::FLEET)
+    assert subscription.rejected?
+  end
+
   test "a page that stops renewing lets the leases lapse" do
     subscribe app_id: @app.id
     travel ApplicationCable::Renewal::SILENCE + 1.second

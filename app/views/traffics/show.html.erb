@@ -1,0 +1,13 @@
+<% content_for :title, "Traffic" %>
+<% content_for :wide, true %>
+<% meta = capture do %>
+  Every app, through kamal-proxy on <%= @proxies.size < @servers ? "the first #{@proxies.size} of #{@servers} servers" : pluralize(@proxies.size, "server") %>
+<% end %>
+<%= page_header "Traffic", meta: meta %>
+
+<% if @proxies.any? %>
+  <%= render "logs/viewer", placements: @proxies, channel: { channel: "TrafficChannel", fleet: true, grant: live_grant("traffic", LiveTraffic::FLEET) }, streams: false,
+        empty: "No requests yet. Each one any app serves shows up here, with the server and container that answered." %>
+<% else %>
+  <%= empty_state "No kamal-proxy reported", icon_name: :traffic do %>Traffic appears here once an agent reports kamal-proxy on a server.<% end %>
+<% end %>

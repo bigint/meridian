@@ -7,7 +7,8 @@ class ShellTest < ActionDispatch::IntegrationTest
     get root_path
     assert_select ".shell:not([data-collapsed])"
     assert_select "#sidebar nav[aria-label=Main] a.sidebar__link[aria-current=page][data-tooltip=Board]", text: /Board/
-    assert_select "#sidebar nav[aria-label=Main] a", 5
+    assert_select "#sidebar nav[aria-label=Main] a", 6
+    assert_select "#sidebar nav[aria-label=Main] a[href=?]", traffic_path, text: "Traffic"
     assert_select "#sidebar nav[aria-label=Manage] a[href=?]", tunnels_path, text: "Tunnels"
     assert_select "#sidebar nav[aria-label=Manage] a", text: /Secrets/
     assert_select "#sidebar nav[aria-label=System] a[data-tooltip=Settings]", text: /Settings/

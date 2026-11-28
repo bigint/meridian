@@ -141,7 +141,7 @@ accessories:
 
   **One tunnel, one token.** The token lives in the repository secret `CLOUDFLARE_TUNNEL_TOKEN`. `cloudflared` reads `TUNNEL_TOKEN`, so the connectors map one to the other: `TUNNEL_TOKEN:CLOUDFLARE_TUNNEL_TOKEN`.
 
-  **A connector on each server.** The edge config runs only accessories, one `cloudflared-<server>` per server. Each has its own `hostname`, so Cloudflare lists every replica by server name. The `meridian.kind: accessories` label keeps the config off the board, and Meridian never deploys an app from it.
+  **A connector on each server.** The edge config runs only accessories, one `cloudflared-<server>` per server. Each has its own `hostname`, so Cloudflare lists every replica by server name. The `meridian.kind: accessories` label keeps the config off the board and the Apps list, and Meridian never deploys an app from it.
 
   **Every hostname goes to kamal-proxy.** The tunnel routes each app's hostname to `http://kamal-proxy:80`. Accessories share Kamal's `kamal` Docker network, where the proxy container is named `kamal-proxy`. kamal-proxy then picks the app by the `Host` header.
 

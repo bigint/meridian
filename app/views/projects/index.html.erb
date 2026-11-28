@@ -19,7 +19,7 @@
         <tr>
           <th scope="row"><%= link_to project.name, project %></th>
           <td class="mono txt-small"><%= link_to project.repo_full_name, project.repo_url %></td>
-          <td class="table__end"><%= project.apps.size %></td>
+          <td class="table__end"><%= project.apps.deployable.size %></td>
           <td class="nowrap"><%= safe_join([ (short_sha(project.last_synced_sha) if project.last_synced_sha), time_ago(project.synced_at) ].compact, " ") %></td>
           <td><%= project.config_errors? ? badge("✕ #{pluralize(project.config_errors.size, "parse error")}", tone: :bad) : "–" %></td>
         </tr>

@@ -97,7 +97,7 @@ If you remove a label from the config, the next sync clears it in Meridian too.
 
 ## Configs that only run accessories
 
-A config labelled `meridian.kind: accessories` runs only accessories, such as the `cloudflared` connectors of a [Cloudflare Tunnel](/guides/cloudflare-tunnel). Meridian leaves it off the board and the map. It refuses to deploy, redeploy or roll it back. Start its accessories with `kamal accessory boot all -c <config>`.
+A config labelled `meridian.kind: accessories` runs only accessories, such as the `cloudflared` connectors of a [Cloudflare Tunnel](/guides/cloudflare-tunnel). Meridian leaves it off the board, the map and the Apps list. A tunnel's edge config opens its tunnel on the Tunnels page instead of an app page. It refuses to deploy, redeploy or roll it back. Start its accessories with `kamal accessory boot all -c <config>`.
 
 ## When a config changes or breaks
 

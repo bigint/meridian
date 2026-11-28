@@ -9,7 +9,7 @@ class JumpsController < ApplicationController
 
   private
     def results
-      apps = best(App.search(@query), "service", "length(service) + length(destination)", "service, destination")
+      apps = best(App.deployable.search(@query), "service", "length(service) + length(destination)", "service, destination")
       servers = best(Server.search(@query), "name")
       projects = best(Project.search(@query), "name")
 

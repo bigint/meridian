@@ -48,6 +48,8 @@ class Tunnel
   def configs = connectors.map(&:config).uniq
   def connector_hosts = connectors.map(&:host).uniq
   def token_set? = secret&.last_set_at.present?
+  # The id of this tunnel's heading on the Tunnels page.
+  def anchor = "tunnel-#{project.id}-#{secret_name.parameterize}"
 
   def state = connectors.map(&:state).max_by { STATES.index(it) } || :unknown
   def missing = connectors.select { it.state == :missing }
@@ -86,6 +88,9 @@ class Tunnel
 
   # The project's tunnel, if it has one: Meridian sets up one per project.
   def self.for(project) = all(project: project).first
+
+  # The tunnel whose connectors this config runs, if any.
+  def self.for_config(config) = all(project: config.project).find { it.configs.include?(config) }
 
   # Every app with a hostname, and the hosts among these it doesn't run on.
   # Only roles behind kamal-proxy count: on a server that runs just the

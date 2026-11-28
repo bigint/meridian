@@ -7,7 +7,8 @@ class App < ApplicationRecord
   # What New app can make. Configs label theirs with meridian.kind.
   KINDS = %w[ static node rails other ].freeze
   # A config that only runs accessories, such as a Cloudflare Tunnel's
-  # connectors: Kamal never deploys an app from it, so the board leaves it out.
+  # connectors: Kamal never deploys an app from it, so the board and the Apps
+  # list leave it out.
   ACCESSORIES = "accessories"
   LABELLED_KINDS = [ *KINDS, ACCESSORIES ].freeze
 

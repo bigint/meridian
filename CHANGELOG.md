@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- A tunnel's edge config no longer shows as an app on the Apps list, in type to go or in a project's app count. Its old app page opens its tunnel on the Tunnels page.
+
 ## v0.1.8 (2026-11-28)
 
 ### Added

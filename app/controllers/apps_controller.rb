@@ -2,7 +2,7 @@ class AppsController < ApplicationController
   before_action :set_projects, only: %i[ new create ]
 
   def index
-    @apps = App.includes(:project).ordered
+    @apps = App.deployable.includes(:project).ordered
     @apps = @apps.search(params[:q]) if params[:q].present?
     @latest_releases = Release.latest_per_app.where(app_id: @apps.map(&:id)).index_by(&:app_id)
   end
@@ -25,6 +25,11 @@ class AppsController < ApplicationController
 
   def show
     @app = App.find(params[:id])
+    # A tunnel's edge config runs no app: its page is the tunnel.
+    if !@app.deployable? && (tunnel = Tunnel.for_config(@app))
+      return redirect_to tunnels_path(anchor: tunnel.anchor)
+    end
+
     @board = Board.new(app_id: @app.id, group: "none")
     @releases = @app.releases.limit(App::Releases::HISTORY)
     @accessories = Accessory.for(@app)

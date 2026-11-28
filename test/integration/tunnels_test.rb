@@ -27,6 +27,34 @@ class TunnelsTest < ActionDispatch::IntegrationTest
     assert_select ".alert", text: /Don't route blog through this tunnel yet.*b\.example\.com/m
   end
 
+  test "the edge config isn't listed as an app, and its page is its tunnel" do
+    edge = make_app("edge", kind: App::ACCESSORIES, accessories: [ connector("cloudflared-a", "a.example.com") ])
+    make_app("shop", hostnames: [ "shop.example.com" ], on: [ @a ])
+
+    get apps_path
+    assert_select "table tbody th a", text: "shop"
+    assert_select "table tbody th a", text: "edge", count: 0
+
+    get jump_path(q: "edge")
+    assert_select "#jump_results a", count: 0
+
+    get projects_path
+    assert_select "tbody tr td.table__end", text: "1"
+
+    get app_path(edge)
+    tunnel = Tunnel.for_config(edge)
+    assert_redirected_to tunnels_path(anchor: tunnel.anchor)
+    follow_redirect!
+    assert_select "h2##{tunnel.anchor}", text: /edge/
+  end
+
+  test "an accessories-only config that runs no tunnel keeps its page" do
+    redis = make_app("cache", kind: App::ACCESSORIES, accessories: [])
+
+    get app_path(redis)
+    assert_response :success
+  end
+
   test "spells out the setup for the picked servers, with the edge config to commit" do
     make_app("shop", hostnames: [ "shop.example.com" ], on: [ @a, @b ])
     make_app("blog", hostnames: [ "blog.example.com" ], on: [ @a ])

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.7 (2026-11-28)
+
+### Changed
+
+- Drift states show icons instead of text symbols on avatars, badges, chips, version cells and map dots. A silent agent's `…` looked like a menu button.
+- Agents that stopped reporting are called silent, and Meridian's hints say what happens instead of vaguer lines. For example, **Deploy something** says Meridian commits the version and CI runs `kamal deploy`.
+- The agent image runs on distroless Debian 13 instead of Debian 12. The agent itself is unchanged.
+
 ## v0.1.6 (2026-11-27)
 
 ### Changed

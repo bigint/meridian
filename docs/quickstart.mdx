@@ -20,7 +20,7 @@ Run Meridian on your own machine and point it at your real [infra repository](/r
       -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
       -e MERIDIAN_URL=http://localhost:3000 \
       -e GITHUB_TOKEN=github_pat_… \
-      ghcr.io/bigint/meridian:v0.1.6
+      ghcr.io/bigint/meridian:v0.1.7
     ```
 
     `127.0.0.1:` keeps Meridian on your own machine: without it, Docker publishes the port to your whole network, over plain HTTP. The `meridian` volume holds Meridian's SQLite databases. `MERIDIAN_URL` is the address you open Meridian at. A plain `http://` address turns off the redirect to HTTPS, which you want on your own machine. `GITHUB_TOKEN` is your token: Meridian makes every GitHub call as its owner.

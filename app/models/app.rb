@@ -45,6 +45,16 @@ class App < ApplicationRecord
     releases.first
   end
 
+  # A version that is a commit of the app's source repository links to that
+  # commit; any other version, such as a v2 tag, to the infra commit that set it.
+  def version_url(version, commit_sha:)
+    if source_repo.present? && version.to_s.match?(/\A\h{7,40}\z/)
+      project.git.commit_url(version, repo: source_repo)
+    else
+      project.git.commit_url(commit_sha)
+    end
+  end
+
   # Takes what Kamal parsed, without saving. Sync calls this, fetches the
   # releases it needs from Git, and only then writes, in a short transaction.
   def assign_config(result, tree)

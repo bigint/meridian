@@ -32,7 +32,7 @@
             <th scope="row" class="matrix__name">
               <%= link_to app.name, app %>
             </th>
-            <td class="matrix__git"><%= board.release_for(app)&.first(12) || "–" %></td>
+            <td class="matrix__git"><% if (version = board.release_for(app)) %><%= link_to version.first(12), board.release_url(app), target: "_blank", rel: "noopener", data: { tooltip: version } %><% else %>–<% end %></td>
             <% board.groups.each do |group| %>
               <% group.columns.each_with_index do |server, index| %>
                 <td class="<%= "matrix__first" if index.zero? %>"><% if (cell = group.cells[[ app.id, server.id ]]) %><%= version_cell cell %><% end %></td>

@@ -9,7 +9,7 @@
     .matrix__region { padding: var(--space-s) var(--space-s) 0; border-inline-start: 1px solid var(--color-line); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; text-align: start; }
     .matrix__server a { display: inline-block; max-inline-size: 6rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; font-family: var(--font-mono); font-size: 0.625rem; font-weight: 400; color: var(--color-ink-muted); &:hover { color: var(--color-accent); } }
     .matrix__first { border-inline-start: 1px solid var(--color-line); }
-    .matrix__git { padding-inline: var(--space-s); font-family: var(--font-mono); font-size: var(--text-s); white-space: nowrap; color: var(--color-ink-muted); text-align: start; }
+    .matrix__git { padding-inline: var(--space-s); font-family: var(--font-mono); font-size: var(--text-s); white-space: nowrap; color: var(--color-ink-muted); text-align: start; a { color: inherit; &:hover { color: var(--color-accent); } } }
     .matrix__group th { padding: 0.375rem var(--space); background: var(--color-surface); font-size: var(--text-xs); font-weight: 600; text-align: start; }
 
     /* The first column stays put while the grid scrolls sideways. */

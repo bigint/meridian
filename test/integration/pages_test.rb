@@ -102,6 +102,19 @@ class PagesTest < ActionDispatch::IntegrationTest
     assert_select "[data-app-status]", text: /everywhere/, count: 0
   end
 
+  test "the board's Git column links a version to its commit, in a new tab" do
+    shop = @project.apps.create!(service: "shop", config_path: "deploy/shop.yml", version_path: "deploy/shop.version", source_repo: "acme/shop")
+    shop.releases.create!(version: "61a6365cdf25" + "0" * 28, commit_sha: "c" * 40, committed_at: 1.hour.ago)
+    tagged = @project.apps.create!(service: "tagged", config_path: "deploy/tagged.yml", version_path: "deploy/tagged.version", source_repo: "acme/tagged")
+    tagged.releases.create!(version: "v2", commit_sha: "d" * 40, committed_at: 1.hour.ago)
+    server = Server.create!(name: "shop-1.example.com", hostname: "shop-1.example.com", last_seen_at: Time.current)
+    [ shop, tagged ].each { it.assignments.create!(server: server, role: "web") }
+
+    get root_path
+    assert_select ".matrix__git a[href='https://github.com/acme/shop/commit/#{"61a6365cdf25" + "0" * 28}'][target=_blank][rel=noopener]", text: "61a6365cdf25"
+    assert_select ".matrix__git a[href='https://github.com/example/infra/commit/#{"d" * 40}']", text: "v2"
+  end
+
   test "a server page lists every app on the server, past one board page" do
     server = Server.create!(name: "big-1.example.com", hostname: "big-1.example.com", last_seen_at: Time.current)
     (Board::PER_PAGE + 5).times { |i| @project.apps.create!(service: "app-#{i}", config_path: "deploy/app-#{i}.yml").assignments.create!(server: server, role: "web") }

@@ -84,6 +84,7 @@ class Board
 
   # The newest release version of an app, as Git says.
   def release_for(app) = releases[app.id]
+  def release_url(app) = (app.version_url(releases[app.id], commit_sha: release_commits[app.id]) if releases[app.id])
 
   def groups
     @groups ||= begin
@@ -176,7 +177,15 @@ class Board
     end
 
     def releases
-      @releases ||= Release.latest_per_app.where(app_id: apps.values.select(&:versioned?).map(&:id)).pluck(:app_id, :version).to_h
+      @releases ||= latest_releases.to_h { |app_id, version, _| [ app_id, version ] }
+    end
+
+    def release_commits
+      @release_commits ||= latest_releases.to_h { |app_id, _, commit_sha| [ app_id, commit_sha ] }
+    end
+
+    def latest_releases
+      @latest_releases ||= Release.latest_per_app.where(app_id: apps.values.select(&:versioned?).map(&:id)).pluck(:app_id, :version, :commit_sha)
     end
 
     def all_cells

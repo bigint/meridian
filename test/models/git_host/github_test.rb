@@ -14,6 +14,7 @@ class GitHost::GitHubTest < ActiveSupport::TestCase
         project = projects(:infra)
         assert_equal "#{web}/example/infra", project.repo_url
         assert_equal "#{web}/example/infra/commit/#{"a" * 40}", project.git.commit_url("a" * 40)
+        assert_equal "#{web}/acme/shop/commit/#{"a" * 40}", project.git.commit_url("a" * 40, repo: "acme/shop")
         assert_equal "#{web}/example/infra/blob/main/deploy/web.yml", project.git.file_url("deploy/web.yml")
         assert_equal "#{web}/example/infra/blob/#{"b" * 40}/deploy/web.yml#L3", project.git.file_url("deploy/web.yml", ref: "b" * 40, line: 3)
       end

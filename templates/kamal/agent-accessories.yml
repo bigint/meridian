@@ -1,20 +1,4 @@
-# Meridian agent: add under `accessories:` in a Kamal config that reaches
-# every host. `roles: [ web ]` boots both on the config's web hosts: list
-# every role whose hosts should report, or name them with `hosts:`.
-# Once per host, create the network the two share:
-#   kamal server exec "docker network inspect meridian >/dev/null 2>&1 || docker network create meridian"
-# then boot them, one at a time:
-#   kamal accessory boot meridian_docker
-#   kamal accessory boot meridian_agent
-# Put MERIDIAN_TOKEN in .kamal/secrets. Replace SERVICE with the config's
-# service, and REGION and PROVIDER with your labels.
-#
-# Both run on their own `meridian` network, not Kamal's `kamal` network, so
-# app containers can't reach the socket proxy: through it they could read
-# every container's environment, files and logs.
   meridian_docker:
-    # Read-only Docker API: only GETs under /containers (list, inspect
-    # and, while someone is looking, stats and logs).
     image: tecnativa/docker-socket-proxy:v0.4.1
     roles: [ web ]
     network: meridian
@@ -26,25 +10,18 @@
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   meridian_agent:
-    # The agent release that matches this Meridian.
     image: ghcr.io/bigint/meridian-agent:%{agent_version}
     roles: [ web ]
-    # Outbound to MERIDIAN_URL works from any network, as long as it is an
-    # address the host itself can reach (not a container name on `kamal`).
     network: meridian
     env:
       clear:
         MERIDIAN_URL: %{meridian_url}
         DOCKER_HOST: tcp://SERVICE-meridian_docker:2375
         MERIDIAN_LABELS: region=REGION,provider=PROVIDER
-        # Lets you read Kamal containers' logs live in Meridian. Logs can
-        # hold secrets; they are relayed, never stored. Remove to turn off.
         MERIDIAN_LOGS: 1
       secret:
         - MERIDIAN_TOKEN
     volumes:
       - /etc/machine-id:/host/etc/machine-id:ro
       - /etc/hostname:/host/etc/hostname:ro
-      # Host CPU, memory and load for live stats. Leave it out and Meridian
-      # shows per-container numbers only.
       - /proc:/host/proc:ro

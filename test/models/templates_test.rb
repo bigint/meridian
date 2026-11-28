@@ -17,9 +17,4 @@ class TemplatesTest < ActiveSupport::TestCase
     assert_equal "tcp://web-meridian_docker:2375", accessories.dig("meridian_agent", "env", "clear", "DOCKER_HOST").sub("SERVICE", "web")
     assert_equal "ghcr.io/bigint/meridian-agent:v0.0.0", accessories.dig("meridian_agent", "image")
   end
-
-  test "the template boots each accessory with its own command" do
-    boots = Templates.render("kamal/agent-accessories.yml", meridian_url: "https://meridian.example.com", agent_version: "v0.0.0").scan(/kamal accessory boot ([^`\n]*)/).flatten
-    assert_equal [ "meridian_docker", "meridian_agent" ], boots.map(&:strip)
-  end
 end

@@ -45,8 +45,6 @@ It never sends environment variables, commands, entrypoints or mounts, which can
     ```yaml config/deploy.yml
     accessories:
       meridian_docker:
-        # Read-only Docker API: only GETs under /containers (list, inspect
-        # and, while someone is looking, stats and logs).
         image: tecnativa/docker-socket-proxy:v0.4.1
         roles: [ web ]
         network: meridian

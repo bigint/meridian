@@ -8,7 +8,7 @@
   <div class="card__meta">
     <span>By <%= deploy.requested_by %></span>
     <span>Commit <%= link_to deploy.commit_sha.first(7), app.project.git.commit_url(deploy.commit_sha), class: "mono link" %></span>
-    <% if deploy.ci_url %><%= link_to "CI run ↗", deploy.ci_url, class: "link" %><% end %>
+    <% if deploy.ci_url %><%= link_to "CI run ↗", deploy.ci_url, class: "link", target: "_blank", rel: "noopener" %><% end %>
   </div>
   <ul>
     <% deploy.progress.each do |server, versions, done| %>

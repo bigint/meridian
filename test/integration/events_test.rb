@@ -18,6 +18,6 @@ class EventsTest < ActionDispatch::IntegrationTest
     get events_path
     assert_select ".row__title", text: "Deploy of web at v42 succeeded"
     assert_select ".row__meta", text: /Git/
-    assert_select ".row__meta a[href=?]", "https://github.com/example/infra/actions/runs/9", text: "CI run ↗"
+    assert_select ".row__meta a[href=?][target=_blank][rel=noopener]", "https://github.com/example/infra/actions/runs/9", text: "CI run ↗"
   end
 end

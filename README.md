@@ -14,7 +14,7 @@ A meridian is the line navigators measure every position against. Here that line
 Try it locally:
 
 ```bash
-docker run -d -p 127.0.0.1:3000:80 -v meridian:/rails/storage -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e MERIDIAN_URL=http://localhost:3000 ghcr.io/bigint/meridian:v0.1.7
+docker run -d -p 127.0.0.1:3000:80 -v meridian:/rails/storage -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e MERIDIAN_URL=http://localhost:3000 ghcr.io/bigint/meridian:v0.1.8
 ```
 
 Then open <http://localhost:3000>.

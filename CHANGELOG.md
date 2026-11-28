@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.8 (2026-11-28)
+
+### Added
+
+- A **Traffic** page in the sidebar shows every app's requests live, from kamal-proxy on every server (up to 20). It also keeps requests for services no app owns.
+- Activity records how each CI deploy, redeploy and rollback ended, with the version, commit, a link to the CI run and who asked for it. Deploys from a `git push` or a run started on GitHub show as **Git**. A re-run is recorded again.
+- On the board, each version in the Git column links to its commit, in a new tab.
+
+### Upgrading
+
+- The upgrade adds one Activity entry for each deploy that already finished, at the time it finished.
+
 ## v0.1.7 (2026-11-28)
 
 ### Changed

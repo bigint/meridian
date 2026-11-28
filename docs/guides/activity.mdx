@@ -5,7 +5,7 @@ description: "Find who deployed, rolled back, set a secret or changed a setting,
 icon: "history"
 ---
 
-**Activity** lists everything Meridian did, and who asked for it. Each of these is one entry: a deploy, rollback or redeploy, a secret set, and a change to a project, token, setting or your account.
+**Activity** lists everything Meridian did, and who asked for it. Each of these is one entry: a deploy, rollback or redeploy, how CI's run of it ended, a secret set, and a change to a project, token, setting or your account.
 
 <Frame>
   <img className="block dark:hidden" src="/screenshots/activity.png" alt="The Activity page, with entries grouped by day" />
@@ -29,6 +29,7 @@ icon: "history"
 | Question | Filter |
 | --- | --- |
 | What shipped this week? | `app.deploy`, `app.rollback` and `app.redeploy` |
+| Which deploys failed? | `app.deploy.failure` |
 | When was a secret rotated? | `secret.set` |
 | What changed in the infra repository through Meridian? | `project.committed` and `project.pull_request` |
 | When did the account's email or password change? | `user.updated` |
@@ -45,15 +46,15 @@ The filters live in the URL, so you can share a filtered view:
 Entries are newest first, grouped by day under **Today**, **Yesterday**, or the date. Each entry shows:
 
 - A sentence, such as `Deployed shop · production to v1.4.2`.
-- Who did it: you, or **Meridian** for work it did on its own.
+- Who did it: you, **Git** for a deploy that came from a push or from GitHub, or **Meridian** for work it did on its own.
 - The action, such as `app.deploy`.
-- The commit's short ID, or a **pull request** link, when the action made one.
+- The commit's short ID, a **pull request** link, or a **CI run** link, when there is one.
 - The time, as `HH:MM`.
 
 Every action, and what each one records, is in [Activity events](/reference/activity-events).
 
 <Note>
-Activity records only what Meridian did. A commit someone pushed to the [infra repository](/reference/glossary#infra-repository) directly isn't an entry. It shows in the app's **Releases**, and in **Current deploy** as by **Git**. See [Deploy](/guides/deploy#follow-a-deploy).
+A commit someone pushed to the [infra repository](/reference/glossary#infra-repository) directly isn't an entry itself. It shows in the app's **Releases**, and once CI's deploy for it finishes, Activity shows how it ended, by **Git**. See [Deploy](/guides/deploy#follow-a-deploy).
 </Note>
 
 ## Related

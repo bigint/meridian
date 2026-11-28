@@ -29,6 +29,7 @@
                 <%= event.actor_name %> · <code><%= event.action %></code>
                 <% if event.details["commit"] %> · <%= short_sha(event.details["commit"]) %><% end %>
                 <% if event.details["pull_request"] %> · <%= link_to "pull request", event.details["pull_request"], class: "link" %><% end %>
+                <% if event.details["ci_url"] %> · <%= link_to "CI run ↗", event.details["ci_url"], class: "link" %><% end %>
               </div>
             </div>
             <div class="row__trail"><%= tag.time(event.created_at.strftime("%H:%M"), datetime: event.created_at.iso8601, class: "mono") %></div>

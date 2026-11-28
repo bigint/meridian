@@ -60,4 +60,38 @@ class DeployTest < ActiveSupport::TestCase
       assert_not deploy.reload.unclaimed?
     end
   end
+
+  test "a finished CI run goes into the activity trail once, and a re-run again" do
+    @app.deploys.create!(version: "v42", commit_sha: "c" * 40, actor: users(:ada))
+    run = { "id" => 9, "head_sha" => "c" * 40, "html_url" => "https://github.com/example/infra/actions/runs/9" }
+
+    Deploy.from_workflow_run(@project, run.merge("status" => "in_progress", "updated_at" => 2.minutes.ago.iso8601))
+    assert_no_difference -> { Event.count } do
+      Deploy.from_workflow_run(@project, run.merge("status" => "in_progress", "updated_at" => 1.minute.ago.iso8601))
+    end
+
+    finished = run.merge("status" => "completed", "conclusion" => "failure", "updated_at" => Time.current.iso8601)
+    assert_difference -> { Event.count }, 1 do
+      2.times { Deploy.from_workflow_run(@project, finished) }
+    end
+    event = Event.recent.first
+    assert_equal [ "app.deploy.failure", "Deploy of #{@app.name} at v42 failed", users(:ada).display_name, run["html_url"] ],
+      [ event.action, event.summary, event.actor_name, event.details["ci_url"] ]
+
+    travel 1.minute do
+      assert_difference -> { Event.count }, 1 do
+        Deploy.from_workflow_run(@project, run.merge("status" => "completed", "conclusion" => "success", "run_attempt" => 2, "updated_at" => Time.current.iso8601))
+      end
+      assert_equal "Deploy of #{@app.name} at v42 succeeded", Event.recent.first.summary
+    end
+  end
+
+  test "a redeploy started outside Meridian says it came from Git" do
+    run = { "id" => 21, "head_sha" => "e" * 40, "display_title" => "deploy #{@app.config_path} #{@app.destination}", "status" => "completed", "conclusion" => "success", "updated_at" => Time.current.iso8601 }
+
+    Deploy.from_dispatch(@project, run)
+    event = Event.recent.first
+    assert_equal [ "app.redeploy.success", "Git" ], [ event.action, event.actor_name ]
+    assert_match(/\ARedeploy of #{@app.name} at \S+ succeeded\z/, event.summary)
+  end
 end

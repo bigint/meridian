@@ -51,7 +51,8 @@ class Deploy < ApplicationRecord
   end
 
   # Every poll sees a run again, and a state older than the one recorded
-  # changes nothing. Run ids only grow, so an older run never takes over
+  # changes nothing. A run that finishes, or a re-run that finishes again,
+  # goes into the activity trail once. Run ids only grow, so an older run never takes over
   # from a newer one: a redeploy made at another app's deploy commit keeps
   # its own run.
   def track(run)
@@ -65,6 +66,14 @@ class Deploy < ApplicationRecord
     self.finished_at = run["updated_at"] if status == "completed"
     self.ci_updated_at = run["updated_at"]
     save!
+    record_outcome if finished? && (saved_change_to_finished_at? || saved_change_to_ci_run_id?)
+  end
+
+  # What CI made of it, for the activity trail. Meridian records the request
+  # when someone asks for a deploy; this is how it ended, however it started.
+  def record_outcome(at: Time.current)
+    Event.create!(action: "app.#{kind}.#{conclusion.presence || "finished"}", subject: app, actor: actor, created_at: at,
+      details: { summary: outcome_summary, by: requested_by, version: version, commit: commit_sha, ci_url: ci_url }.compact)
   end
 
   def finished? = status == "completed"
@@ -89,6 +98,14 @@ class Deploy < ApplicationRecord
   end
 
   private
+    def outcome_summary
+      what = { "deploy" => "Deploy of #{app.name} at", "redeploy" => "Redeploy of #{app.name} at", "rollback" => "Rollback of #{app.name} to" }
+        .fetch(kind, "#{kind.humanize} of #{app.name} at")
+      outcome = { "success" => "succeeded", "failure" => "failed", "cancelled" => "was cancelled", "timed_out" => "timed out" }
+        .fetch(conclusion.to_s) { "ended: #{conclusion.to_s.humanize(capitalize: false).presence || "no conclusion"}" }
+      "#{what} #{version} #{outcome}"
+    end
+
     def status_of(run)
       STATUSES.include?(run["status"]) ? run["status"] : "in_progress"
     end

@@ -11,13 +11,13 @@ Meridian never edits or deletes an event. The page shows 50 at a time, newest fi
 Each event keeps:
 
 - **Action**, a dotted name such as `app.deploy`.
-- **Who**, the user who acted. Events from scheduled jobs have no user, so they show as **Meridian**.
+- **Who**, the user who acted. A deploy that came from Git shows as **Git**. Other events from scheduled jobs have no user, so they show as **Meridian**.
 - **Summary**, the sentence the page shows, such as `Deployed web · production to 3f2a9c1e`.
-- **Details**, such as the commit, the version, the pull request URL or the files changed. The page links the commit and the pull request.
+- **Details**, such as the commit, the version, the pull request URL, the CI run or the files changed. The page links the pull request and the CI run.
 
 ## Filter
 
-**Action starts with** matches the start of the action name. `app.` shows every deploy, rollback and redeploy. `project.` shows every project change.
+**Action starts with** matches the start of the action name. `app.` shows every deploy, rollback and redeploy, and how each ended. `app.deploy.failure` shows the deploys CI failed. `project.` shows every project change.
 
 It is a URL parameter, so you can bookmark a filtered view: `/events?action_name=app.`.
 
@@ -28,8 +28,13 @@ It is a URL parameter, so you can bookmark a filtered view: `/events?action_name
 | `app.deploy` | You press **Deploy** and Meridian commits the version file | `commit`, `version` |
 | `app.rollback` | You press **Roll back** and Meridian commits the version from before the newest release | `commit`, `version` |
 | `app.redeploy` | You press **Redeploy** and Meridian starts the [CI workflow](/reference/glossary#ci-workflow) | `version` |
+| `app.deploy.<conclusion>` | A run of the CI workflow for a deploy finishes, whoever started it | `commit`, `version`, `ci_url`, `by` |
+| `app.redeploy.<conclusion>` | The same, for a redeploy | `commit`, `version`, `ci_url`, `by` |
+| `app.rollback.<conclusion>` | The same, for a rollback | `commit`, `version`, `ci_url`, `by` |
 
-A `git push` outside Meridian that changes a version file records no event. It shows on the app's page as a release, and as a deploy once CI runs.
+`<conclusion>` is GitHub's word for how the run ended: `success`, `failure`, `cancelled` or `timed_out`. The summary says it in words, such as `Deploy of web · production at v42 failed`. A run that is run again records another event when it finishes.
+
+A `git push` outside Meridian that changes a version file records no event of its own. It shows on the app's page as a release, and in Activity once CI's run for it finishes, by **Git**. So does a run of the CI workflow started from GitHub. Upgrading records one for each deploy that finished before.
 
 ## Projects
 
@@ -70,7 +75,7 @@ These record no event:
 
 - Signing in and out.
 - Syncs, whether from the 30-second poll or **Sync now**. The project page shows when it last synced and any parse errors.
-- Deploy progress. The app's page shows each deploy's CI status, from `pending` to `completed`.
+- Deploy progress before the run finishes. The app's page shows each deploy's CI status, from `pending` to `completed`.
 - Snapshots and live stats.
 - Opening logs or **Traffic**. Opening a page reads, and changes nothing.
 

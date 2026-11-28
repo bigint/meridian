@@ -9,9 +9,10 @@ class Event < ApplicationRecord
     create!(action: action, subject: subject, actor: actor, details: details)
   end
 
-  # Who asked for it. An event with no person behind it is Meridian's own.
+  # Who asked for it. An event with no person behind it says where it came
+  # from (a deploy from Git says Git), or else is Meridian's own.
   def actor_name
-    actor&.display_name || "Meridian"
+    actor&.display_name || details["by"] || "Meridian"
   end
 
   def summary

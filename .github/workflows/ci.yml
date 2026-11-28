@@ -12,7 +12,7 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install libsodium
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsodium23
@@ -22,7 +22,7 @@ jobs:
           bundler-cache: true
 
       # The agent has no dependencies, so no go.sum: key the cache on go.mod.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: agent/go.mod
           cache-dependency-path: agent/go.mod
@@ -50,11 +50,11 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
 
       - name: bin/docs check
         run: bin/docs check

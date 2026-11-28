@@ -11,7 +11,7 @@
 
 # Keep in step with .ruby-version and MINT_VERSION in bin/docs.
 ARG RUBY_VERSION=4.0.10
-ARG MINT_VERSION=4.3.96
+ARG MINT_VERSION=4.3.97
 
 # The Changelog page, written from CHANGELOG.md as bin/docs does.
 # Both build stages only write static files, so they run on the builder's own
@@ -23,7 +23,7 @@ COPY script/docs_changelog.rb script/
 COPY docs/ docs/
 RUN ruby script/docs_changelog.rb > /dev/null
 
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22-slim AS build
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26-slim AS build
 ARG MINT_VERSION
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y unzip && \

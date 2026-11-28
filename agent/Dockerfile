@@ -11,6 +11,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpat
       -ldflags "-s -w -X main.version=${VERSION}" \
       -o /out/meridian-agent .
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /out/meridian-agent /meridian-agent
 ENTRYPOINT ["/meridian-agent"]

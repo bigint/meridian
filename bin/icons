@@ -8,7 +8,7 @@
 require "net/http"
 require "fileutils"
 
-VERSION = "1.81.0"
+VERSION = "1.82.0"
 DIR = File.expand_path("../vendor/lucide", __dir__)
 
 def fetch(path)
